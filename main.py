@@ -4,10 +4,9 @@ A web-based teleprompter that allows control from one device (computer)
 and display on another (phone).
 """
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 import json
 import asyncio
 from typing import Dict, Set
@@ -18,13 +17,10 @@ app = FastAPI(title="Remote Teleprompter")
 # Setup paths
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
-TEMPLATES_DIR = BASE_DIR / "templates"
 
-# Mount static files
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
-# Setup templates
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+# Mount static files for JS/CSS
+app.mount("/js", StaticFiles(directory=str(STATIC_DIR / "js")), name="js")
+app.mount("/css", StaticFiles(directory=str(STATIC_DIR / "css")), name="css")
 
 # Store active connections by channel
 class ConnectionManager:
@@ -61,10 +57,10 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
+@app.get("/")
+async def home():
     """Serve the main application page"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return FileResponse(str(STATIC_DIR / "index.html"))
 
 @app.websocket("/ws/{channel}")
 async def websocket_endpoint(websocket: WebSocket, channel: str):

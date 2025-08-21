@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 32.6% 17.5%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  body {
+    background: linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 100%);
+    color: hsl(var(--foreground));
+    min-height: 100vh;
+  }
+}
+
+/* Custom teleprompter styles */
+.teleprompter-content {
+  transform-origin: center top;
+  transition: transform 0.1s linear;
+}
+
+.mirror-horizontal {
+  transform: scaleX(-1);
+}
+
+.mirror-vertical {
+  transform: scaleY(-1);
+}
+
+.mirror-both {
+  transform: scale(-1, -1);
+}
