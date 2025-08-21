@@ -1,0 +1,50 @@
+---
+name: Release
+permissions: { contents: read }
+
+on:
+  schedule: [{ cron: "0 0 * * *" }]
+
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Dry Run
+        default: false
+        required: false
+        type: boolean
+
+  push:
+    branches: ["main"]
+    paths:
+      - .github/workflows/git-release.yaml
+      - static/**
+      - templates/**
+      - main.py
+
+jobs:
+  release:
+    if: github.repository_owner == 'mirceanton' # ? don't run on forks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Token
+        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
+        id: app-token
+        with:
+          app-id: "${{ secrets.BOT_APP_ID }}"
+          private-key: "${{ secrets.BOT_APP_PRIVATE_KEY }}"
+
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+          token: "${{ steps.app-token.outputs.token }}"
+
+      - name: Release
+        uses: mirceanton/action-semver-release@be5a9413659737e968dffd82b6a0a47805ffd026 # v2.0.0
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          dry-run: |
+            ${{ 
+              ( github.event.inputs.dry-run == 'true' && github.event_name == 'workflow_dispatch' ) ||
+              github.event_name == 'push'
+            }}
