@@ -32,6 +32,7 @@ jobs:
 
       - name: Generate Metadata
         uses: docker/metadata-action@v5.8.0
+        id: meta
         with:
           images: ghcr.io/${{ github.repository }}/teleprompter
           tags: |
