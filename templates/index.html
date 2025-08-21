@@ -8,14 +8,16 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 
-<body>
-    <div class="container">
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div class="container max-w-4xl">
+        <!-- Header -->
         <div class="header">
             <h1>📱 Remote Teleprompter</h1>
             <p>Control your phone's teleprompter from your computer</p>
         </div>
 
-        <div class="mode-selector">
+        <!-- Mode Selector -->
+        <div class="flex gap-5 justify-center mb-8 flex-wrap">
             <button class="mode-btn" onclick="setMode('controller')">
                 💻 Controller Mode
             </button>
@@ -24,18 +26,21 @@
             </button>
         </div>
 
-        <div class="setup-panel">
-            <div class="input-group">
-                <label for="channelName">Channel Name</label>
-                <input type="text" id="channelName" placeholder="Enter a unique channel name">
+        <!-- Setup Panel -->
+        <div class="card mb-8">
+            <div class="mb-6">
+                <label for="channelName" class="block mb-3 font-medium text-slate-300 text-sm uppercase tracking-wider">Channel Name</label>
+                <input type="text" id="channelName" placeholder="Enter a unique channel name" class="input">
             </div>
-            <button class="connect-btn" onclick="connect()">Connect to Channel</button>
+            <button class="btn btn-primary w-full py-4 text-lg uppercase tracking-wider" onclick="connect()">
+                Connect to Channel
+            </button>
             <div id="status" class="status disconnected">Not Connected</div>
         </div>
 
         <!-- Controller Panel -->
-        <div class="controller-panel" id="controllerPanel">
-            <h2>📝 Script Editor</h2>
+        <div class="controller-panel hidden card" id="controllerPanel">
+            <h2 class="mb-6 text-3xl font-bold">📝 Script Editor</h2>
             <textarea class="script-editor" id="scriptEditor" placeholder="Paste or type your script here...">Welcome to Remote Teleprompter!
 
 This is your teleprompter script. Edit this text on your computer, and it will appear on your phone's screen.
@@ -51,7 +56,7 @@ The text will sync automatically as you type. Use the controls below to manage s
 
 Happy recording! 🎬</textarea>
 
-            <div class="control-buttons">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
                 <button class="control-btn primary" onclick="startScrolling()">
                     ▶️ Start
                 </button>
@@ -72,47 +77,49 @@ Happy recording! 🎬</textarea>
                 </button>
             </div>
 
-            <div class="speed-control">
-                <label>Speed</label>
-                <input type="range" id="speedSlider" min="1" max="10" value="5" oninput="updateSpeed()">
-                <span class="speed-value" id="speedValue">5</span>
+            <!-- Speed Control -->
+            <div class="flex items-center gap-6 mt-6 p-6 bg-black/30 rounded-2xl border border-white/10">
+                <label class="font-semibold uppercase tracking-wider text-sm">Speed</label>
+                <input type="range" id="speedSlider" min="1" max="10" value="5" oninput="updateSpeed()" class="slider">
+                <span class="value-display" id="speedValue">5</span>
             </div>
 
-            <div class="display-controls">
-                <div class="width-control">
-                    <label>Text Width</label>
-                    <div class="width-buttons">
-                        <button class="control-font-btn" onclick="decreaseWidth()">-</button>
-                        <span class="width-value" id="widthValue">100%</span>
-                        <button class="control-font-btn" onclick="increaseWidth()">+</button>
+            <!-- Display Controls -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 p-6 bg-black/30 rounded-2xl border border-white/10">
+                <div class="flex flex-col gap-3">
+                    <label class="font-semibold uppercase tracking-wider text-sm text-slate-300">Text Width</label>
+                    <div class="flex items-center gap-4">
+                        <button class="control-btn min-w-12" onclick="decreaseWidth()">-</button>
+                        <span class="value-display min-w-12" id="widthValue">100%</span>
+                        <button class="control-btn min-w-12" onclick="increaseWidth()">+</button>
                     </div>
                 </div>
 
-                <div class="font-size-control">
-                    <label>Font Size</label>
-                    <div class="font-size-buttons">
-                        <button class="control-font-btn" onclick="decreaseFontSize()">A-</button>
-                        <span class="font-size-value" id="fontSizeValue">2.5em</span>
-                        <button class="control-font-btn" onclick="increaseFontSize()">A+</button>
+                <div class="flex flex-col gap-3">
+                    <label class="font-semibold uppercase tracking-wider text-sm text-slate-300">Font Size</label>
+                    <div class="flex items-center gap-4">
+                        <button class="control-btn min-w-12" onclick="decreaseFontSize()">A-</button>
+                        <span class="value-display min-w-12" id="fontSizeValue">2.5em</span>
+                        <button class="control-btn min-w-12" onclick="increaseFontSize()">A+</button>
                     </div>
                 </div>
 
-                <div class="mirror-control">
-                    <label class="mirror-label">Mirror Controls</label>
-                    <div class="mirror-buttons">
-                        <div class="mirror-toggle">
+                <div class="flex flex-col gap-4">
+                    <label class="font-semibold uppercase tracking-wider text-sm text-slate-300">Mirror Controls</label>
+                    <div class="flex flex-col gap-4 w-full">
+                        <div class="flex items-center gap-3 justify-between">
                             <label class="switch">
                                 <input type="checkbox" id="horizontalMirror" onchange="updateHorizontalMirror()">
                                 <span class="slider"></span>
                             </label>
-                            <span class="toggle-label">Horizontal</span>
+                            <span class="text-sm font-medium text-white min-w-20">Horizontal</span>
                         </div>
-                        <div class="mirror-toggle">
+                        <div class="flex items-center gap-3 justify-between">
                             <label class="switch">
                                 <input type="checkbox" id="verticalMirror" onchange="updateVerticalMirror()">
                                 <span class="slider"></span>
                             </label>
-                            <span class="toggle-label">Vertical</span>
+                            <span class="text-sm font-medium text-white min-w-20">Vertical</span>
                         </div>
                     </div>
                 </div>
@@ -120,22 +127,22 @@ Happy recording! 🎬</textarea>
         </div>
 
         <!-- Teleprompter Panel -->
-        <div class="teleprompter-panel" id="teleprompterPanel">
-            <div class="teleprompter-controls">
-                <button class="teleprompter-btn" onclick="exitTeleprompter()">✕ Exit</button>
-                <button class="teleprompter-btn" onclick="toggleMirror()">🔄 Mirror</button>
+        <div class="teleprompter-panel hidden fixed inset-0 bg-black z-50" id="teleprompterPanel">
+            <div class="fixed top-5 right-5 flex gap-3 z-50">
+                <button class="btn px-5 py-3" onclick="exitTeleprompter()">✕ Exit</button>
+                <button class="btn px-5 py-3" onclick="toggleMirror()">🔄 Mirror</button>
             </div>
-            <div class="mirror-indicator" id="mirrorIndicator" style="display: none;">
+            <div class="fixed top-5 left-5 px-5 py-3 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl text-white font-semibold text-sm tracking-wider z-50 animate-pulse hidden" id="mirrorIndicator">
                 MIRROR MODE
             </div>
-            <div class="font-size-controls">
-                <button class="font-size-btn" onclick="changeFontSize(-0.2)">A-</button>
-                <button class="font-size-btn" onclick="changeFontSize(0.2)">A+</button>
-                <button class="width-btn" onclick="changeWidth(-10)">◀</button>
-                <button class="width-btn" onclick="changeWidth(10)">▶</button>
+            <div class="fixed bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4 z-50">
+                <button class="w-14 h-14 btn rounded-full text-xl" onclick="changeFontSize(-0.2)">A-</button>
+                <button class="w-14 h-14 btn rounded-full text-xl" onclick="changeFontSize(0.2)">A+</button>
+                <button class="w-14 h-14 btn rounded-full text-2xl" onclick="changeWidth(-10)">◀</button>
+                <button class="w-14 h-14 btn rounded-full text-2xl" onclick="changeWidth(10)">▶</button>
             </div>
-            <div class="teleprompter-text" id="teleprompterText">
-                <div class="teleprompter-content" id="teleprompterContent">
+            <div class="py-12 px-5 text-4xl leading-relaxed text-center text-white h-screen overflow-hidden relative flex justify-center items-start" id="teleprompterText">
+                <div class="absolute w-full max-w-full left-1/2 transform -translate-x-1/2 transition-all duration-300 px-5 whitespace-pre-wrap" id="teleprompterContent">
                     Waiting for text from controller...
                 </div>
             </div>
