@@ -13,6 +13,7 @@ let scrollSpeed = 5;
 let fontSize = 2.5;
 let textWidth = 100;
 let isMirrored = false;
+let mirrorMode = "none"; // "none", "horizontal", "vertical", "both"
 let animationId = null;
 
 // Initialize on page load
@@ -227,6 +228,26 @@ function handleMessage(message) {
         document.getElementById("teleprompterText").style.fontSize = fontSize + "em";
         break;
     }
+  } else if (mode === "controller") {
+    // Handle messages that update controller UI
+    switch (message.type) {
+      case "mirror":
+        // Update controller dropdown when teleprompter changes mirror mode
+        mirrorMode = message.value;
+        const mirrorSelect = document.getElementById("mirrorSelect");
+        if (mirrorSelect) {
+          mirrorSelect.value = mirrorMode;
+        }
+        break;
+      case "width":
+        // Update controller width slider when teleprompter changes width
+        textWidth = message.value;
+        const widthSlider = document.getElementById("widthSlider");
+        const widthValue = document.getElementById("widthValue");
+        if (widthSlider) widthSlider.value = textWidth;
+        if (widthValue) widthValue.textContent = textWidth + "%";
+        break;
+    }
   }
 }
 
@@ -301,9 +322,10 @@ function updateWidth() {
  * Update mirror setting
  */
 function updateMirror() {
-  const toggle = document.getElementById("mirrorToggle");
-  isMirrored = toggle.checked;
-  sendMessage({ type: "mirror", value: isMirrored });
+  const select = document.getElementById("mirrorSelect");
+  mirrorMode = select.value;
+  isMirrored = mirrorMode !== "none"; // For backward compatibility
+  sendMessage({ type: "mirror", value: mirrorMode });
 }
 
 /**
@@ -354,16 +376,38 @@ function updateTeleprompterWidth(width) {
 /**
  * Set teleprompter mirror mode
  */
-function setTeleprompterMirror(mirror) {
-  isMirrored = mirror;
+function setTeleprompterMirror(mode) {
+  mirrorMode = mode;
+  // Keep isMirrored for backward compatibility
+  isMirrored = mode !== "none";
+  
   const teleprompterText = document.getElementById("teleprompterText");
   const mirrorIndicator = document.getElementById("mirrorIndicator");
 
-  if (mirror) {
-    teleprompterText.classList.add("mirrored");
-    if (mirrorIndicator) mirrorIndicator.style.display = "block";
+  // Remove all mirror classes
+  teleprompterText.classList.remove("mirrored-horizontal", "mirrored-vertical", "mirrored-both");
+  
+  // Add appropriate mirror class based on mode
+  if (mode === "horizontal") {
+    teleprompterText.classList.add("mirrored-horizontal");
+    if (mirrorIndicator) {
+      mirrorIndicator.textContent = "HORIZONTAL MIRROR";
+      mirrorIndicator.style.display = "block";
+    }
+  } else if (mode === "vertical") {
+    teleprompterText.classList.add("mirrored-vertical");
+    if (mirrorIndicator) {
+      mirrorIndicator.textContent = "VERTICAL MIRROR";
+      mirrorIndicator.style.display = "block";
+    }
+  } else if (mode === "both") {
+    teleprompterText.classList.add("mirrored-both");
+    if (mirrorIndicator) {
+      mirrorIndicator.textContent = "BOTH MIRRORS";
+      mirrorIndicator.style.display = "block";
+    }
   } else {
-    teleprompterText.classList.remove("mirrored");
+    // mode === "none"
     if (mirrorIndicator) mirrorIndicator.style.display = "none";
   }
 }
@@ -372,10 +416,15 @@ function setTeleprompterMirror(mirror) {
  * Toggle mirror mode (for direct control on teleprompter)
  */
 function toggleMirror() {
-  isMirrored = !isMirrored;
-  setTeleprompterMirror(isMirrored);
+  // Cycle through mirror modes: none -> horizontal -> vertical -> both -> none
+  const modes = ["none", "horizontal", "vertical", "both"];
+  const currentIndex = modes.indexOf(mirrorMode);
+  const nextIndex = (currentIndex + 1) % modes.length;
+  mirrorMode = modes[nextIndex];
+  
+  setTeleprompterMirror(mirrorMode);
   // Send update to controller
-  sendMessage({ type: "mirror", value: isMirrored });
+  sendMessage({ type: "mirror", value: mirrorMode });
 }
 
 /**

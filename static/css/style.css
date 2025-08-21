@@ -420,6 +420,31 @@ body {
   gap: 15px;
 }
 
+.mirror-select {
+  padding: 8px 12px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 120px;
+}
+
+.mirror-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+}
+
+.mirror-select option {
+  background: #1a1a2e;
+  color: #fff;
+  padding: 8px;
+}
+
 .switch {
   position: relative;
   display: inline-block;
@@ -504,8 +529,16 @@ input:checked + .slider:before {
   align-items: flex-start;
 }
 
-.teleprompter-text.mirrored {
+.teleprompter-text.mirrored-horizontal {
   transform: scaleX(-1);
+}
+
+.teleprompter-text.mirrored-vertical {
+  transform: scaleY(-1);
+}
+
+.teleprompter-text.mirrored-both {
+  transform: scaleX(-1) scaleY(-1);
 }
 
 .teleprompter-content {
@@ -519,9 +552,19 @@ input:checked + .slider:before {
   white-space: pre-wrap;
 }
 
-.teleprompter-text.mirrored .teleprompter-content {
-  /* When mirrored, we need to adjust the transform */
+.teleprompter-text.mirrored-horizontal .teleprompter-content {
+  /* When horizontally mirrored, we need to adjust the transform */
   transform: translateX(-50%) scaleX(1);
+}
+
+.teleprompter-text.mirrored-vertical .teleprompter-content {
+  /* When vertically mirrored, we need to adjust the transform */
+  transform: translateX(-50%) scaleY(1);
+}
+
+.teleprompter-text.mirrored-both .teleprompter-content {
+  /* When both horizontally and vertically mirrored, we need to adjust both transforms */
+  transform: translateX(-50%) scaleX(1) scaleY(1);
 }
 
 .teleprompter-controls {
