@@ -131,6 +131,7 @@ function setupWebSocketHandlers() {
         // Also sync initial display settings
         updateWidth();
         updateMirror();
+        updateFontSizeDisplay();
       }, 500);
     }
   };
@@ -221,6 +222,10 @@ function handleMessage(message) {
       case "mirror":
         setTeleprompterMirror(message.value);
         break;
+      case "fontsize":
+        fontSize = message.value;
+        document.getElementById("teleprompterText").style.fontSize = fontSize + "em";
+        break;
     }
   }
 }
@@ -299,6 +304,34 @@ function updateMirror() {
   const toggle = document.getElementById("mirrorToggle");
   isMirrored = toggle.checked;
   sendMessage({ type: "mirror", value: isMirrored });
+}
+
+/**
+ * Increase font size from controller
+ */
+function increaseFontSize() {
+  fontSize = Math.max(1, Math.min(5, fontSize + 0.2));
+  updateFontSizeDisplay();
+  sendMessage({ type: "fontsize", value: fontSize });
+}
+
+/**
+ * Decrease font size from controller
+ */
+function decreaseFontSize() {
+  fontSize = Math.max(1, Math.min(5, fontSize - 0.2));
+  updateFontSizeDisplay();
+  sendMessage({ type: "fontsize", value: fontSize });
+}
+
+/**
+ * Update font size display in controller
+ */
+function updateFontSizeDisplay() {
+  const fontSizeValue = document.getElementById("fontSizeValue");
+  if (fontSizeValue) {
+    fontSizeValue.textContent = fontSize.toFixed(1) + "em";
+  }
 }
 
 // Teleprompter Functions
