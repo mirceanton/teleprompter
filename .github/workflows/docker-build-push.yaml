@@ -34,7 +34,7 @@ jobs:
         uses: docker/metadata-action@v5.8.0
         id: meta
         with:
-          images: ghcr.io/${{ github.repository }}/teleprompter
+          images: ghcr.io/${{ github.repository }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
