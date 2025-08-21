@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Teleprompter</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Remote Teleprompter</h1>
+            <p>Control your phone's teleprompter from your computer</p>
+        </div>
+
+        <div class="mode-selector">
+            <button class="mode-btn" onclick="setMode('controller')">
+                💻 Controller Mode
+            </button>
+            <button class="mode-btn" onclick="setMode('teleprompter')">
+                📱 Teleprompter Mode
+            </button>
+        </div>
+
+        <div class="setup-panel">
+            <div class="input-group">
+                <label for="channelName">Channel Name</label>
+                <input type="text" id="channelName" placeholder="Enter a unique channel name">
+            </div>
+            <button class="connect-btn" onclick="connect()">Connect to Channel</button>
+            <div id="status" class="status disconnected">Not Connected</div>
+        </div>
+
+        <!-- Controller Panel -->
+        <div class="controller-panel" id="controllerPanel">
+            <h2>📝 Script Editor</h2>
+            <textarea class="script-editor" id="scriptEditor" placeholder="Paste or type your script here...">Welcome to Remote Teleprompter!
+
+This is your teleprompter script. Edit this text on your computer, and it will appear on your phone's screen.
+
+Instructions:
+1. Use the same channel name on both devices
+2. Select "Controller Mode" on your computer
+3. Select "Teleprompter Mode" on your phone
+4. Click Connect on both devices
+5. Start controlling your teleprompter remotely!
+
+The text will sync automatically as you type. Use the controls below to manage scrolling speed and playback.
+
+Happy recording! 🎬</textarea>
+
+            <div class="control-buttons">
+                <button class="control-btn primary" onclick="startScrolling()">
+                    ▶️ Start
+                </button>
+                <button class="control-btn" onclick="pauseScrolling()">
+                    ⏸️ Pause
+                </button>
+                <button class="control-btn" onclick="resetScrolling()">
+                    ⏮️ Reset
+                </button>
+                <button class="control-btn" onclick="syncText()">
+                    🔄 Sync Text
+                </button>
+            </div>
+
+            <div class="speed-control">
+                <label>Speed</label>
+                <input type="range" id="speedSlider" min="1" max="10" value="5" oninput="updateSpeed()">
+                <span class="speed-value" id="speedValue">5</span>
+            </div>
+
+            <div class="display-controls">
+                <div class="width-control">
+                    <label>Text Width</label>
+                    <input type="range" id="widthSlider" min="30" max="100" value="100" oninput="updateWidth()">
+                    <span class="width-value" id="widthValue">100%</span>
+                </div>
+
+                <div class="mirror-control">
+                    <label class="switch">
+                        <input type="checkbox" id="mirrorToggle" onchange="updateMirror()">
+                        <span class="slider"></span>
+                    </label>
+                    <label for="mirrorToggle" class="mirror-label">Mirror Text</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teleprompter Panel -->
+        <div class="teleprompter-panel" id="teleprompterPanel">
+            <div class="teleprompter-controls">
+                <button class="teleprompter-btn" onclick="exitTeleprompter()">✕ Exit</button>
+                <button class="teleprompter-btn" onclick="toggleMirror()">🔄 Mirror</button>
+            </div>
+            <div class="mirror-indicator" id="mirrorIndicator" style="display: none;">
+                MIRROR MODE
+            </div>
+            <div class="font-size-controls">
+                <button class="font-size-btn" onclick="changeFontSize(-0.2)">A-</button>
+                <button class="font-size-btn" onclick="changeFontSize(0.2)">A+</button>
+                <button class="width-btn" onclick="changeWidth(-10)">◀</button>
+                <button class="width-btn" onclick="changeWidth(10)">▶</button>
+            </div>
+            <div class="teleprompter-text" id="teleprompterText">
+                <div class="teleprompter-content" id="teleprompterContent">
+                    Waiting for text from controller...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>
