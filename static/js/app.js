@@ -206,6 +206,12 @@ function handleMessage(message) {
       case "reset":
         resetTeleprompterScrolling();
         break;
+      case "fastforward":
+        fastForwardTeleprompter();
+        break;
+      case "rewind":
+        rewindTeleprompter();
+        break;
       case "speed":
         scrollSpeed = message.value;
         break;
@@ -248,6 +254,20 @@ function pauseScrolling() {
  */
 function resetScrolling() {
   sendMessage({ type: "reset" });
+}
+
+/**
+ * Fast forward text on teleprompter
+ */
+function fastForwardText() {
+  sendMessage({ type: "fastforward" });
+}
+
+/**
+ * Rewind text on teleprompter
+ */
+function rewindText() {
+  sendMessage({ type: "rewind" });
 }
 
 /**
@@ -361,6 +381,44 @@ function resetTeleprompterScrolling() {
   const content = document.getElementById("teleprompterContent");
   content.style.transform = `translateX(-50%) translateY(${scrollPosition}px)`;
   pauseTeleprompterScrolling();
+}
+
+/**
+ * Fast forward teleprompter text
+ */
+function fastForwardTeleprompter() {
+  const content = document.getElementById("teleprompterContent");
+  const container = document.getElementById("teleprompterText");
+  
+  // Move forward by a large amount
+  scrollPosition -= scrollSpeed * 5;
+  
+  // Check boundaries - don't go past the end
+  const maxScroll = -(content.offsetHeight - container.offsetHeight + 100);
+  if (scrollPosition < maxScroll) {
+    scrollPosition = maxScroll;
+  }
+  
+  // Apply transform
+  content.style.transform = `translateX(-50%) translateY(${scrollPosition}px)`;
+}
+
+/**
+ * Rewind teleprompter text
+ */
+function rewindTeleprompter() {
+  const content = document.getElementById("teleprompterContent");
+  
+  // Move backward by a large amount
+  scrollPosition += scrollSpeed * 5;
+  
+  // Check boundaries - don't go past the beginning
+  if (scrollPosition > 0) {
+    scrollPosition = 0;
+  }
+  
+  // Apply transform
+  content.style.transform = `translateX(-50%) translateY(${scrollPosition}px)`;
 }
 
 /**
