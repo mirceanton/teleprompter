@@ -378,9 +378,30 @@ body {
 
 /* Mirror Control Styling */
 .mirror-control {
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   gap: 15px;
+}
+
+.mirror-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+}
+
+.mirror-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.toggle-label {
+  font-size: 0.9em;
+  font-weight: 500;
+  color: #fff;
+  min-width: 80px;
 }
 
 .switch {
@@ -467,8 +488,16 @@ input:checked + .slider:before {
   align-items: flex-start;
 }
 
-.teleprompter-text.mirrored {
+.teleprompter-text.mirrored-horizontal {
   transform: scaleX(-1);
+}
+
+.teleprompter-text.mirrored-vertical {
+  transform: scaleY(-1);
+}
+
+.teleprompter-text.mirrored-both {
+  transform: scaleX(-1) scaleY(-1);
 }
 
 .teleprompter-content {
@@ -482,9 +511,19 @@ input:checked + .slider:before {
   white-space: pre-wrap;
 }
 
-.teleprompter-text.mirrored .teleprompter-content {
-  /* When mirrored, we need to adjust the transform */
+.teleprompter-text.mirrored-horizontal .teleprompter-content {
+  /* When horizontally mirrored, we need to adjust the transform */
   transform: translateX(-50%) scaleX(1);
+}
+
+.teleprompter-text.mirrored-vertical .teleprompter-content {
+  /* When vertically mirrored, we need to adjust the transform */
+  transform: translateX(-50%) scaleY(1);
+}
+
+.teleprompter-text.mirrored-both .teleprompter-content {
+  /* When both horizontally and vertically mirrored, we need to adjust both transforms */
+  transform: translateX(-50%) scaleX(1) scaleY(1);
 }
 
 .teleprompter-controls {
