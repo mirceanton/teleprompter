@@ -129,7 +129,7 @@ function setupWebSocketHandlers() {
       setTimeout(() => {
         syncText();
         // Also sync initial display settings
-        updateWidth();
+        updateWidthDisplay();
         updateMirror();
         updateFontSizeDisplay();
       }, 500);
@@ -287,13 +287,30 @@ function updateSpeed() {
 }
 
 /**
- * Update text width
+ * Update text width display
  */
-function updateWidth() {
-  const slider = document.getElementById("widthSlider");
-  const value = slider.value;
-  document.getElementById("widthValue").textContent = value + "%";
-  textWidth = parseInt(value);
+function updateWidthDisplay() {
+  const widthValue = document.getElementById("widthValue");
+  if (widthValue) {
+    widthValue.textContent = textWidth + "%";
+  }
+}
+
+/**
+ * Increase text width from controller
+ */
+function increaseWidth() {
+  textWidth = Math.max(30, Math.min(100, textWidth + 5));
+  updateWidthDisplay();
+  sendMessage({ type: "width", value: textWidth });
+}
+
+/**
+ * Decrease text width from controller
+ */
+function decreaseWidth() {
+  textWidth = Math.max(30, Math.min(100, textWidth - 5));
+  updateWidthDisplay();
   sendMessage({ type: "width", value: textWidth });
 }
 
