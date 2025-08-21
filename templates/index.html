@@ -81,8 +81,11 @@ Happy recording! 🎬</textarea>
             <div class="display-controls">
                 <div class="width-control">
                     <label>Text Width</label>
-                    <input type="range" id="widthSlider" min="30" max="100" value="100" oninput="updateWidth()">
-                    <span class="width-value" id="widthValue">100%</span>
+                    <div class="width-buttons">
+                        <button class="control-font-btn" onclick="decreaseWidth()">-</button>
+                        <span class="width-value" id="widthValue">100%</span>
+                        <button class="control-font-btn" onclick="increaseWidth()">+</button>
+                    </div>
                 </div>
 
                 <div class="font-size-control">
