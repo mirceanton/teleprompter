@@ -415,34 +415,30 @@ body {
 
 /* Mirror Control Styling */
 .mirror-control {
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   gap: 15px;
 }
 
-.mirror-select {
-  padding: 8px 12px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.3);
-  color: #fff;
+.mirror-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+}
+
+.mirror-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.toggle-label {
   font-size: 0.9em;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  min-width: 120px;
-}
-
-.mirror-select:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
-}
-
-.mirror-select option {
-  background: #1a1a2e;
+  font-weight: 500;
   color: #fff;
-  padding: 8px;
+  min-width: 80px;
 }
 
 .switch {

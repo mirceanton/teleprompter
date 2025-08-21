@@ -13,7 +13,9 @@ let scrollSpeed = 5;
 let fontSize = 2.5;
 let textWidth = 100;
 let isMirrored = false;
-let mirrorMode = "none"; // "none", "horizontal", "vertical", "both"
+let isHorizontalMirrored = false;
+let isVerticalMirrored = false;
+let mirrorMode = "none"; // "none", "horizontal", "vertical", "both" - kept for backward compatibility
 let animationId = null;
 
 // Initialize on page load
@@ -131,7 +133,7 @@ function setupWebSocketHandlers() {
         syncText();
         // Also sync initial display settings
         updateWidth();
-        updateMirror();
+        updateMirrorFromState();
         updateFontSizeDisplay();
       }, 500);
     }
@@ -221,7 +223,7 @@ function handleMessage(message) {
         updateTeleprompterWidth(message.value);
         break;
       case "mirror":
-        setTeleprompterMirror(message.value);
+        setTeleprompterMirror(message.value, message.horizontal, message.vertical);
         break;
       case "fontsize":
         fontSize = message.value;
@@ -232,12 +234,8 @@ function handleMessage(message) {
     // Handle messages that update controller UI
     switch (message.type) {
       case "mirror":
-        // Update controller dropdown when teleprompter changes mirror mode
-        mirrorMode = message.value;
-        const mirrorSelect = document.getElementById("mirrorSelect");
-        if (mirrorSelect) {
-          mirrorSelect.value = mirrorMode;
-        }
+        // Update controller toggles when teleprompter changes mirror mode
+        setMirrorState(message.horizontal, message.vertical);
         break;
       case "width":
         // Update controller width slider when teleprompter changes width
@@ -319,13 +317,73 @@ function updateWidth() {
 }
 
 /**
- * Update mirror setting
+ * Update horizontal mirror setting
  */
-function updateMirror() {
-  const select = document.getElementById("mirrorSelect");
-  mirrorMode = select.value;
+function updateHorizontalMirror() {
+  const checkbox = document.getElementById("horizontalMirror");
+  isHorizontalMirrored = checkbox.checked;
+  updateMirrorFromState();
+}
+
+/**
+ * Update vertical mirror setting
+ */
+function updateVerticalMirror() {
+  const checkbox = document.getElementById("verticalMirror");
+  isVerticalMirrored = checkbox.checked;
+  updateMirrorFromState();
+}
+
+/**
+ * Update mirror mode based on current state and send to teleprompter
+ */
+function updateMirrorFromState() {
+  // Determine mirror mode from boolean states
+  if (isHorizontalMirrored && isVerticalMirrored) {
+    mirrorMode = "both";
+  } else if (isHorizontalMirrored) {
+    mirrorMode = "horizontal";
+  } else if (isVerticalMirrored) {
+    mirrorMode = "vertical";
+  } else {
+    mirrorMode = "none";
+  }
+  
   isMirrored = mirrorMode !== "none"; // For backward compatibility
-  sendMessage({ type: "mirror", value: mirrorMode });
+  sendMessage({ 
+    type: "mirror", 
+    value: mirrorMode,
+    horizontal: isHorizontalMirrored,
+    vertical: isVerticalMirrored
+  });
+}
+
+/**
+ * Set mirror state from incoming message
+ */
+function setMirrorState(horizontal, vertical) {
+  isHorizontalMirrored = horizontal;
+  isVerticalMirrored = vertical;
+  
+  // Update UI toggles
+  const horizontalCheckbox = document.getElementById("horizontalMirror");
+  const verticalCheckbox = document.getElementById("verticalMirror");
+  
+  if (horizontalCheckbox) horizontalCheckbox.checked = isHorizontalMirrored;
+  if (verticalCheckbox) verticalCheckbox.checked = isVerticalMirrored;
+  
+  // Update mirror mode for backward compatibility
+  if (isHorizontalMirrored && isVerticalMirrored) {
+    mirrorMode = "both";
+  } else if (isHorizontalMirrored) {
+    mirrorMode = "horizontal";
+  } else if (isVerticalMirrored) {
+    mirrorMode = "vertical";
+  } else {
+    mirrorMode = "none";
+  }
+  
+  isMirrored = mirrorMode !== "none";
 }
 
 /**
@@ -376,8 +434,13 @@ function updateTeleprompterWidth(width) {
 /**
  * Set teleprompter mirror mode
  */
-function setTeleprompterMirror(mode) {
+function setTeleprompterMirror(mode, horizontal, vertical) {
   mirrorMode = mode;
+  
+  // Update boolean states if provided
+  if (horizontal !== undefined) isHorizontalMirrored = horizontal;
+  if (vertical !== undefined) isVerticalMirrored = vertical;
+  
   // Keep isMirrored for backward compatibility
   isMirrored = mode !== "none";
   
@@ -422,9 +485,18 @@ function toggleMirror() {
   const nextIndex = (currentIndex + 1) % modes.length;
   mirrorMode = modes[nextIndex];
   
-  setTeleprompterMirror(mirrorMode);
+  // Update boolean states based on new mode
+  isHorizontalMirrored = mirrorMode === "horizontal" || mirrorMode === "both";
+  isVerticalMirrored = mirrorMode === "vertical" || mirrorMode === "both";
+  
+  setTeleprompterMirror(mirrorMode, isHorizontalMirrored, isVerticalMirrored);
   // Send update to controller
-  sendMessage({ type: "mirror", value: mirrorMode });
+  sendMessage({ 
+    type: "mirror", 
+    value: mirrorMode,
+    horizontal: isHorizontalMirrored,
+    vertical: isVerticalMirrored
+  });
 }
 
 /**

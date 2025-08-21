@@ -95,13 +95,23 @@ Happy recording! 🎬</textarea>
                 </div>
 
                 <div class="mirror-control">
-                    <label for="mirrorSelect" class="mirror-label">Mirror Mode</label>
-                    <select id="mirrorSelect" class="mirror-select" onchange="updateMirror()">
-                        <option value="none">None</option>
-                        <option value="horizontal">Horizontal</option>
-                        <option value="vertical">Vertical</option>
-                        <option value="both">Both</option>
-                    </select>
+                    <label class="mirror-label">Mirror Controls</label>
+                    <div class="mirror-buttons">
+                        <div class="mirror-toggle">
+                            <label class="switch">
+                                <input type="checkbox" id="horizontalMirror" onchange="updateHorizontalMirror()">
+                                <span class="slider"></span>
+                            </label>
+                            <span class="toggle-label">Horizontal</span>
+                        </div>
+                        <div class="mirror-toggle">
+                            <label class="switch">
+                                <input type="checkbox" id="verticalMirror" onchange="updateVerticalMirror()">
+                                <span class="slider"></span>
+                            </label>
+                            <span class="toggle-label">Vertical</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
