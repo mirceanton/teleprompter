@@ -61,7 +61,7 @@ jobs:
         uses: docker/metadata-action@v5.8.0
         id: meta
         with:
-          images: ghcr.io/${{ github.repository }}-${{ matrix.folder }}
+          images: ghcr.io/${{ github.repository }}-${{ matrix.directory }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -70,7 +70,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6.18.0
         with:
-          context: ./services/${{ matrix.folder }}
+          context: ./services/${{ matrix.directory }}
           push: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.push == 'true') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
