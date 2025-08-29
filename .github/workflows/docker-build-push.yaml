@@ -30,13 +30,13 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Generate matrix from services directory
-        uses: mirceanton/action-folder-matrix@v1
+        uses: mirceanton/action-folder-matrix@v2.0.0
         id: set-matrix
         with:
           path: 'services'
           filter: ${{ github.event.inputs.service || '' }}
           changed-only: ${{ github.event_name == 'pull_request' }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   build-and-push:
     runs-on: ubuntu-latest
