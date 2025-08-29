@@ -173,6 +173,31 @@ body {
   }
 }
 
+/* Connection Info */
+.connection-info {
+  text-align: center;
+  padding: 8px 16px;
+  margin: 10px 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 0.9em;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.connection-info #connectionCount {
+  font-weight: bold;
+  color: #10b981;
+}
+
+.connection-info #multiTeleprompterNote {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.85em;
+  color: #a3a3a3;
+  font-style: italic;
+}
+
 /* Controller Panel */
 .controller-panel {
   display: none;

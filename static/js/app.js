@@ -137,6 +137,11 @@ function setupWebSocketHandlers() {
         updateFontSizeDisplay();
       }, 500);
     }
+    
+    // Request connection info update
+    setTimeout(() => {
+      sendMessage({ type: "request_connection_info" });
+    }, 1000);
   };
 
   ws.onmessage = function (event) {
@@ -229,6 +234,9 @@ function handleMessage(message) {
         fontSize = message.value;
         document.getElementById("teleprompterText").style.fontSize = fontSize + "em";
         break;
+      case "connection_update":
+        updateConnectionInfo(message.connection_count);
+        break;
     }
   } else if (mode === "controller") {
     // Handle messages that update controller UI
@@ -244,6 +252,9 @@ function handleMessage(message) {
         const widthValue = document.getElementById("widthValue");
         if (widthSlider) widthSlider.value = textWidth;
         if (widthValue) widthValue.textContent = textWidth + "%";
+        break;
+      case "connection_update":
+        updateConnectionInfo(message.connection_count);
         break;
     }
   }
@@ -642,6 +653,29 @@ function changeFontSize(delta) {
 function showNotification(message, type = "info") {
   // Simple alert for now, can be replaced with better notification system
   alert(message);
+}
+
+/**
+ * Update connection information display
+ */
+function updateConnectionInfo(connectionCount) {
+  const connectionInfo = document.getElementById("connectionInfo");
+  const connectionCountElement = document.getElementById("connectionCount");
+  const multiTeleprompterNote = document.getElementById("multiTeleprompterNote");
+  
+  if (connectionInfo && connectionCountElement) {
+    connectionCountElement.textContent = connectionCount;
+    connectionInfo.style.display = "block";
+    
+    // Show multi-teleprompter note if more than one connection
+    if (multiTeleprompterNote) {
+      if (connectionCount > 1) {
+        multiTeleprompterNote.style.display = "block";
+      } else {
+        multiTeleprompterNote.style.display = "none";
+      }
+    }
+  }
 }
 
 // Keyboard shortcuts (optional enhancement)
