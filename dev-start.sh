@@ -29,6 +29,9 @@ echo "📱 Starting Teleprompter App on port 3002..."
 cd ../teleprompter && npm run dev &
 TELEPROMPTER_PID=$!
 
+# Wait for services to start
+sleep 5
+
 echo ""
 echo "✅ All services started!"
 echo "📡 Backend API:      http://localhost:8001/api/health"
