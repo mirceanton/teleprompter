@@ -5,6 +5,9 @@ permissions:
   packages: write
 
 on:
+  pull_request:
+    paths:
+      - 'services/**'
   release: { types: [ created ] }
   workflow_dispatch:
     inputs:
@@ -31,7 +34,8 @@ jobs:
         id: set-matrix
         with:
           path: 'services'
-          filtee: ${{ github.event.inputs.service || '' }}
+          filter: ${{ github.event.inputs.service || '' }}
+          changed-only: ${{ github.event_name == 'pull_request' }}
 
   build-and-push:
     runs-on: ubuntu-latest
@@ -66,6 +70,6 @@ jobs:
         uses: docker/build-push-action@v6.18.0
         with:
           context: ./services/${{ matrix.folder }}
-          push: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.push) }}
+          push: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.push == 'true') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
