@@ -1,8 +1,7 @@
----
 version: '3.8'
 
 services:
-  # Backend API Service (New microservice architecture)
+  # Backend API Service
   backend:
     build:
       context: ./backend
@@ -13,7 +12,6 @@ services:
       - PORT=8001
     networks:
       - teleprompter-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8001/api/health')"]
       interval: 30s
@@ -29,7 +27,6 @@ services:
       - "80:80"
     networks:
       - teleprompter-network
-    restart: unless-stopped
     depends_on:
       - backend
 
@@ -42,7 +39,6 @@ services:
       - "8080:80"
     networks:
       - teleprompter-network
-    restart: unless-stopped
     depends_on:
       - backend
 
@@ -55,11 +51,10 @@ services:
       - "8081:80"
     networks:
       - teleprompter-network
-    restart: unless-stopped
     depends_on:
       - backend
 
-  # Reverse Proxy for production routing
+  # Reverse Proxy (Optional - for production routing)
   nginx-proxy:
     image: nginx:alpine
     ports:
@@ -68,7 +63,6 @@ services:
       - ./nginx-proxy.conf:/etc/nginx/nginx.conf:ro
     networks:
       - teleprompter-network
-    restart: unless-stopped
     depends_on:
       - landing
       - controller
