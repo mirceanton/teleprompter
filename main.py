@@ -70,9 +70,10 @@ class ConnectionManager:
                     except:
                         disconnected.add(connection)
             
-            # Clean up disconnected clients
-            for conn in disconnected:
-                self.active_connections[channel].discard(conn)
+            # Clean up disconnected clients - check if channel still exists
+            if channel in self.active_connections:
+                for conn in disconnected:
+                    self.active_connections[channel].discard(conn)
 
 manager = ConnectionManager()
 
