@@ -1,5 +1,5 @@
 ---
-name: Build and Push Docker Image
+name: Build and Push Docker Images
 permissions:
   contents: read
   packages: write
@@ -9,13 +9,30 @@ on:
   workflow_dispatch:
     inputs:
       push:
-        description: 'Push the Docker image to the registry'
+        description: 'Push the Docker images to the registry'
         type: boolean
         default: false
 
 jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Generate matrix from services directory
+        uses: mirceanton/action-folder-matrix@v1
+        id: set-matrix
+        with:
+          path: 'services'
+
   build-and-push:
     runs-on: ubuntu-latest
+    needs: generate-matrix
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -34,7 +51,7 @@ jobs:
         uses: docker/metadata-action@v5.8.0
         id: meta
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ github.repository }}-${{ matrix.folder }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -43,7 +60,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6.18.0
         with:
-          context: .
+          context: ./services/${{ matrix.folder }}
           push: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.push) }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

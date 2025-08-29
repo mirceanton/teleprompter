@@ -1,11 +1,8 @@
----
-version: '3.8'
-
 services:
   # Backend API Service (New microservice architecture)
   backend:
     build:
-      context: ./backend
+      context: ./services/backend
       dockerfile: Dockerfile
     ports:
       - "8001:8001"
@@ -23,7 +20,7 @@ services:
   # Landing Page Service (/)
   landing:
     build:
-      context: ./landing
+      context: ./services/landing
       dockerfile: Dockerfile
     ports:
       - "80:80"
@@ -36,7 +33,7 @@ services:
   # Controller Service (/controller)
   controller:
     build:
-      context: ./controller
+      context: ./services/controller
       dockerfile: Dockerfile
     ports:
       - "8080:80"
@@ -49,7 +46,7 @@ services:
   # Teleprompter Service (/teleprompter)
   teleprompter:
     build:
-      context: ./teleprompter
+      context: ./services/teleprompter
       dockerfile: Dockerfile
     ports:
       - "8081:80"

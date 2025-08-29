@@ -75,28 +75,28 @@ This will start:
 
 1. **Start Backend API**:
 ```bash
-cd backend
+cd services/backend
 pip install -r requirements.txt
 python3 main.py
 ```
 
 2. **Start Landing Page**:
 ```bash
-cd landing
+cd services/landing
 npm install
 npm run dev
 ```
 
 3. **Start Controller App**:
 ```bash
-cd controller
+cd services/controller
 npm install
 npm run dev
 ```
 
 4. **Start Teleprompter App**:
 ```bash
-cd teleprompter
+cd services/teleprompter
 npm install
 npm run dev
 ```
