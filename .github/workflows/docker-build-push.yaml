@@ -12,6 +12,16 @@ on:
         description: 'Push the Docker images to the registry'
         type: boolean
         default: false
+      service:
+        description: 'Specific service to build (leave empty to build all services)'
+        type: choice
+        required: false
+        options:
+          - ''
+          - backend
+          - controller
+          - landing
+          - teleprompter
 
 jobs:
   generate-matrix:
@@ -27,6 +37,7 @@ jobs:
         id: set-matrix
         with:
           path: 'services'
+          regex: ${{ github.event.inputs.service && format('^{0}$', github.event.inputs.service) || '' }}
 
   build-and-push:
     runs-on: ubuntu-latest
