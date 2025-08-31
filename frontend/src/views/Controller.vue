@@ -101,6 +101,33 @@
                     </v-btn>
                   </v-col>
                 </v-row>
+
+                <!-- Speed Control -->
+                <div class="mt-4">
+                  <v-label class="mb-2">
+                    <v-icon class="mr-1">mdi-speedometer</v-icon>
+                    Speed
+                  </v-label>
+                  <v-row align="center">
+                    <v-col cols="3">
+                      <v-btn 
+                        size="small" 
+                        @click="decreaseSpeed"
+                        icon="mdi-minus"
+                      />
+                    </v-col>
+                    <v-col cols="6" class="text-center">
+                      {{ scrollSpeed }}
+                    </v-col>
+                    <v-col cols="3">
+                      <v-btn 
+                        size="small" 
+                        @click="increaseSpeed"
+                        icon="mdi-plus"
+                      />
+                    </v-col>
+                  </v-row>
+                </div>
               </v-card-text>
             </v-card>
 
@@ -142,17 +169,25 @@
                 <!-- Lines to scroll control -->
                 <div class="mb-3 mt-4">
                   <v-label class="mb-2">Lines to Scroll</v-label>
-                  <v-slider
-                    v-model="scrollLines"
-                    min="1"
-                    max="20"
-                    step="1"
-                    thumb-label
-                    color="primary"
-                  />
-                  <div class="text-center">
-                    Lines: {{ scrollLines }}
-                  </div>
+                  <v-row align="center">
+                    <v-col cols="3">
+                      <v-btn 
+                        size="small" 
+                        @click="decreaseScrollLines"
+                        icon="mdi-minus"
+                      />
+                    </v-col>
+                    <v-col cols="6" class="text-center">
+                      {{ scrollLines }}
+                    </v-col>
+                    <v-col cols="3">
+                      <v-btn 
+                        size="small" 
+                        @click="increaseScrollLines"
+                        icon="mdi-plus"
+                      />
+                    </v-col>
+                  </v-row>
                 </div>
 
                 <v-row>
@@ -181,29 +216,6 @@
                     <div class="text-center text-caption mt-1">Go to End</div>
                   </v-col>
                 </v-row>
-              </v-card-text>
-            </v-card>
-
-            <!-- Speed Control -->
-            <v-card elevation="4" class="mb-4">
-              <v-card-title class="text-h6">
-                <v-icon class="mr-2">mdi-speedometer</v-icon>
-                Speed Control
-              </v-card-title>
-              
-              <v-card-text>
-                <v-slider
-                  v-model="scrollSpeed"
-                  min="1"
-                  max="10"
-                  step="1"
-                  thumb-label
-                  @update:model-value="updateSpeed"
-                  color="primary"
-                />
-                <div class="text-center">
-                  Speed: {{ scrollSpeed }}
-                </div>
               </v-card-text>
             </v-card>
 
@@ -566,6 +578,33 @@ Happy teleprompting! 🎬`,
         type: 'speed', 
         value: this.scrollSpeed 
       })
+    },
+
+    increaseSpeed() {
+      if (this.scrollSpeed < 10) {
+        this.scrollSpeed += 1
+        this.updateSpeed()
+      }
+    },
+
+    decreaseSpeed() {
+      if (this.scrollSpeed > 1) {
+        this.scrollSpeed -= 1
+        this.updateSpeed()
+      }
+    },
+
+    // Scroll lines controls
+    increaseScrollLines() {
+      if (this.scrollLines < 20) {
+        this.scrollLines += 1
+      }
+    },
+
+    decreaseScrollLines() {
+      if (this.scrollLines > 1) {
+        this.scrollLines -= 1
+      }
     },
     
     // Font size controls
