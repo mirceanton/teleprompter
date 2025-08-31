@@ -88,7 +88,7 @@
               
               <v-card-text>
                 <v-row>
-                  <!-- Play/Pause Toggle Button (Double Width) -->
+                  <!-- Play/Pause Toggle Button (Full Width) -->
                   <v-col cols="12">
                     <v-btn 
                       :color="isPlaying ? 'warning' : 'success'" 
@@ -99,29 +99,6 @@
                       <v-icon>{{ isPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
                       <span class="ml-2">{{ isPlaying ? 'Pause' : 'Start' }}</span>
                     </v-btn>
-                  </v-col>
-                  <!-- Reset and Fast Forward buttons -->
-                  <v-col cols="6">
-                    <v-btn 
-                      color="info" 
-                      @click="resetScrolling"
-                      block
-                      size="large"
-                    >
-                      <v-icon>mdi-skip-backward</v-icon>
-                    </v-btn>
-                    <div class="text-center text-caption mt-1">Reset</div>
-                  </v-col>
-                  <v-col cols="6">
-                    <v-btn 
-                      color="secondary" 
-                      @click="fastForwardText"
-                      block
-                      size="large"
-                    >
-                      <v-icon>mdi-fast-forward</v-icon>
-                    </v-btn>
-                    <div class="text-center text-caption mt-1">Fast Forward</div>
                   </v-col>
                 </v-row>
               </v-card-text>
@@ -536,17 +513,6 @@ Happy teleprompting! 🎬`,
       this.isPlaying = false
       this.sendMessage({ type: 'pause' })
       this.showSnackbar('Teleprompter paused', 'warning')
-    },
-    
-    resetScrolling() {
-      this.isPlaying = false
-      this.sendMessage({ type: 'reset' })
-      this.showSnackbar('Teleprompter reset', 'info')
-    },
-    
-    fastForwardText() {
-      this.sendMessage({ type: 'fast_forward' })
-      this.showSnackbar('Fast forwarding...', 'info')
     },
 
     // Navigation controls
