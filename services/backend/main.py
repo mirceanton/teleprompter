@@ -1,30 +1,25 @@
 """
-Remote Teleprompter Application
-A web-based teleprompter that allows control from one device (computer) 
-and display on another (phone).
+Remote Teleprompter API Backend
+FastAPI backend providing WebSocket communication and API endpoints for teleprompter microservices.
 """
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 import json
 import asyncio
 from typing import Dict, Set
 from pathlib import Path
 
-app = FastAPI(title="Remote Teleprompter")
+app = FastAPI(title="Remote Teleprompter API", openapi_url="/api/openapi.json", docs_url="/api/docs")
 
-# Setup paths
-BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR / "static"
-TEMPLATES_DIR = BASE_DIR / "templates"
-
-# Mount static files
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
-# Setup templates
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+# Configure CORS for frontend apps
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify exact origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Store active connections by channel
 class ConnectionManager:
@@ -77,12 +72,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    """Serve the main application page"""
-    return templates.TemplateResponse("index.html", {"request": request})
-
-@app.websocket("/ws/{channel}")
+@app.websocket("/api/ws/{channel}")
 async def websocket_endpoint(websocket: WebSocket, channel: str):
     """WebSocket endpoint for real-time communication"""
     await manager.connect(websocket, channel)
@@ -137,16 +127,16 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
             })
             await manager.broadcast_to_channel(connection_update, channel)
 
-@app.get("/channel/{channel}/info")
+@app.get("/api/channel/{channel}/info")
 async def get_channel_info(channel: str):
     """Get information about a specific channel"""
     return manager.get_channel_info(channel)
 
-@app.get("/health")
+@app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "active_channels": len(manager.active_connections)}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
