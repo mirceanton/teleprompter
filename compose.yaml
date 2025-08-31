@@ -1,5 +1,5 @@
 services:
-  # Backend API Service (New microservice architecture)
+  # Backend API Service
   backend:
     build:
       context: ./backend
@@ -17,59 +17,22 @@ services:
       timeout: 10s
       retries: 3
 
-  # Landing Page Service (/)
-  landing:
+  # Unified Frontend Service
+  frontend:
     build:
-      context: ./landing
+      context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "80:80"
-    networks:
-      - teleprompter-network
-    restart: unless-stopped
-    depends_on:
-      - backend
-
-  # Controller Service (/controller)
-  controller:
-    build:
-      context: ./controller
-      dockerfile: Dockerfile
-    ports:
-      - "8080:80"
-    networks:
-      - teleprompter-network
-    restart: unless-stopped
-    depends_on:
-      - backend
-
-  # Teleprompter Service (/teleprompter)
-  teleprompter:
-    build:
-      context: ./teleprompter
-      dockerfile: Dockerfile
-    ports:
-      - "8081:80"
-    networks:
-      - teleprompter-network
-    restart: unless-stopped
-    depends_on:
-      - backend
-
-  # Reverse Proxy for production routing
-  nginx-proxy:
-    image: nginx:alpine
+      args:
+        - BACKEND_URL=${FRONTEND_BACKEND_URL:-http://localhost:8001}
     ports:
       - "3000:80"
-    volumes:
-      - ./nginx-proxy.conf:/etc/nginx/nginx.conf:ro
+    environment:
+      # Runtime backend URL configuration - can be overridden
+      - BACKEND_URL=${FRONTEND_BACKEND_URL:-http://localhost:8001}
     networks:
       - teleprompter-network
     restart: unless-stopped
     depends_on:
-      - landing
-      - controller
-      - teleprompter
       - backend
 
 networks:
