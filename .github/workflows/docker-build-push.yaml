@@ -7,7 +7,10 @@ permissions:
 on:
   pull_request:
     paths:
-      - 'services/**'
+      - 'backend/**'
+      - 'controller/**'
+      - 'landing/**'
+      - 'teleprompter/**'
   release: { types: [ created ] }
   workflow_dispatch:
     inputs:
@@ -29,14 +32,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Generate matrix from services directory
-        uses: mirceanton/action-folder-matrix@v2.0.0
+      - name: Generate matrix for services
         id: set-matrix
-        with:
-          path: 'services'
-          filter: ${{ github.event.inputs.service || '' }}
-          changed-only: ${{ github.event_name == 'pull_request' }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Define the service directories
+          services='["backend", "controller", "landing", "teleprompter"]'
+          
+          # If a specific service is requested, filter to just that one
+          if [[ -n "${{ github.event.inputs.service }}" ]]; then
+            if [[ "$services" == *"${{ github.event.inputs.service }}"* ]]; then
+              services='["${{ github.event.inputs.service }}"]'
+            else
+              services='[]'
+            fi
+          fi
+          
+          # For pull requests, only include services that have changes
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            changed_services=()
+            for service in backend controller landing teleprompter; do
+              if git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} | grep -q "^${service}/"; then
+                changed_services+=("\"$service\"")
+              fi
+            done
+            if [[ ${#changed_services[@]} -gt 0 ]]; then
+              services="[$(IFS=,; echo "${changed_services[*]}")]"
+            else
+              services='[]'
+            fi
+          fi
+          
+          echo "matrix={\"directory\":$services}" >> $GITHUB_OUTPUT
 
   build-and-push:
     runs-on: ubuntu-latest
@@ -70,7 +96,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6.18.0
         with:
-          context: ./services/${{ matrix.directory }}
+          context: ./${{ matrix.directory }}
           push: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.push == 'true') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
