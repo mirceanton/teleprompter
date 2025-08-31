@@ -7,7 +7,12 @@ permissions:
 on:
   pull_request:
     paths:
-      - 'services/**'
+      - '**/*.py'
+      - '**/*.js'
+      - '**/*.vue'
+      - '**/package.json'
+      - '**/requirements.txt'
+      - '**/Dockerfile'
   release: { types: [ created ] }
   workflow_dispatch:
     inputs:
@@ -29,11 +34,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Generate matrix from services directory
+      - name: Generate matrix from root directory
         uses: mirceanton/action-folder-matrix@v2.0.0
         id: set-matrix
         with:
-          path: 'services'
+          path: '.'
           filter: ${{ github.event.inputs.service || '' }}
           changed-only: ${{ github.event_name == 'pull_request' }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -70,7 +75,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6.18.0
         with:
-          context: ./services/${{ matrix.directory }}
+          context: ./${{ matrix.directory }}
           push: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.push == 'true') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

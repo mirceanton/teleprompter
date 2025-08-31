@@ -1,184 +1,117 @@
-# Remote Teleprompter Microservices
+# Remote Teleprompter
 
-A web-based teleprompter application split into microservices for better scalability and deployment flexibility.
+A modern microservices-based teleprompter application that enables real-time teleprompter control between devices. One device (computer) acts as a controller to edit scripts and manage playback, while another device (phone/tablet) displays the teleprompter text.
+
+## Features
+
+- **Remote Control**: Control teleprompter from any device with a web browser
+- **Real-time Sync**: WebSocket-based communication for instant updates  
+- **Microservices Architecture**: Scalable, modular design with separate services
+- **Responsive Design**: Works on desktop, tablets, and mobile devices
+- **Channel-based**: Multiple independent teleprompter sessions via named channels
+- **Mirror Support**: Horizontal and vertical mirroring for teleprompter setup flexibility
+- **Adjustable Settings**: Speed control, font size, and text width adjustment
 
 ## Architecture
 
-The application is now split into 4 microservices:
+The application is built using a microservices architecture with the following services:
 
-### 🏠 Landing Page (`/`)
-- **Technology**: Vue.js 3 + Vuetify 3
-- **Port**: 80 (Docker) / 3000 (Development)
-- **Purpose**: Room ID generation/input and role selection
-- **Features**:
-  - Generate random room IDs
-  - Paste room IDs from clipboard
-  - Select role (Controller or Teleprompter)
-  - Redirect to appropriate microservice
+- **Backend Service** (`services/backend/`): FastAPI backend providing WebSocket and REST APIs
+- **Landing Service** (`services/landing/`): Vue.js application serving the main landing page
+- **Controller Service** (`services/controller/`): Vue.js application for script editing and playback control
+- **Teleprompter Service** (`services/teleprompter/`): Vue.js application for full-screen text display
+- **Nginx Proxy**: Reverse proxy routing traffic to appropriate services
 
-### 💻 Controller App (`/controller`)
-- **Technology**: Vue.js 3 + Vuetify 3
-- **Port**: 8080 (Docker) / 3001 (Development)
-- **Purpose**: Script editing and playback control
-- **Features**:
-  - Script editor with auto-sync
-  - Playback controls (start/pause/reset/fast-forward)
-  - Speed control
-  - Text width and font size adjustment
-  - Mirror controls
-  - Connection monitoring
-
-### 📱 Teleprompter App (`/teleprompter`)
-- **Technology**: Vue.js 3 + Vuetify 3
-- **Port**: 8081 (Docker) / 3002 (Development)
-- **Purpose**: Text display with scrolling
-- **Features**:
-  - Fullscreen text display
-  - Smooth scrolling
-  - Mirror modes (horizontal/vertical)
-  - Font size and width controls
-  - Floating controls in fullscreen mode
-
-### 📡 Backend API (`/api`)
-- **Technology**: FastAPI + WebSockets
-- **Port**: 8001
-- **Purpose**: Real-time communication between services
-- **Features**:
-  - WebSocket communication (`/api/ws/{channel}`)
-  - Channel management
-  - Health check endpoint (`/api/health`)
-  - CORS support for frontend apps
-
-## Development
+## Quick Start
 
 ### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- npm
+- Docker and Docker Compose
+- Node.js 18+ (for development)
+- Python 3.11+ (for backend development)
 
-### Quick Start (Development)
+### Installation & Running
+
 ```bash
-# Make the dev script executable
-chmod +x dev-start.sh
+# Clone the repository
+git clone https://github.com/mirceanton/teleprompter.git
+cd teleprompter
 
-# Start all services in development mode
-./dev-start.sh
+# Start all services using Docker Compose
+docker-compose up -d
 ```
 
-This will start:
-- Backend API: http://localhost:8001
-- Landing Page: http://localhost:3000
-- Controller: http://localhost:3001
-- Teleprompter: http://localhost:3002
+The application will be available at:
+- **Main Application**: http://localhost:3000 (via Nginx proxy)
+- **Landing Page**: http://localhost:80
+- **Controller**: http://localhost:8080
+- **Teleprompter**: http://localhost:8081
+- **Backend API**: http://localhost:8001
 
-### Manual Development Setup
-
-1. **Start Backend API**:
-```bash
-cd services/backend
-pip install -r requirements.txt
-python3 main.py
-```
-
-2. **Start Landing Page**:
-```bash
-cd services/landing
-npm install
-npm run dev
-```
-
-3. **Start Controller App**:
-```bash
-cd services/controller
-npm install
-npm run dev
-```
-
-4. **Start Teleprompter App**:
-```bash
-cd services/teleprompter
-npm install
-npm run dev
-```
-
-## Production Deployment
-
-### Using Docker Compose
-```bash
-# Build and start all services
-docker-compose up --build
-
-# Start in background
-docker-compose up -d --build
-```
-
-Services will be available at:
-- **Unified Access**: http://localhost:3000 (via nginx proxy)
-  - Landing: http://localhost:3000/
-  - Controller: http://localhost:3000/controller
-  - Teleprompter: http://localhost:3000/teleprompter
-  - API: http://localhost:3000/api
-- **Direct Access**:
-  - Landing: http://localhost:80
-  - Controller: http://localhost:8080
-  - Teleprompter: http://localhost:8081
-  - Backend API: http://localhost:8001
-
-### Individual Service Docker Build
-```bash
-# Backend API
-docker build -t teleprompter-backend ./backend
-
-# Landing Page
-docker build -t teleprompter-landing ./landing
-
-# Controller
-docker build -t teleprompter-controller ./controller
-
-# Teleprompter
-docker build -t teleprompter-teleprompter ./teleprompter
-```
-
-## Usage
-
-1. **Open Landing Page**: Navigate to the root URL
-2. **Create/Join Room**: Generate a room ID or paste an existing one
-3. **Select Role**: Choose "Controller" or "Teleprompter"
-4. **Controller Setup**: 
-   - Edit your script in the text editor
-   - Use playback controls to manage scrolling
-   - Adjust speed, font size, and mirror settings
-5. **Teleprompter Setup**:
-   - View the scrolling text
-   - Use fullscreen mode for better visibility
-   - Adjust local settings with floating controls
+### Usage
+1. Open http://localhost:3000 in your web browser
+2. Choose your mode:
+   - **💻 Controller Mode**: For editing scripts and controlling playback
+   - **📱 Teleprompter Mode**: For full-screen text display
+3. Enter a channel name (both devices must use the same channel name)
+4. Click "Connect to Channel"
+5. In Controller mode: Edit your script and use the controls
+6. In Teleprompter mode: The text will display and scroll automatically
 
 ## API Endpoints
 
-### Backend API (`/api`)
-- `GET /api/health` - Health check
-- `GET /api/channel/{channel}/info` - Get channel information
-- `WebSocket /api/ws/{channel}` - Real-time communication
+The backend service provides the following endpoints:
+
+- **GET /api/health**: Health check endpoint
+- **WebSocket /api/ws/{channel}**: Real-time communication for teleprompter control
 
 ## Technology Stack
 
-- **Frontend**: Vue.js 3, Vuetify 3, Vite
-- **Backend**: FastAPI, WebSockets, uvicorn
-- **Containerization**: Docker, nginx
-- **Orchestration**: Docker Compose
+- **Backend**: FastAPI (Python) with WebSocket support
+- **Frontend**: Vue.js 3 with Vite for modern JavaScript tooling
+- **Communication**: WebSockets for real-time messaging
+- **Infrastructure**: Docker, Docker Compose, Nginx reverse proxy
+- **Styling**: Modern CSS with responsive design
 
-## Migration from Monolith
+## Development
 
-The original monolithic application has been split while maintaining all functionality:
-- ✅ Real-time WebSocket communication
-- ✅ Multi-device synchronization
-- ✅ Script editing and playback controls
-- ✅ Mirror modes and display adjustments
-- ✅ Multi-teleprompter support
-- ✅ Responsive design
+### Making Changes
 
-The new architecture provides:
-- Better separation of concerns
-- Independent scaling of services
-- Easier deployment and maintenance
-- Modern Vue.js frontend with Vuetify components
+Each service can be developed independently:
+
+1. **Backend changes**: 
+   - Navigate to `services/backend/`
+   - Edit `main.py` for API endpoints, WebSocket handling
+   - Edit `requirements.txt` for Python dependencies
+
+2. **Frontend services changes**:
+   - Navigate to `services/landing/`, `services/controller/`, or `services/teleprompter/`
+   - Edit Vue.js components in `src/`
+   - Edit `package.json` for Node.js dependencies
+
+### Development Workflow
+
+```bash
+# Start all services for development
+docker-compose up -d
+
+# For frontend development with hot reload
+cd services/controller  # or landing/teleprompter
+npm install
+npm run dev
+
+# For backend development
+cd services/backend
+pip install -r requirements.txt
+python main.py
+```
+
+### Testing
+After making changes:
+1. Rebuild affected services: `docker-compose build <service-name>`
+2. Restart services: `docker-compose restart`
+3. Test through the main proxy at http://localhost:3000
+4. Verify WebSocket communication between controller and teleprompter modes
+
+## License
+
+This project is licensed under the terms included in the LICENSE file.
