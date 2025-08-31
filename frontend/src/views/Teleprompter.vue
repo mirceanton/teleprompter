@@ -583,9 +583,11 @@ export default {
 .teleprompter-controls {
   position: absolute;
   bottom: 0;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1000;
+  max-width: 600px;
+  width: auto;
 }
 
 /* Hide scrollbar */
