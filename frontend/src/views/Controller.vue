@@ -113,49 +113,6 @@
               
               <v-card-text>
                 <v-row>
-                  <!-- Go to beginning -->
-                  <v-col cols="6">
-                    <v-btn 
-                      color="primary" 
-                      @click="goToBeginning"
-                      block
-                      size="large"
-                    >
-                      <v-icon>mdi-skip-previous</v-icon>
-                    </v-btn>
-                    <div class="text-center text-caption mt-1">Go to Start</div>
-                  </v-col>
-                  <!-- Go to end -->
-                  <v-col cols="6">
-                    <v-btn 
-                      color="primary" 
-                      @click="goToEnd"
-                      block
-                      size="large"
-                    >
-                      <v-icon>mdi-skip-next</v-icon>
-                    </v-btn>
-                    <div class="text-center text-caption mt-1">Go to End</div>
-                  </v-col>
-                </v-row>
-
-                <!-- Lines to scroll control -->
-                <div class="mb-3 mt-4">
-                  <v-label class="mb-2">Lines to Scroll</v-label>
-                  <v-slider
-                    v-model="scrollLines"
-                    min="1"
-                    max="20"
-                    step="1"
-                    thumb-label
-                    color="primary"
-                  />
-                  <div class="text-center">
-                    Lines: {{ scrollLines }}
-                  </div>
-                </div>
-
-                <v-row>
                   <!-- Scroll back -->
                   <v-col cols="6">
                     <v-btn 
@@ -179,6 +136,49 @@
                       <v-icon>mdi-arrow-down</v-icon>
                     </v-btn>
                     <div class="text-center text-caption mt-1">Scroll Forward</div>
+                  </v-col>
+                </v-row>
+
+                <!-- Lines to scroll control -->
+                <div class="mb-3 mt-4">
+                  <v-label class="mb-2">Lines to Scroll</v-label>
+                  <v-slider
+                    v-model="scrollLines"
+                    min="1"
+                    max="20"
+                    step="1"
+                    thumb-label
+                    color="primary"
+                  />
+                  <div class="text-center">
+                    Lines: {{ scrollLines }}
+                  </div>
+                </div>
+
+                <v-row>
+                  <!-- Go to beginning -->
+                  <v-col cols="6">
+                    <v-btn 
+                      color="primary" 
+                      @click="goToBeginning"
+                      block
+                      size="large"
+                    >
+                      <v-icon>mdi-skip-previous</v-icon>
+                    </v-btn>
+                    <div class="text-center text-caption mt-1">Go to Start</div>
+                  </v-col>
+                  <!-- Go to end -->
+                  <v-col cols="6">
+                    <v-btn 
+                      color="primary" 
+                      @click="goToEnd"
+                      block
+                      size="large"
+                    >
+                      <v-icon>mdi-skip-next</v-icon>
+                    </v-btn>
+                    <div class="text-center text-caption mt-1">Go to End</div>
                   </v-col>
                 </v-row>
               </v-card-text>
