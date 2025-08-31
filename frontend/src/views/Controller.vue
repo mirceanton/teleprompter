@@ -262,8 +262,10 @@
 </template>
 
 <script>
+import { config } from '@/utils/config.js'
+
 export default {
-  name: 'ControllerApp',
+  name: 'Controller',
   
   data() {
     return {
@@ -330,8 +332,7 @@ Happy teleprompting! 🎬`,
   
   mounted() {
     // Get channel name from URL params
-    const params = new URLSearchParams(window.location.search)
-    this.channelName = params.get('room') || 'default'
+    this.channelName = this.$route.query.room || 'default'
     
     // Connect to WebSocket
     this.connect()
@@ -346,10 +347,9 @@ Happy teleprompting! 🎬`,
   methods: {
     connect() {
       try {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-        const host = window.location.hostname
-        // Use backend API port (8001) for WebSocket connection
-        this.ws = new WebSocket(`${protocol}//${host}:8001/api/ws/${this.channelName}`)
+        // Use configurable backend URL instead of hard-coded port
+        const wsUrl = config.getWebSocketUrl()
+        this.ws = new WebSocket(`${wsUrl}/api/ws/${this.channelName}`)
         
         this.setupWebSocketHandlers()
       } catch (error) {
@@ -417,12 +417,21 @@ Happy teleprompting! 🎬`,
           break
           
         case 'width':
-          // Update width when teleprompter changes width
+          // Update width when teleprompter changes width setting
           this.textWidth = message.value
           break
+          
+        case 'font_size':
+          // Update font size when teleprompter changes font size
+          this.fontSize = message.value
+          break
+          
+        default:
+          console.log('Received message:', message)
       }
     },
     
+    // WebSocket communication
     sendMessage(message) {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         this.ws.send(JSON.stringify(message))
@@ -431,79 +440,92 @@ Happy teleprompting! 🎬`,
       }
     },
     
-    // Text synchronization
+    // Playback controls
+    startScrolling() {
+      this.sendMessage({ type: 'start' })
+      this.showSnackbar('Teleprompter started', 'success')
+    },
+    
+    pauseScrolling() {
+      this.sendMessage({ type: 'pause' })
+      this.showSnackbar('Teleprompter paused', 'warning')
+    },
+    
+    resetScrolling() {
+      this.sendMessage({ type: 'reset' })
+      this.showSnackbar('Teleprompter reset', 'info')
+    },
+    
+    fastForwardText() {
+      this.sendMessage({ type: 'fast_forward' })
+      this.showSnackbar('Fast forwarding...', 'info')
+    },
+    
+    // Text sync
     syncText() {
-      this.sendMessage({
-        type: 'text',
-        content: this.scriptText
+      this.sendMessage({ 
+        type: 'text', 
+        content: this.scriptText 
       })
+      this.showSnackbar('Text synced to teleprompters', 'success')
     },
     
     debouncedSyncText() {
       clearTimeout(this.syncTimeout)
       this.syncTimeout = setTimeout(() => {
         this.syncText()
-      }, 300)
+      }, 1000)
     },
     
-    // Playback controls
-    startScrolling() {
-      this.sendMessage({ type: 'start' })
-    },
-    
-    pauseScrolling() {
-      this.sendMessage({ type: 'pause' })
-    },
-    
-    resetScrolling() {
-      this.sendMessage({ type: 'reset' })
-    },
-    
-    fastForwardText() {
-      this.sendMessage({ type: 'fastforward' })
-    },
-    
-    // Speed control
+    // Speed controls
     updateSpeed() {
-      this.sendMessage({
-        type: 'speed',
-        value: this.scrollSpeed
-      })
-    },
-    
-    // Text width controls
-    decreaseWidth() {
-      this.textWidth = Math.max(20, this.textWidth - 10)
-      this.updateWidth()
-    },
-    
-    increaseWidth() {
-      this.textWidth = Math.min(100, this.textWidth + 10)
-      this.updateWidth()
-    },
-    
-    updateWidth() {
-      this.sendMessage({
-        type: 'width',
-        value: this.textWidth
+      this.sendMessage({ 
+        type: 'speed', 
+        value: this.scrollSpeed 
       })
     },
     
     // Font size controls
-    decreaseFontSize() {
-      this.fontSize = Math.max(1.0, this.fontSize - 0.2)
-      this.updateFontSize()
+    increaseFontSize() {
+      if (this.fontSize < 5) {
+        this.fontSize += 0.1
+        this.updateFontSize()
+      }
     },
     
-    increaseFontSize() {
-      this.fontSize = Math.min(5.0, this.fontSize + 0.2)
-      this.updateFontSize()
+    decreaseFontSize() {
+      if (this.fontSize > 0.5) {
+        this.fontSize -= 0.1
+        this.updateFontSize()
+      }
     },
     
     updateFontSize() {
-      this.sendMessage({
-        type: 'fontsize',
-        value: this.fontSize
+      this.sendMessage({ 
+        type: 'font_size', 
+        value: this.fontSize 
+      })
+    },
+    
+    // Width controls
+    increaseWidth() {
+      if (this.textWidth < 100) {
+        this.textWidth += 10
+        this.updateWidth()
+      }
+    },
+    
+    decreaseWidth() {
+      if (this.textWidth > 20) {
+        this.textWidth -= 10
+        this.updateWidth()
+      }
+    },
+    
+    updateWidth() {
+      this.sendMessage({ 
+        type: 'width', 
+        value: this.textWidth 
       })
     },
     
@@ -529,8 +551,8 @@ Happy teleprompting! 🎬`,
       if (this.ws) {
         this.ws.close()
       }
-      // Redirect back to landing page
-      window.location.href = '/'
+      // Navigate back to landing page using Vue Router
+      this.$router.push('/')
     },
     
     showSnackbar(text, color = 'success') {

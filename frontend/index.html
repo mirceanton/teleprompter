@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Remote Teleprompter</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <meta name="description" content="Control your phone's teleprompter from your computer">
+  <meta name="theme-color" content="#1976d2">
+  
+  <!-- Runtime Configuration -->
+  <script>
+    // Global configuration object for runtime environment variables
+    window.__TELEPROMPTER_CONFIG__ = {
+      backendUrl: '%BACKEND_URL%' // This will be replaced by environment variable in Docker
+    };
+    
+    // If the backend URL wasn't replaced, remove it so the default is used
+    if (window.__TELEPROMPTER_CONFIG__.backendUrl === '%BACKEND_URL%') {
+      delete window.__TELEPROMPTER_CONFIG__.backendUrl;
+    }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

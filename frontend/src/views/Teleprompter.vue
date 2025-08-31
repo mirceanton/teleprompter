@@ -182,8 +182,10 @@
 </template>
 
 <script>
+import { config } from '@/utils/config.js'
+
 export default {
-  name: 'TeleprompterApp',
+  name: 'Teleprompter',
   
   data() {
     return {
@@ -236,8 +238,7 @@ export default {
   
   mounted() {
     // Get channel name from URL params
-    const params = new URLSearchParams(window.location.search)
-    this.channelName = params.get('room') || 'default'
+    this.channelName = this.$route.query.room || 'default'
     
     // Connect to WebSocket
     this.connect()
@@ -267,10 +268,9 @@ export default {
   methods: {
     connect() {
       try {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-        const host = window.location.hostname
-        // Use backend API port (8001) for WebSocket connection
-        this.ws = new WebSocket(`${protocol}//${host}:8001/api/ws/${this.channelName}`)
+        // Use configurable backend URL instead of hard-coded port
+        const wsUrl = config.getWebSocketUrl()
+        this.ws = new WebSocket(`${wsUrl}/api/ws/${this.channelName}`)
         
         this.setupWebSocketHandlers()
       } catch (error) {
@@ -311,38 +311,49 @@ export default {
     handleMessage(message) {
       switch (message.type) {
         case 'text':
-          this.updateTeleprompterText(message.content)
+          this.teleprompterContent = message.content
+          this.resetScrolling()
           break
+          
         case 'start':
-          this.startTeleprompterScrolling()
+          this.startScrolling()
           break
+          
         case 'pause':
-          this.pauseTeleprompterScrolling()
+          this.pauseScrolling()
           break
+          
         case 'reset':
-          this.resetTeleprompterScrolling()
+          this.resetScrolling()
           break
-        case 'fastforward':
-          this.fastForwardTeleprompter()
+          
+        case 'fast_forward':
+          this.fastForward()
           break
-        case 'rewind':
-          this.rewindTeleprompter()
-          break
+          
         case 'speed':
           this.scrollSpeed = message.value
           break
-        case 'width':
-          this.updateTeleprompterWidth(message.value)
-          break
-        case 'mirror':
-          this.setTeleprompterMirror(message.horizontal, message.vertical)
-          break
-        case 'fontsize':
+          
+        case 'font_size':
           this.fontSize = message.value
           break
+          
+        case 'width':
+          this.textWidth = message.value
+          break
+          
+        case 'mirror':
+          this.horizontalMirror = message.horizontal
+          this.verticalMirror = message.vertical
+          break
+          
+        default:
+          console.log('Received message:', message)
       }
     },
     
+    // WebSocket communication
     sendMessage(message) {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         this.ws.send(JSON.stringify(message))
@@ -351,75 +362,80 @@ export default {
       }
     },
     
-    // Teleprompter text methods
-    updateTeleprompterText(content) {
-      this.teleprompterContent = content
+    // Scrolling controls
+    startScrolling() {
+      this.isScrolling = true
+      this.scroll()
     },
     
-    // Scrolling methods
-    startTeleprompterScrolling() {
-      if (!this.isScrolling) {
-        this.isScrolling = true
-        this.animateScroll()
-      }
-    },
-    
-    pauseTeleprompterScrolling() {
+    pauseScrolling() {
       this.isScrolling = false
       if (this.animationId) {
         cancelAnimationFrame(this.animationId)
-        this.animationId = null
       }
     },
     
-    resetTeleprompterScrolling() {
-      this.pauseTeleprompterScrolling()
+    resetScrolling() {
+      this.isScrolling = false
       this.scrollPosition = 0
-    },
-    
-    fastForwardTeleprompter() {
-      this.scrollPosition -= this.scrollSpeed * 5
-      const maxScroll = -(this.$refs.teleprompterText?.scrollHeight || 0) - window.innerHeight
-      if (this.scrollPosition < maxScroll) {
-        this.scrollPosition = maxScroll
+      if (this.animationId) {
+        cancelAnimationFrame(this.animationId)
       }
     },
     
-    rewindTeleprompter() {
-      this.scrollPosition += this.scrollSpeed * 5
-      if (this.scrollPosition > 0) {
-        this.scrollPosition = 0
+    fastForward() {
+      if (this.$refs.teleprompterText) {
+        const textHeight = this.$refs.teleprompterText.scrollHeight
+        const containerHeight = this.$refs.teleprompterContainer.clientHeight
+        this.scrollPosition = Math.max(this.scrollPosition - (containerHeight * 0.3), -(textHeight - containerHeight))
       }
     },
     
-    animateScroll() {
-      if (this.isScrolling) {
-        this.scrollPosition -= this.scrollSpeed
+    scroll() {
+      if (!this.isScrolling) return
+      
+      // Calculate scroll speed
+      const speed = this.scrollSpeed * 0.5
+      this.scrollPosition -= speed
+      
+      // Check if we've scrolled past the end
+      if (this.$refs.teleprompterText) {
+        const textHeight = this.$refs.teleprompterText.scrollHeight
+        const containerHeight = this.$refs.teleprompterContainer.clientHeight
         
-        // Check if we've scrolled past the end
-        const maxScroll = -(this.$refs.teleprompterText?.scrollHeight || 0) - window.innerHeight
-        if (this.scrollPosition < maxScroll) {
-          this.pauseTeleprompterScrolling()
-        } else {
-          this.animationId = requestAnimationFrame(this.animateScroll)
+        if (this.scrollPosition < -(textHeight + containerHeight)) {
+          this.resetScrolling()
+          return
         }
       }
+      
+      this.animationId = requestAnimationFrame(this.scroll)
     },
     
-    // Display control methods
-    updateTeleprompterWidth(width) {
-      this.textWidth = width
-      // Send back to controller for sync
+    // Font size controls
+    changeFontSize(delta) {
+      this.fontSize = Math.max(0.5, Math.min(5, this.fontSize + delta))
+      // Sync with controller
+      this.sendMessage({
+        type: 'font_size',
+        value: this.fontSize
+      })
+    },
+    
+    // Width controls
+    changeWidth(delta) {
+      this.textWidth = Math.max(20, Math.min(100, this.textWidth + delta))
+      // Sync with controller
       this.sendMessage({
         type: 'width',
         value: this.textWidth
       })
     },
     
-    setTeleprompterMirror(horizontal, vertical) {
-      this.horizontalMirror = horizontal
-      this.verticalMirror = vertical
-      // Send back to controller for sync
+    // Mirror controls
+    toggleMirrorMode() {
+      this.horizontalMirror = !this.horizontalMirror
+      // Sync with controller
       this.sendMessage({
         type: 'mirror',
         horizontal: this.horizontalMirror,
@@ -427,34 +443,7 @@ export default {
       })
     },
     
-    // Local control methods
-    toggleMirrorMode() {
-      // Cycle through mirror modes: none -> horizontal -> vertical -> both -> none
-      if (!this.horizontalMirror && !this.verticalMirror) {
-        this.setTeleprompterMirror(true, false)
-      } else if (this.horizontalMirror && !this.verticalMirror) {
-        this.setTeleprompterMirror(false, true)
-      } else if (!this.horizontalMirror && this.verticalMirror) {
-        this.setTeleprompterMirror(true, true)
-      } else {
-        this.setTeleprompterMirror(false, false)
-      }
-    },
-    
-    changeFontSize(delta) {
-      this.fontSize = Math.max(1.0, Math.min(5.0, this.fontSize + delta))
-      this.sendMessage({
-        type: 'fontsize',
-        value: this.fontSize
-      })
-    },
-    
-    changeWidth(delta) {
-      this.textWidth = Math.max(20, Math.min(100, this.textWidth + delta))
-      this.updateTeleprompterWidth(this.textWidth)
-    },
-    
-    // Fullscreen methods
+    // Fullscreen controls
     enterFullscreen() {
       const element = this.$refs.teleprompterContainer
       if (element.requestFullscreen) {
@@ -499,9 +488,10 @@ export default {
       }
     },
     
+    // Utility methods
     exitTeleprompter() {
-      // Redirect back to landing page
-      window.location.href = '/'
+      // Navigate back to landing page using Vue Router
+      this.$router.push('/')
     },
     
     showSnackbar(text, color = 'success') {
@@ -530,25 +520,28 @@ export default {
   width: 100vw;
   height: 100vh;
   z-index: 9999;
-  cursor: none;
 }
 
 .teleprompter-text {
   position: absolute;
   top: 50%;
   left: 50%;
-  white-space: pre-wrap;
-  line-height: 1.6;
-  text-align: center;
   transform: translateX(-50%);
-  transition: font-size 0.3s ease, max-width 0.3s ease;
+  width: 100%;
+  text-align: center;
+  line-height: 1.8;
+  font-family: 'Roboto', Arial, sans-serif;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  padding: 0 20px;
 }
 
 .teleprompter-content {
-  padding: 20px;
+  display: inline-block;
+  max-width: 100%;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
 
-/* Mirror effects */
 .horizontal-mirror .teleprompter-text {
   transform: translateX(-50%) scaleX(-1);
 }
@@ -563,22 +556,14 @@ export default {
 
 .mirror-indicator {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  padding: 8px 16px;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 0, 0, 0.8);
+  color: white;
+  padding: 5px 10px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: bold;
-  z-index: 1000;
-}
-
-.teleprompter-controls {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
   z-index: 1000;
 }
 
@@ -588,20 +573,30 @@ export default {
   right: 20px;
   z-index: 10000;
   opacity: 0;
-  pointer-events: none;
   transition: opacity 0.3s ease;
 }
 
 .floating-controls.visible {
   opacity: 1;
-  pointer-events: auto;
 }
 
-.w-100 {
-  width: 100%;
+.teleprompter-controls {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  max-width: 600px;
+  width: auto;
 }
 
-.flex-grow-1 {
-  flex-grow: 1;
+/* Hide scrollbar */
+.teleprompter-container::-webkit-scrollbar {
+  display: none;
+}
+
+.teleprompter-container {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 </style>

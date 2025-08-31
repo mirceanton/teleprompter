@@ -1,12 +1,12 @@
 # Remote Teleprompter
 
-A modern microservices-based teleprompter application that enables real-time teleprompter control between devices. One device (computer) acts as a controller to edit scripts and manage playback, while another device (phone/tablet) displays the teleprompter text.
+A modern teleprompter application that enables real-time teleprompter control between devices. One device (computer) acts as a controller to edit scripts and manage playback, while another device (phone/tablet) displays the teleprompter text.
 
 ## Features
 
 - **Remote Control**: Control teleprompter from any device with a web browser
 - **Real-time Sync**: WebSocket-based communication for instant updates  
-- **Microservices Architecture**: Scalable, modular design with separate services
+- **Single Page Application**: Unified Vue.js frontend with configurable backend URL
 - **Responsive Design**: Works on desktop, tablets, and mobile devices
 - **Channel-based**: Multiple independent teleprompter sessions via named channels
 - **Mirror Support**: Horizontal and vertical mirroring for teleprompter setup flexibility
@@ -14,13 +14,10 @@ A modern microservices-based teleprompter application that enables real-time tel
 
 ## Architecture
 
-The application is built using a microservices architecture with the following services:
+The application uses a simplified architecture with:
 
-- **Backend Service** (`services/backend/`): FastAPI backend providing WebSocket and REST APIs
-- **Landing Service** (`services/landing/`): Vue.js application serving the main landing page
-- **Controller Service** (`services/controller/`): Vue.js application for script editing and playback control
-- **Teleprompter Service** (`services/teleprompter/`): Vue.js application for full-screen text display
-- **Nginx Proxy**: Reverse proxy routing traffic to appropriate services
+- **Backend Service** (`backend/`): FastAPI backend providing WebSocket and REST APIs
+- **Frontend Service** (`frontend/`): Unified Vue.js application with Vue Router for all pages (landing, controller, teleprompter)
 
 ## Quick Start
 
@@ -41,21 +38,28 @@ docker-compose up -d
 ```
 
 The application will be available at:
-- **Main Application**: http://localhost:3000 (via Nginx proxy)
-- **Landing Page**: http://localhost:80
-- **Controller**: http://localhost:8080
-- **Teleprompter**: http://localhost:8081
+- **Main Application**: http://localhost:3000
 - **Backend API**: http://localhost:8001
+
+### Configuration
+
+The frontend can be configured to use a different backend URL via environment variables:
+
+```bash
+# Set custom backend URL
+export FRONTEND_BACKEND_URL=http://my-backend-server:8001
+docker-compose up -d
+```
 
 ### Usage
 1. Open http://localhost:3000 in your web browser
-2. Choose your mode:
-   - **💻 Controller Mode**: For editing scripts and controlling playback
-   - **📱 Teleprompter Mode**: For full-screen text display
-3. Enter a channel name (both devices must use the same channel name)
-4. Click "Connect to Channel"
-5. In Controller mode: Edit your script and use the controls
-6. In Teleprompter mode: The text will display and scroll automatically
+2. Enter a room ID or generate one
+3. Choose your role:
+   - **💻 Controller**: For editing scripts and controlling playback
+   - **📱 Teleprompter**: For full-screen text display
+4. Click "Join Room"
+5. In Controller mode: Edit your script and use the playback controls
+6. In Teleprompter mode: The text will display and scroll based on controller commands
 
 ## API Endpoints
 

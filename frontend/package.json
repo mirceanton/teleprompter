@@ -1,5 +1,5 @@
 {
-  "name": "teleprompter-controller",
+  "name": "teleprompter-frontend",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -10,12 +10,13 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "Remote Teleprompter Controller App",
+  "description": "Remote Teleprompter Unified Frontend",
   "dependencies": {
     "@mdi/font": "^7.4.47",
     "@vitejs/plugin-vue": "^6.0.1",
     "vite": "^7.1.3",
     "vue": "^3.5.20",
+    "vue-router": "^4.0.0",
     "vuetify": "^3.7.5"
   }
 }

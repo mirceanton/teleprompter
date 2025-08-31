@@ -11,17 +11,6 @@
         <v-row justify="center" align="center" class="fill-height">
           <v-col cols="12" md="8" lg="6">
             
-            <!-- Header Card -->
-            <v-card class="mb-6" elevation="8">
-              <v-card-text class="text-center pa-8">
-                <v-icon size="64" color="primary" class="mb-4">mdi-message-text</v-icon>
-                <h1 class="text-h3 mb-2">📱 Remote Teleprompter</h1>
-                <p class="text-h6 text-medium-emphasis">
-                  Control your phone's teleprompter from your computer
-                </p>
-              </v-card-text>
-            </v-card>
-
             <!-- Room Setup Card -->
             <v-card elevation="8">
               <v-card-title class="text-h5 pa-6">
@@ -141,7 +130,7 @@
 
 <script>
 export default {
-  name: 'App',
+  name: 'Landing',
   data() {
     return {
       channelName: '',
@@ -183,19 +172,12 @@ export default {
         return
       }
       
-      // Create URL with room parameter
-      const params = new URLSearchParams({ room: this.channelName })
-      const baseUrl = window.location.origin
-      
-      let targetUrl
+      // Navigate using Vue Router instead of window.location.href
       if (this.selectedRole === 'controller') {
-        targetUrl = `${baseUrl}/controller?${params}`
+        this.$router.push({ path: '/controller', query: { room: this.channelName } })
       } else {
-        targetUrl = `${baseUrl}/teleprompter?${params}`
+        this.$router.push({ path: '/teleprompter', query: { room: this.channelName } })
       }
-      
-      // Redirect to the appropriate microservice
-      window.location.href = targetUrl
     },
     
     showSnackbar(text, color = 'success') {
