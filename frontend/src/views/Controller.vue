@@ -112,6 +112,8 @@
                     <v-col cols="3">
                       <v-btn 
                         size="small" 
+                        color="primary"
+                        variant="tonal"
                         @click="decreaseSpeed"
                       >
                         <v-icon>mdi-minus</v-icon>
@@ -123,6 +125,8 @@
                     <v-col cols="3">
                       <v-btn 
                         size="small" 
+                        color="primary"
+                        variant="tonal"
                         @click="increaseSpeed"
                       >
                         <v-icon>mdi-plus</v-icon>
@@ -175,6 +179,8 @@
                     <v-col cols="3">
                       <v-btn 
                         size="small" 
+                        color="primary"
+                        variant="tonal"
                         @click="decreaseScrollLines"
                       >
                         <v-icon>mdi-minus</v-icon>
@@ -186,6 +192,8 @@
                     <v-col cols="3">
                       <v-btn 
                         size="small" 
+                        color="primary"
+                        variant="tonal"
                         @click="increaseScrollLines"
                       >
                         <v-icon>mdi-plus</v-icon>
@@ -238,6 +246,8 @@
                     <v-col cols="3">
                       <v-btn 
                         size="small" 
+                        color="primary"
+                        variant="tonal"
                         @click="decreaseWidth"
                       >
                         <v-icon>mdi-minus</v-icon>
@@ -249,6 +259,8 @@
                     <v-col cols="3">
                       <v-btn 
                         size="small" 
+                        color="primary"
+                        variant="tonal"
                         @click="increaseWidth"
                       >
                         <v-icon>mdi-plus</v-icon>
@@ -264,6 +276,8 @@
                     <v-col cols="3">
                       <v-btn 
                         size="small" 
+                        color="primary"
+                        variant="tonal"
                         @click="decreaseFontSize"
                       >
                         <v-icon>mdi-format-font-size-decrease</v-icon>
@@ -275,6 +289,8 @@
                     <v-col cols="3">
                       <v-btn 
                         size="small" 
+                        color="primary"
+                        variant="tonal"
                         @click="increaseFontSize"
                       >
                         <v-icon>mdi-format-font-size-increase</v-icon>
