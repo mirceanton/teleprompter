@@ -88,161 +88,180 @@
               
               <v-card-text>
                 <v-row>
-                  <v-col cols="6">
+                  <!-- Play/Pause Toggle Button (Full Width) -->
+                  <v-col cols="12">
                     <v-btn 
-                      color="success" 
-                      @click="startScrolling"
+                      :color="isPlaying ? 'warning' : 'success'" 
+                      @click="togglePlayback"
                       block
                       size="large"
                     >
-                      <v-icon>mdi-play</v-icon>
+                      <v-icon>{{ isPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
+                      <span class="ml-2">{{ isPlaying ? 'Pause' : 'Start' }}</span>
                     </v-btn>
-                    <div class="text-center text-caption mt-1">Start</div>
                   </v-col>
-                  <v-col cols="6">
-                    <v-btn 
-                      color="warning" 
-                      @click="pauseScrolling"
-                      block
-                      size="large"
-                    >
-                      <v-icon>mdi-pause</v-icon>
-                    </v-btn>
-                    <div class="text-center text-caption mt-1">Pause</div>
-                  </v-col>
-                  <v-col cols="6">
-                    <v-btn 
-                      color="info" 
-                      @click="resetScrolling"
-                      block
-                      size="large"
-                    >
-                      <v-icon>mdi-skip-backward</v-icon>
-                    </v-btn>
-                    <div class="text-center text-caption mt-1">Reset</div>
-                  </v-col>
+                </v-row>
+
+                <!-- Speed Control -->
+                <div class="mt-4">
+                  <v-label class="mb-2">
+                    <v-icon class="mr-1">mdi-speedometer</v-icon>
+                    Speed
+                  </v-label>
+                  <v-number-input
+                    v-model="scrollSpeed"
+                    :min="1"
+                    :max="10"
+                    :step="1"
+                    split-buttons
+                    @update:modelValue="updateSpeed"
+                  ></v-number-input>
+                </div>
+              </v-card-text>
+            </v-card>
+
+            <!-- Navigation Controls -->
+            <v-card elevation="4" class="mb-4">
+              <v-card-title class="text-h6">
+                <v-icon class="mr-2">mdi-navigation-variant</v-icon>
+                Navigation Controls
+              </v-card-title>
+              
+              <v-card-text>
+                <v-row>
+                  <!-- Scroll back -->
                   <v-col cols="6">
                     <v-btn 
                       color="secondary" 
-                      @click="fastForwardText"
+                      @click="scrollBackLines"
                       block
                       size="large"
                     >
-                      <v-icon>mdi-fast-forward</v-icon>
+                      <v-icon>mdi-arrow-up</v-icon>
                     </v-btn>
-                    <div class="text-center text-caption mt-1">Fast Forward</div>
+                    <div class="text-center text-caption mt-1">Scroll Back</div>
+                  </v-col>
+                  <!-- Scroll forward -->
+                  <v-col cols="6">
+                    <v-btn 
+                      color="secondary" 
+                      @click="scrollForwardLines"
+                      block
+                      size="large"
+                    >
+                      <v-icon>mdi-arrow-down</v-icon>
+                    </v-btn>
+                    <div class="text-center text-caption mt-1">Scroll Forward</div>
+                  </v-col>
+                </v-row>
+
+                <!-- Lines to scroll control -->
+                <div class="mb-3 mt-4">
+                  <v-label class="mb-2">Lines to Scroll</v-label>
+                  <v-number-input
+                    v-model="scrollLines"
+                    :min="1"
+                    :max="20"
+                    :step="1"
+                    split-buttons
+                  ></v-number-input>
+                </div>
+
+                <v-row>
+                  <!-- Go to beginning -->
+                  <v-col cols="6">
+                    <v-btn 
+                      color="primary" 
+                      @click="goToBeginning"
+                      block
+                      size="large"
+                    >
+                      <v-icon>mdi-skip-previous</v-icon>
+                    </v-btn>
+                    <div class="text-center text-caption mt-1">Go to Start</div>
+                  </v-col>
+                  <!-- Go to end -->
+                  <v-col cols="6">
+                    <v-btn 
+                      color="primary" 
+                      @click="goToEnd"
+                      block
+                      size="large"
+                    >
+                      <v-icon>mdi-skip-next</v-icon>
+                    </v-btn>
+                    <div class="text-center text-caption mt-1">Go to End</div>
                   </v-col>
                 </v-row>
               </v-card-text>
             </v-card>
 
-            <!-- Speed Control -->
-            <v-card elevation="4" class="mb-4">
-              <v-card-title class="text-h6">
-                <v-icon class="mr-2">mdi-speedometer</v-icon>
-                Speed Control
-              </v-card-title>
-              
-              <v-card-text>
-                <v-slider
-                  v-model="scrollSpeed"
-                  min="1"
-                  max="10"
-                  step="1"
-                  thumb-label
-                  @update:model-value="updateSpeed"
-                  color="primary"
-                />
-                <div class="text-center">
-                  Speed: {{ scrollSpeed }}
-                </div>
-              </v-card-text>
-            </v-card>
-
-            <!-- Display Controls -->
-            <v-card elevation="4" class="mb-4">
+            <!-- Text & Mirror Settings -->
+            <v-card elevation="4">
               <v-card-title class="text-h6">
                 <v-icon class="mr-2">mdi-format-text</v-icon>
-                Display Settings
+                Text & Mirror Settings
               </v-card-title>
               
               <v-card-text>
                 <!-- Text Width -->
                 <div class="mb-4">
                   <v-label class="mb-2">Text Width</v-label>
-                  <v-row align="center">
-                    <v-col cols="3">
-                      <v-btn 
-                        size="small" 
-                        @click="decreaseWidth"
-                        icon="mdi-minus"
-                      />
-                    </v-col>
-                    <v-col cols="6" class="text-center">
-                      {{ textWidth }}%
-                    </v-col>
-                    <v-col cols="3">
-                      <v-btn 
-                        size="small" 
-                        @click="increaseWidth"
-                        icon="mdi-plus"
-                      />
-                    </v-col>
-                  </v-row>
+                  <v-number-input
+                    v-model="textWidth"
+                    :min="20"
+                    :max="100"
+                    :step="5"
+                    split-buttons
+                    suffix="%"
+                    @update:modelValue="updateWidth"
+                  ></v-number-input>
                 </div>
 
                 <!-- Font Size -->
                 <div class="mb-4">
                   <v-label class="mb-2">Font Size</v-label>
-                  <v-row align="center">
-                    <v-col cols="3">
+                  <v-number-input
+                    v-model="fontSize"
+                    :min="0.5"
+                    :max="5"
+                    :step="0.1"
+                    split-buttons
+                    suffix="em"
+                    @update:modelValue="updateFontSize"
+                  ></v-number-input>
+                </div>
+
+                <!-- Mirror Controls (half-width buttons side by side) -->
+                <div class="mb-2">
+                  <v-label class="mb-2">Mirror Controls</v-label>
+                  <v-row>
+                    <v-col cols="6">
                       <v-btn 
-                        size="small" 
-                        @click="decreaseFontSize"
-                        icon="mdi-format-font-size-decrease"
-                      />
+                        :color="horizontalMirror ? 'primary' : 'secondary'"
+                        @click="toggleHorizontalMirror"
+                        block
+                        size="small"
+                        variant="outlined"
+                      >
+                        <v-icon class="mr-1">mdi-flip-horizontal</v-icon>
+                        Horizontal
+                      </v-btn>
                     </v-col>
-                    <v-col cols="6" class="text-center">
-                      {{ fontSize }}em
-                    </v-col>
-                    <v-col cols="3">
+                    <v-col cols="6">
                       <v-btn 
-                        size="small" 
-                        @click="increaseFontSize"
-                        icon="mdi-format-font-size-increase"
-                      />
+                        :color="verticalMirror ? 'primary' : 'secondary'"
+                        @click="toggleVerticalMirror"
+                        block
+                        size="small"
+                        variant="outlined"
+                      >
+                        <v-icon class="mr-1">mdi-flip-vertical</v-icon>
+                        Vertical
+                      </v-btn>
                     </v-col>
                   </v-row>
                 </div>
-              </v-card-text>
-            </v-card>
-
-            <!-- Mirror Controls -->
-            <v-card elevation="4">
-              <v-card-title class="text-h6">
-                <v-icon class="mr-2">mdi-flip-horizontal</v-icon>
-                Mirror Controls
-              </v-card-title>
-              
-              <v-card-text>
-                <v-row>
-                  <v-col cols="12">
-                    <v-switch
-                      v-model="horizontalMirror"
-                      label="Horizontal Mirror"
-                      @update:model-value="updateHorizontalMirror"
-                      color="primary"
-                    />
-                  </v-col>
-                  <v-col cols="12">
-                    <v-switch
-                      v-model="verticalMirror"
-                      label="Vertical Mirror"
-                      @update:model-value="updateVerticalMirror"
-                      color="primary"
-                    />
-                  </v-col>
-                </v-row>
               </v-card-text>
             </v-card>
           </v-col>
@@ -300,6 +319,10 @@ Happy teleprompting! 🎬`,
       fontSize: 2.5,
       horizontalMirror: false,
       verticalMirror: false,
+      
+      // Navigation settings
+      isPlaying: false,
+      scrollLines: 5,
       
       // UI state
       snackbar: {
@@ -441,24 +464,53 @@ Happy teleprompting! 🎬`,
     },
     
     // Playback controls
+    togglePlayback() {
+      if (this.isPlaying) {
+        this.pauseScrolling()
+      } else {
+        this.startScrolling()
+      }
+    },
+    
     startScrolling() {
+      this.isPlaying = true
       this.sendMessage({ type: 'start' })
       this.showSnackbar('Teleprompter started', 'success')
     },
     
     pauseScrolling() {
+      this.isPlaying = false
       this.sendMessage({ type: 'pause' })
       this.showSnackbar('Teleprompter paused', 'warning')
     },
-    
-    resetScrolling() {
-      this.sendMessage({ type: 'reset' })
-      this.showSnackbar('Teleprompter reset', 'info')
+
+    // Navigation controls
+    goToBeginning() {
+      this.sendMessage({ type: 'go_to_beginning' })
+      this.showSnackbar('Teleprompter moved to beginning', 'info')
     },
-    
-    fastForwardText() {
-      this.sendMessage({ type: 'fast_forward' })
-      this.showSnackbar('Fast forwarding...', 'info')
+
+    goToEnd() {
+      this.sendMessage({ type: 'go_to_end' })
+      this.showSnackbar('Teleprompter moved to end', 'info')
+    },
+
+    scrollBackLines() {
+      this.sendMessage({ 
+        type: 'scroll_lines', 
+        direction: 'back',
+        lines: this.scrollLines 
+      })
+      this.showSnackbar(`Scrolled back ${this.scrollLines} lines`, 'info')
+    },
+
+    scrollForwardLines() {
+      this.sendMessage({ 
+        type: 'scroll_lines', 
+        direction: 'forward',
+        lines: this.scrollLines 
+      })
+      this.showSnackbar(`Scrolled forward ${this.scrollLines} lines`, 'info')
     },
     
     // Text sync
@@ -486,20 +538,6 @@ Happy teleprompting! 🎬`,
     },
     
     // Font size controls
-    increaseFontSize() {
-      if (this.fontSize < 5) {
-        this.fontSize += 0.1
-        this.updateFontSize()
-      }
-    },
-    
-    decreaseFontSize() {
-      if (this.fontSize > 0.5) {
-        this.fontSize -= 0.1
-        this.updateFontSize()
-      }
-    },
-    
     updateFontSize() {
       this.sendMessage({ 
         type: 'font_size', 
@@ -508,20 +546,6 @@ Happy teleprompting! 🎬`,
     },
     
     // Width controls
-    increaseWidth() {
-      if (this.textWidth < 100) {
-        this.textWidth += 10
-        this.updateWidth()
-      }
-    },
-    
-    decreaseWidth() {
-      if (this.textWidth > 20) {
-        this.textWidth -= 10
-        this.updateWidth()
-      }
-    },
-    
     updateWidth() {
       this.sendMessage({ 
         type: 'width', 
@@ -530,6 +554,16 @@ Happy teleprompting! 🎬`,
     },
     
     // Mirror controls
+    toggleHorizontalMirror() {
+      this.horizontalMirror = !this.horizontalMirror
+      this.updateHorizontalMirror()
+    },
+
+    toggleVerticalMirror() {
+      this.verticalMirror = !this.verticalMirror
+      this.updateVerticalMirror()
+    },
+
     updateHorizontalMirror() {
       this.sendMessage({
         type: 'mirror',
