@@ -108,31 +108,14 @@
                     <v-icon class="mr-1">mdi-speedometer</v-icon>
                     Speed
                   </v-label>
-                  <v-row align="center">
-                    <v-col cols="3">
-                      <v-btn 
-                        size="small" 
-                        color="primary"
-                        variant="tonal"
-                        @click="decreaseSpeed"
-                      >
-                        <v-icon>mdi-minus</v-icon>
-                      </v-btn>
-                    </v-col>
-                    <v-col cols="6" class="text-center">
-                      {{ scrollSpeed }}
-                    </v-col>
-                    <v-col cols="3">
-                      <v-btn 
-                        size="small" 
-                        color="primary"
-                        variant="tonal"
-                        @click="increaseSpeed"
-                      >
-                        <v-icon>mdi-plus</v-icon>
-                      </v-btn>
-                    </v-col>
-                  </v-row>
+                  <v-number-input
+                    v-model="scrollSpeed"
+                    :min="1"
+                    :max="10"
+                    :step="1"
+                    split-buttons
+                    @update:modelValue="updateSpeed"
+                  ></v-number-input>
                 </div>
               </v-card-text>
             </v-card>
@@ -175,31 +158,13 @@
                 <!-- Lines to scroll control -->
                 <div class="mb-3 mt-4">
                   <v-label class="mb-2">Lines to Scroll</v-label>
-                  <v-row align="center">
-                    <v-col cols="3">
-                      <v-btn 
-                        size="small" 
-                        color="primary"
-                        variant="tonal"
-                        @click="decreaseScrollLines"
-                      >
-                        <v-icon>mdi-minus</v-icon>
-                      </v-btn>
-                    </v-col>
-                    <v-col cols="6" class="text-center">
-                      {{ scrollLines }}
-                    </v-col>
-                    <v-col cols="3">
-                      <v-btn 
-                        size="small" 
-                        color="primary"
-                        variant="tonal"
-                        @click="increaseScrollLines"
-                      >
-                        <v-icon>mdi-plus</v-icon>
-                      </v-btn>
-                    </v-col>
-                  </v-row>
+                  <v-number-input
+                    v-model="scrollLines"
+                    :min="1"
+                    :max="20"
+                    :step="1"
+                    split-buttons
+                  ></v-number-input>
                 </div>
 
                 <v-row>
@@ -242,61 +207,29 @@
                 <!-- Text Width -->
                 <div class="mb-4">
                   <v-label class="mb-2">Text Width</v-label>
-                  <v-row align="center">
-                    <v-col cols="3">
-                      <v-btn 
-                        size="small" 
-                        color="primary"
-                        variant="tonal"
-                        @click="decreaseWidth"
-                      >
-                        <v-icon>mdi-minus</v-icon>
-                      </v-btn>
-                    </v-col>
-                    <v-col cols="6" class="text-center">
-                      {{ textWidth }}%
-                    </v-col>
-                    <v-col cols="3">
-                      <v-btn 
-                        size="small" 
-                        color="primary"
-                        variant="tonal"
-                        @click="increaseWidth"
-                      >
-                        <v-icon>mdi-plus</v-icon>
-                      </v-btn>
-                    </v-col>
-                  </v-row>
+                  <v-number-input
+                    v-model="textWidth"
+                    :min="20"
+                    :max="100"
+                    :step="10"
+                    split-buttons
+                    suffix="%"
+                    @update:modelValue="updateWidth"
+                  ></v-number-input>
                 </div>
 
                 <!-- Font Size -->
                 <div class="mb-4">
                   <v-label class="mb-2">Font Size</v-label>
-                  <v-row align="center">
-                    <v-col cols="3">
-                      <v-btn 
-                        size="small" 
-                        color="primary"
-                        variant="tonal"
-                        @click="decreaseFontSize"
-                      >
-                        <v-icon>mdi-format-font-size-decrease</v-icon>
-                      </v-btn>
-                    </v-col>
-                    <v-col cols="6" class="text-center">
-                      {{ fontSize }}em
-                    </v-col>
-                    <v-col cols="3">
-                      <v-btn 
-                        size="small" 
-                        color="primary"
-                        variant="tonal"
-                        @click="increaseFontSize"
-                      >
-                        <v-icon>mdi-format-font-size-increase</v-icon>
-                      </v-btn>
-                    </v-col>
-                  </v-row>
+                  <v-number-input
+                    v-model="fontSize"
+                    :min="0.5"
+                    :max="5"
+                    :step="0.1"
+                    split-buttons
+                    suffix="em"
+                    @update:modelValue="updateFontSize"
+                  ></v-number-input>
                 </div>
 
                 <!-- Mirror Controls (half-width buttons side by side) -->
@@ -603,49 +536,8 @@ Happy teleprompting! 🎬`,
         value: this.scrollSpeed 
       })
     },
-
-    increaseSpeed() {
-      if (this.scrollSpeed < 10) {
-        this.scrollSpeed += 1
-        this.updateSpeed()
-      }
-    },
-
-    decreaseSpeed() {
-      if (this.scrollSpeed > 1) {
-        this.scrollSpeed -= 1
-        this.updateSpeed()
-      }
-    },
-
-    // Scroll lines controls
-    increaseScrollLines() {
-      if (this.scrollLines < 20) {
-        this.scrollLines += 1
-      }
-    },
-
-    decreaseScrollLines() {
-      if (this.scrollLines > 1) {
-        this.scrollLines -= 1
-      }
-    },
     
     // Font size controls
-    increaseFontSize() {
-      if (this.fontSize < 5) {
-        this.fontSize += 0.1
-        this.updateFontSize()
-      }
-    },
-    
-    decreaseFontSize() {
-      if (this.fontSize > 0.5) {
-        this.fontSize -= 0.1
-        this.updateFontSize()
-      }
-    },
-    
     updateFontSize() {
       this.sendMessage({ 
         type: 'font_size', 
@@ -654,20 +546,6 @@ Happy teleprompting! 🎬`,
     },
     
     // Width controls
-    increaseWidth() {
-      if (this.textWidth < 100) {
-        this.textWidth += 10
-        this.updateWidth()
-      }
-    },
-    
-    decreaseWidth() {
-      if (this.textWidth > 20) {
-        this.textWidth -= 10
-        this.updateWidth()
-      }
-    },
-    
     updateWidth() {
       this.sendMessage({ 
         type: 'width', 
