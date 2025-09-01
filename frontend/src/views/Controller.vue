@@ -211,7 +211,7 @@
                     v-model="textWidth"
                     :min="20"
                     :max="100"
-                    :step="10"
+                    :step="5"
                     split-buttons
                     suffix="%"
                     @update:modelValue="updateWidth"
