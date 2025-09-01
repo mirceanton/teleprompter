@@ -167,6 +167,37 @@
                   ></v-number-input>
                 </div>
 
+                <!-- Section Navigation -->
+                <div class="mb-3 mt-4" v-if="sections.length > 0">
+                  <v-label class="mb-2">Section Navigation</v-label>
+                  <v-row>
+                    <v-col cols="6">
+                      <v-btn 
+                        color="accent" 
+                        @click="goToPreviousSection"
+                        :disabled="!canGoToPreviousSection"
+                        block
+                        size="large"
+                      >
+                        <v-icon>mdi-page-previous</v-icon>
+                      </v-btn>
+                      <div class="text-center text-caption mt-1">Previous Section</div>
+                    </v-col>
+                    <v-col cols="6">
+                      <v-btn 
+                        color="accent" 
+                        @click="goToNextSection"
+                        :disabled="!canGoToNextSection"
+                        block
+                        size="large"
+                      >
+                        <v-icon>mdi-page-next</v-icon>
+                      </v-btn>
+                      <div class="text-center text-caption mt-1">Next Section</div>
+                    </v-col>
+                  </v-row>
+                </div>
+
                 <v-row>
                   <!-- Go to beginning -->
                   <v-col cols="6">
@@ -264,6 +295,45 @@
                 </div>
               </v-card-text>
             </v-card>
+
+            <!-- Table of Contents -->
+            <v-card elevation="4" v-if="sections.length > 0" class="mt-4">
+              <v-card-title class="text-h6">
+                <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
+                Table of Contents
+                <v-spacer />
+                <v-btn 
+                  icon="mdi-chevron-down"
+                  @click="showTableOfContents = !showTableOfContents"
+                  size="small"
+                  variant="text"
+                >
+                </v-btn>
+              </v-card-title>
+              
+              <v-expand-transition>
+                <v-card-text v-show="showTableOfContents">
+                  <div class="toc-list">
+                    <div 
+                      v-for="(section, index) in sections" 
+                      :key="index"
+                      class="toc-item"
+                      :class="`toc-level-${section.level}`"
+                      @click="goToSection(section)"
+                    >
+                      <v-btn 
+                        variant="text" 
+                        size="small"
+                        class="justify-start text-left"
+                        block
+                      >
+                        <span class="text-truncate">{{ section.title }}</span>
+                      </v-btn>
+                    </div>
+                  </div>
+                </v-card-text>
+              </v-expand-transition>
+            </v-card>
           </v-col>
         </v-row>
       </v-container>
@@ -282,6 +352,13 @@
 
 <script>
 import { config } from '@/utils/config.js'
+import { 
+  parseMarkdownSections, 
+  getCurrentSection, 
+  getNextSection, 
+  getPreviousSection,
+  generateTableOfContents 
+} from '@/utils/markdown.js'
 
 export default {
   name: 'Controller',
@@ -297,19 +374,30 @@ export default {
       },
       
       // Script content
-      scriptText: `Welcome to Remote Teleprompter!
+      scriptText: `# Welcome to Remote Teleprompter!
 
 This is your teleprompter script. Edit this text on your computer, and it will appear on your phone's screen.
 
-Instructions:
+## Instructions
+
 1. Use the same channel name on all devices
 2. Select "Controller Mode" on your computer
 3. Select "Teleprompter Mode" on your phones/tablets
 4. Click "Start" to begin scrolling
 
+## Features
+
 The text will scroll smoothly on the teleprompter devices. You can pause, reset, or adjust the speed as needed.
 
+### Section Navigation
+
+You can now navigate between sections using markdown headings! Use the Previous/Next Section buttons or click on items in the Table of Contents.
+
+### Multi-Camera Support
+
 This application supports multiple teleprompter devices connected to the same channel, perfect for multi-camera setups.
+
+## Conclusion
 
 Happy teleprompting! 🎬`,
 
@@ -323,6 +411,10 @@ Happy teleprompting! 🎬`,
       // Navigation settings
       isPlaying: false,
       scrollLines: 5,
+      currentScrollPosition: 0, // Track current scroll position in lines
+      
+      // Section navigation
+      showTableOfContents: false,
       
       // UI state
       snackbar: {
@@ -350,6 +442,26 @@ Happy teleprompting! 🎬`,
         icon: 'mdi-wifi-off',
         text: 'Disconnected'
       }
+    },
+    
+    // Parse markdown sections from script text
+    sections() {
+      return parseMarkdownSections(this.scriptText)
+    },
+    
+    // Current section based on scroll position
+    currentSection() {
+      return getCurrentSection(this.sections, this.currentScrollPosition)
+    },
+    
+    // Check if can navigate to previous section
+    canGoToPreviousSection() {
+      return getPreviousSection(this.sections, this.currentScrollPosition) !== null
+    },
+    
+    // Check if can navigate to next section
+    canGoToNextSection() {
+      return getNextSection(this.sections, this.currentScrollPosition) !== null
     }
   },
   
@@ -512,6 +624,32 @@ Happy teleprompting! 🎬`,
       })
       this.showSnackbar(`Scrolled forward ${this.scrollLines} lines`, 'info')
     },
+
+    // Section navigation controls
+    goToPreviousSection() {
+      const prevSection = getPreviousSection(this.sections, this.currentScrollPosition)
+      if (prevSection) {
+        this.goToSection(prevSection)
+        this.showSnackbar(`Moved to: ${prevSection.title}`, 'info')
+      }
+    },
+
+    goToNextSection() {
+      const nextSection = getNextSection(this.sections, this.currentScrollPosition)
+      if (nextSection) {
+        this.goToSection(nextSection)
+        this.showSnackbar(`Moved to: ${nextSection.title}`, 'info')
+      }
+    },
+
+    goToSection(section) {
+      this.currentScrollPosition = section.start
+      this.sendMessage({ 
+        type: 'go_to_section', 
+        sectionLine: section.start,
+        sectionTitle: section.title 
+      })
+    },
     
     // Text sync
     syncText() {
@@ -608,5 +746,44 @@ Happy teleprompting! 🎬`,
   font-weight: 500;
   font-size: 0.875rem;
   opacity: 0.87;
+}
+
+.toc-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.toc-item {
+  margin-bottom: 2px;
+  cursor: pointer;
+}
+
+.toc-level-1 {
+  margin-left: 0;
+}
+
+.toc-level-2 {
+  margin-left: 16px;
+}
+
+.toc-level-3 {
+  margin-left: 32px;
+}
+
+.toc-level-4 {
+  margin-left: 48px;
+}
+
+.toc-level-5 {
+  margin-left: 64px;
+}
+
+.toc-level-6 {
+  margin-left: 80px;
+}
+
+.toc-item:hover {
+  background-color: rgba(var(--v-theme-primary), 0.1);
+  border-radius: 4px;
 }
 </style>
