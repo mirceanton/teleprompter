@@ -113,8 +113,9 @@
                       <v-btn 
                         size="small" 
                         @click="decreaseSpeed"
-                        icon="mdi-minus"
-                      />
+                      >
+                        <v-icon>mdi-minus</v-icon>
+                      </v-btn>
                     </v-col>
                     <v-col cols="6" class="text-center">
                       {{ scrollSpeed }}
@@ -123,8 +124,9 @@
                       <v-btn 
                         size="small" 
                         @click="increaseSpeed"
-                        icon="mdi-plus"
-                      />
+                      >
+                        <v-icon>mdi-plus</v-icon>
+                      </v-btn>
                     </v-col>
                   </v-row>
                 </div>
@@ -174,8 +176,9 @@
                       <v-btn 
                         size="small" 
                         @click="decreaseScrollLines"
-                        icon="mdi-minus"
-                      />
+                      >
+                        <v-icon>mdi-minus</v-icon>
+                      </v-btn>
                     </v-col>
                     <v-col cols="6" class="text-center">
                       {{ scrollLines }}
@@ -184,8 +187,9 @@
                       <v-btn 
                         size="small" 
                         @click="increaseScrollLines"
-                        icon="mdi-plus"
-                      />
+                      >
+                        <v-icon>mdi-plus</v-icon>
+                      </v-btn>
                     </v-col>
                   </v-row>
                 </div>
@@ -235,8 +239,9 @@
                       <v-btn 
                         size="small" 
                         @click="decreaseWidth"
-                        icon="mdi-minus"
-                      />
+                      >
+                        <v-icon>mdi-minus</v-icon>
+                      </v-btn>
                     </v-col>
                     <v-col cols="6" class="text-center">
                       {{ textWidth }}%
@@ -245,8 +250,9 @@
                       <v-btn 
                         size="small" 
                         @click="increaseWidth"
-                        icon="mdi-plus"
-                      />
+                      >
+                        <v-icon>mdi-plus</v-icon>
+                      </v-btn>
                     </v-col>
                   </v-row>
                 </div>
@@ -259,8 +265,9 @@
                       <v-btn 
                         size="small" 
                         @click="decreaseFontSize"
-                        icon="mdi-format-font-size-decrease"
-                      />
+                      >
+                        <v-icon>mdi-format-font-size-decrease</v-icon>
+                      </v-btn>
                     </v-col>
                     <v-col cols="6" class="text-center">
                       {{ fontSize }}em
@@ -269,8 +276,9 @@
                       <v-btn 
                         size="small" 
                         @click="increaseFontSize"
-                        icon="mdi-format-font-size-increase"
-                      />
+                      >
+                        <v-icon>mdi-format-font-size-increase</v-icon>
+                      </v-btn>
                     </v-col>
                   </v-row>
                 </div>
