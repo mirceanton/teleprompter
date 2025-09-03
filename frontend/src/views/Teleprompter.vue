@@ -183,6 +183,7 @@
 
 <script>
 import { config } from '@/utils/config.js'
+import { parseMarkdownSections, getCharacterPositionForLine } from '@/utils/markdown.js'
 
 export default {
   name: 'Teleprompter',
@@ -348,6 +349,22 @@ export default {
           this.verticalMirror = message.vertical
           break
           
+        case 'go_to_section':
+          this.goToSection(message.sectionLine)
+          break
+          
+        case 'go_to_beginning':
+          this.resetScrolling()
+          break
+          
+        case 'go_to_end':
+          this.goToEnd()
+          break
+          
+        case 'scroll_lines':
+          this.scrollByLines(message.direction, message.lines)
+          break
+          
         default:
           console.log('Received message:', message)
       }
@@ -410,6 +427,45 @@ export default {
       }
       
       this.animationId = requestAnimationFrame(this.scroll)
+    },
+    
+    // Section navigation methods
+    goToSection(sectionLine) {
+      // Calculate the scroll position based on the section line
+      const lines = this.teleprompterContent.split('\n')
+      const lineHeight = this.calculateLineHeight()
+      
+      // Position to show the section heading near the center
+      const containerHeight = this.$refs.teleprompterContainer ? this.$refs.teleprompterContainer.clientHeight : 400
+      const targetLinePosition = sectionLine * lineHeight
+      const centerOffset = containerHeight * 0.3 // Show section heading in upper third
+      
+      this.scrollPosition = -(targetLinePosition - centerOffset)
+    },
+    
+    goToEnd() {
+      if (this.$refs.teleprompterText) {
+        const textHeight = this.$refs.teleprompterText.scrollHeight
+        const containerHeight = this.$refs.teleprompterContainer.clientHeight
+        this.scrollPosition = -(textHeight - containerHeight)
+      }
+    },
+    
+    scrollByLines(direction, lines) {
+      const lineHeight = this.calculateLineHeight()
+      const scrollAmount = lines * lineHeight
+      
+      if (direction === 'back') {
+        this.scrollPosition += scrollAmount
+      } else {
+        this.scrollPosition -= scrollAmount
+      }
+    },
+    
+    calculateLineHeight() {
+      // Estimate line height based on font size
+      // This is an approximation - in a real implementation you might measure actual line height
+      return this.fontSize * 16 * 1.8 // fontSize (em) * base font size * line-height
     },
     
     // Font size controls
