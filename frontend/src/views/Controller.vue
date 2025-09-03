@@ -46,8 +46,49 @@
         </v-card>
 
         <v-row>
+          <!-- Table of Contents (Left Side) -->
+          <v-col cols="12" lg="3" v-if="sections.length > 0">
+            <v-card elevation="4">
+              <v-card-title class="text-h6">
+                <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
+                Table of Contents
+                <v-spacer />
+                <v-btn 
+                  :icon="showTableOfContents ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                  @click="showTableOfContents = !showTableOfContents"
+                  size="small"
+                  variant="text"
+                >
+                </v-btn>
+              </v-card-title>
+              
+              <v-expand-transition>
+                <v-card-text v-show="showTableOfContents">
+                  <div class="toc-list">
+                    <div 
+                      v-for="(section, index) in sections" 
+                      :key="index"
+                      class="toc-item"
+                      :class="`toc-level-${section.level}`"
+                      @click="goToSection(section)"
+                    >
+                      <v-btn 
+                        variant="text" 
+                        size="small"
+                        class="justify-start text-left"
+                        block
+                      >
+                        <span class="text-truncate">{{ section.title }}</span>
+                      </v-btn>
+                    </div>
+                  </div>
+                </v-card-text>
+              </v-expand-transition>
+            </v-card>
+          </v-col>
+
           <!-- Script Editor -->
-          <v-col cols="12" lg="8">
+          <v-col cols="12" :lg="sections.length > 0 ? 6 : 8">
             <v-card elevation="4">
               <v-card-title class="text-h5">
                 <v-icon class="mr-2">mdi-script-text</v-icon>
@@ -79,7 +120,7 @@
           </v-col>
 
           <!-- Controls Panel -->
-          <v-col cols="12" lg="4">
+          <v-col cols="12" :lg="sections.length > 0 ? 3 : 4">
             <v-card elevation="4" class="mb-4">
               <v-card-title class="text-h6">
                 <v-icon class="mr-2">mdi-play-circle</v-icon>
@@ -295,45 +336,6 @@
                 </div>
               </v-card-text>
             </v-card>
-
-            <!-- Table of Contents -->
-            <v-card elevation="4" v-if="sections.length > 0" class="mt-4">
-              <v-card-title class="text-h6">
-                <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
-                Table of Contents
-                <v-spacer />
-                <v-btn 
-                  icon="mdi-chevron-down"
-                  @click="showTableOfContents = !showTableOfContents"
-                  size="small"
-                  variant="text"
-                >
-                </v-btn>
-              </v-card-title>
-              
-              <v-expand-transition>
-                <v-card-text v-show="showTableOfContents">
-                  <div class="toc-list">
-                    <div 
-                      v-for="(section, index) in sections" 
-                      :key="index"
-                      class="toc-item"
-                      :class="`toc-level-${section.level}`"
-                      @click="goToSection(section)"
-                    >
-                      <v-btn 
-                        variant="text" 
-                        size="small"
-                        class="justify-start text-left"
-                        block
-                      >
-                        <span class="text-truncate">{{ section.title }}</span>
-                      </v-btn>
-                    </div>
-                  </div>
-                </v-card-text>
-              </v-expand-transition>
-            </v-card>
           </v-col>
         </v-row>
       </v-container>
@@ -414,7 +416,7 @@ Happy teleprompting! 🎬`,
       currentScrollPosition: 0, // Track current scroll position in lines
       
       // Section navigation
-      showTableOfContents: false,
+      showTableOfContents: true,
       
       // UI state
       snackbar: {
