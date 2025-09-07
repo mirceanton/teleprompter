@@ -151,9 +151,9 @@
                   </v-label>
                   <v-number-input
                     v-model="scrollSpeed"
-                    :min="1"
+                    :min="0.1"
                     :max="10"
-                    :step="1"
+                    :step="0.1"
                     split-buttons
                     @update:modelValue="updateSpeed"
                   ></v-number-input>
@@ -404,7 +404,7 @@ This application supports multiple teleprompter devices connected to the same ch
 Happy teleprompting! 🎬`,
 
       // Control settings
-      scrollSpeed: 5,
+      scrollSpeed: 2.5,
       textWidth: 100,
       fontSize: 2.5,
       horizontalMirror: false,

@@ -196,7 +196,7 @@ export default {
       teleprompterContent: '',
       isScrolling: false,
       scrollPosition: 0,
-      scrollSpeed: 5,
+      scrollSpeed: 2.5,
       animationId: null,
       
       // Display settings
