@@ -67,9 +67,7 @@
         ref="teleprompterContainer"
         class="teleprompter-container"
         :class="{ 
-          'fullscreen': isFullscreen,
-          'horizontal-mirror': horizontalMirror,
-          'vertical-mirror': verticalMirror
+          'fullscreen': isFullscreen
         }"
         @click="enterFullscreen"
         @mousemove="onMouseMove"
@@ -89,7 +87,7 @@
           :style="{
             fontSize: fontSize + 'em',
             maxWidth: textWidth + '%',
-            transform: `translateX(-50%) translateY(${scrollPosition}px)`
+            transform: teleprompterTransform
           }"
         >
           <div class="teleprompter-content">
@@ -234,6 +232,21 @@ export default {
         icon: 'mdi-wifi-off',
         text: 'Disconnected'
       }
+    },
+    
+    teleprompterTransform() {
+      // Build the transform string combining scroll position and mirror effects
+      let transforms = [`translateX(-50%)`, `translateY(${this.scrollPosition}px)`]
+      
+      if (this.horizontalMirror) {
+        transforms.push('scaleX(-1)')
+      }
+      
+      if (this.verticalMirror) {
+        transforms.push('scaleY(-1)')
+      }
+      
+      return transforms.join(' ')
     }
   },
   
@@ -582,7 +595,6 @@ export default {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translateX(-50%);
   width: 100%;
   text-align: center;
   line-height: 1.8;
@@ -596,18 +608,6 @@ export default {
   display: inline-block;
   max-width: 100%;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-}
-
-.horizontal-mirror .teleprompter-text {
-  transform: translateX(-50%) scaleX(-1);
-}
-
-.vertical-mirror .teleprompter-text {
-  transform: translateX(-50%) scaleY(-1);
-}
-
-.horizontal-mirror.vertical-mirror .teleprompter-text {
-  transform: translateX(-50%) scaleX(-1) scaleY(-1);
 }
 
 .mirror-indicator {
