@@ -299,7 +299,7 @@
                 </div>
 
                 <!-- Audio Source Selection -->
-                <div class="mb-3" v-if="aiScrolling.enabled">
+                <div class="mb-3" v-show="aiScrolling.enabled">
                   <v-label class="mb-2">Audio Source</v-label>
                   <v-select
                     v-model="aiScrolling.config.audio_source"
@@ -311,7 +311,7 @@
                 </div>
 
                 <!-- Advanced Settings -->
-                <v-expansion-panels v-if="aiScrolling.enabled" variant="accordion">
+                <v-expansion-panels v-show="aiScrolling.enabled" variant="accordion">
                   <v-expansion-panel title="Advanced Settings">
                     <v-expansion-panel-text>
                       <!-- Look Ahead/Behind -->
@@ -958,7 +958,12 @@ Happy teleprompting! 🎬`,
         
       } catch (error) {
         console.error('Error starting AI scrolling:', error)
-        this.aiScrolling.enabled = false
+        // Don't disable the UI checkbox, just show error status
+        this.aiScrolling.status = {
+          color: 'error',
+          icon: 'mdi-alert',
+          text: `Error: ${error.message}`
+        }
         this.showSnackbar(`Failed to start AI scrolling: ${error.message}`, 'error')
       }
     },
