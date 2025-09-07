@@ -166,9 +166,18 @@
               <v-card-title class="text-h6">
                 <v-icon class="mr-2">mdi-navigation-variant</v-icon>
                 Navigation Controls
+                <v-spacer />
+                <v-btn 
+                  :icon="showNavigationControls ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                  @click="showNavigationControls = !showNavigationControls"
+                  size="small"
+                  variant="text"
+                >
+                </v-btn>
               </v-card-title>
               
-              <v-card-text>
+              <v-expand-transition>
+                <v-card-text v-show="showNavigationControls">
                 <v-row>
                   <!-- Scroll back -->
                   <v-col cols="6">
@@ -265,7 +274,8 @@
                     <div class="text-center text-caption mt-1">Go to End</div>
                   </v-col>
                 </v-row>
-              </v-card-text>
+                </v-card-text>
+              </v-expand-transition>
             </v-card>
 
             <!-- AI Scrolling Controls -->
@@ -284,29 +294,32 @@
               </v-card-title>
               
               <v-card-text>
-                <!-- AI Scrolling Toggle -->
-                <div class="mb-3">
-                  <v-switch
-                    v-model="aiScrolling.enabled"
-                    label="Enable AI Scrolling"
-                    :disabled="!aiScrolling.available"
-                    @change="toggleAIScrolling"
-                    color="primary"
-                  ></v-switch>
-                  <div v-if="!aiScrolling.available" class="text-caption text-error">
-                    Speech recognition not available
-                  </div>
-                </div>
+                <!-- AI Scrolling Toggle and Audio Source in same row -->
+                <v-row>
+                  <v-col cols="12">
+                    <v-switch
+                      v-model="aiScrolling.enabled"
+                      label="Enable AI Scrolling"
+                      :disabled="!aiScrolling.available"
+                      @change="toggleAIScrolling"
+                      color="primary"
+                    ></v-switch>
+                    <div v-if="!aiScrolling.available" class="text-caption text-error">
+                      Speech recognition not available
+                    </div>
+                  </v-col>
+                </v-row>
 
-                <!-- Audio Source Selection -->
+                <!-- Audio Source Selection - Compact -->
                 <div class="mb-3" v-show="aiScrolling.enabled">
-                  <v-label class="mb-2">Audio Source</v-label>
                   <v-select
                     v-model="aiScrolling.config.audio_source"
                     :items="audioSourceOptions"
                     @update:modelValue="updateAIScrollingConfig"
                     density="compact"
                     variant="outlined"
+                    label="Audio Source"
+                    hide-details
                   ></v-select>
                 </div>
 
@@ -368,16 +381,17 @@
                   </v-expansion-panel>
                 </v-expansion-panels>
 
-                <!-- AI Status Display -->
-                <div v-if="aiScrolling.enabled" class="mt-3">
-                  <v-alert
+                <!-- AI Status Display - Compact -->
+                <div v-if="aiScrolling.enabled" class="mt-2">
+                  <v-chip
                     :color="aiScrolling.status.color"
-                    :icon="aiScrolling.status.icon"
                     variant="tonal"
-                    density="compact"
+                    size="small"
+                    class="mb-1"
                   >
+                    <v-icon start size="small">{{ aiScrolling.status.icon }}</v-icon>
                     {{ aiScrolling.status.text }}
-                  </v-alert>
+                  </v-chip>
                 </div>
               </v-card-text>
             </v-card>
@@ -387,9 +401,18 @@
               <v-card-title class="text-h6">
                 <v-icon class="mr-2">mdi-format-text</v-icon>
                 Text & Mirror Settings
+                <v-spacer />
+                <v-btn 
+                  :icon="showTextSettings ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                  @click="showTextSettings = !showTextSettings"
+                  size="small"
+                  variant="text"
+                >
+                </v-btn>
               </v-card-title>
               
-              <v-card-text>
+              <v-expand-transition>
+                <v-card-text v-show="showTextSettings">
                 <!-- Text Width -->
                 <div class="mb-4">
                   <v-label class="mb-2">Text Width</v-label>
@@ -448,7 +471,8 @@
                     </v-col>
                   </v-row>
                 </div>
-              </v-card-text>
+                </v-card-text>
+              </v-expand-transition>
             </v-card>
           </v-col>
         </v-row>
@@ -531,6 +555,8 @@ Happy teleprompting! 🎬`,
       
       // Section navigation
       showTableOfContents: true,
+      showNavigationControls: false, // Start collapsed to save space
+      showTextSettings: false, // Start collapsed to save space
       
       // UI state
       snackbar: {
