@@ -378,6 +378,14 @@ export default {
           this.scrollByLines(message.direction, message.lines)
           break
           
+        case 'ai_scroll_to_position':
+          this.scrollToCharacterPosition(message.position)
+          break
+          
+        case 'ai_pause_scrolling':
+          this.pauseScrolling()
+          break
+          
         default:
           console.log('Received message:', message)
       }
@@ -479,6 +487,30 @@ export default {
       // Estimate line height based on font size
       // This is an approximation - in a real implementation you might measure actual line height
       return this.fontSize * 16 * 1.8 // fontSize (em) * base font size * line-height
+    },
+    
+    scrollToCharacterPosition(charPosition) {
+      // Convert character position to scroll position
+      if (!this.teleprompterContent || charPosition <= 0) {
+        this.scrollPosition = 0
+        return
+      }
+      
+      // Approximate character to pixel conversion
+      const averageCharWidth = this.fontSize * 16 * 0.6 // Rough estimate
+      const lineHeight = this.calculateLineHeight()
+      const textWidth = this.$refs.teleprompterText ? this.$refs.teleprompterText.clientWidth : 400
+      const charsPerLine = Math.floor(textWidth / averageCharWidth)
+      
+      // Calculate approximate line position
+      const linePosition = Math.floor(charPosition / charsPerLine)
+      const targetScrollPosition = linePosition * lineHeight
+      
+      // Adjust for container height to center the text
+      const containerHeight = this.$refs.teleprompterContainer ? this.$refs.teleprompterContainer.clientHeight : 400
+      const centerOffset = containerHeight * 0.3 // Show text in upper third
+      
+      this.scrollPosition = -(targetScrollPosition - centerOffset)
     },
     
     // Font size controls

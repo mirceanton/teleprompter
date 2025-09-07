@@ -268,6 +268,120 @@
               </v-card-text>
             </v-card>
 
+            <!-- AI Scrolling Controls -->
+            <v-card elevation="4" class="mb-4">
+              <v-card-title class="text-h6">
+                <v-icon class="mr-2">mdi-brain</v-icon>
+                AI Scrolling
+                <v-spacer />
+                <v-chip 
+                  :color="aiScrolling.enabled ? 'success' : 'default'"
+                  size="small"
+                  variant="outlined"
+                >
+                  {{ aiScrolling.enabled ? 'Active' : 'Disabled' }}
+                </v-chip>
+              </v-card-title>
+              
+              <v-card-text>
+                <!-- AI Scrolling Toggle -->
+                <div class="mb-3">
+                  <v-switch
+                    v-model="aiScrolling.enabled"
+                    label="Enable AI Scrolling"
+                    :disabled="!aiScrolling.available"
+                    @change="toggleAIScrolling"
+                    color="primary"
+                  ></v-switch>
+                  <div v-if="!aiScrolling.available" class="text-caption text-error">
+                    Speech recognition not available
+                  </div>
+                </div>
+
+                <!-- Audio Source Selection -->
+                <div class="mb-3" v-if="aiScrolling.enabled">
+                  <v-label class="mb-2">Audio Source</v-label>
+                  <v-select
+                    v-model="aiScrolling.config.audio_source"
+                    :items="audioSourceOptions"
+                    @update:modelValue="updateAIScrollingConfig"
+                    density="compact"
+                    variant="outlined"
+                  ></v-select>
+                </div>
+
+                <!-- Advanced Settings -->
+                <v-expansion-panels v-if="aiScrolling.enabled" variant="accordion">
+                  <v-expansion-panel title="Advanced Settings">
+                    <v-expansion-panel-text>
+                      <!-- Look Ahead/Behind -->
+                      <div class="mb-3">
+                        <v-label class="mb-2">Look Ahead (characters)</v-label>
+                        <v-number-input
+                          v-model="aiScrolling.config.look_ahead_chars"
+                          :min="50"
+                          :max="500"
+                          :step="10"
+                          split-buttons
+                          @update:modelValue="updateAIScrollingConfig"
+                        ></v-number-input>
+                      </div>
+
+                      <div class="mb-3">
+                        <v-label class="mb-2">Look Behind (characters)</v-label>
+                        <v-number-input
+                          v-model="aiScrolling.config.look_behind_chars"
+                          :min="25"
+                          :max="200"
+                          :step="5"
+                          split-buttons
+                          @update:modelValue="updateAIScrollingConfig"
+                        ></v-number-input>
+                      </div>
+
+                      <!-- Confidence Threshold -->
+                      <div class="mb-3">
+                        <v-label class="mb-2">Confidence Threshold</v-label>
+                        <v-slider
+                          v-model="aiScrolling.config.confidence_threshold"
+                          :min="0.3"
+                          :max="1.0"
+                          :step="0.05"
+                          thumb-label
+                          @update:modelValue="updateAIScrollingConfig"
+                        ></v-slider>
+                      </div>
+
+                      <!-- Pause Threshold -->
+                      <div class="mb-3">
+                        <v-label class="mb-2">Pause Threshold (seconds)</v-label>
+                        <v-number-input
+                          v-model="aiScrolling.config.pause_threshold_seconds"
+                          :min="1.0"
+                          :max="10.0"
+                          :step="0.5"
+                          split-buttons
+                          @update:modelValue="updateAIScrollingConfig"
+                        ></v-number-input>
+                      </div>
+                    </v-expansion-panel-text>
+                  </v-expansion-panel>
+                </v-expansion-panels>
+
+                <!-- AI Status Display -->
+                <div v-if="aiScrolling.enabled" class="mt-3">
+                  <v-alert
+                    :color="aiScrolling.status.color"
+                    :icon="aiScrolling.status.icon"
+                    variant="tonal"
+                    density="compact"
+                  >
+                    {{ aiScrolling.status.text }}
+                  </v-alert>
+                </div>
+              </v-card-text>
+            </v-card>
+
             <!-- Text & Mirror Settings -->
             <v-card elevation="4">
               <v-card-title class="text-h6">
@@ -426,7 +540,33 @@ Happy teleprompting! 🎬`,
       },
       
       // Debounce timer
-      syncTimeout: null
+      syncTimeout: null,
+      
+      // AI Scrolling state
+      aiScrolling: {
+        enabled: false,
+        available: false,
+        config: {
+          look_ahead_chars: 100,
+          look_behind_chars: 50,
+          confidence_threshold: 0.7,
+          pause_threshold_seconds: 3.0,
+          scroll_speed_multiplier: 1.0,
+          audio_source: 'controller'
+        },
+        status: {
+          color: 'default',
+          icon: 'mdi-microphone-off',
+          text: 'AI Scrolling Disabled'
+        }
+      },
+      
+      // Audio recording state
+      audioRecording: {
+        active: false,
+        mediaRecorder: null,
+        stream: null
+      }
     }
   },
   
@@ -444,6 +584,14 @@ Happy teleprompting! 🎬`,
         icon: 'mdi-wifi-off',
         text: 'Disconnected'
       }
+    },
+    
+    // Audio source options for AI scrolling
+    audioSourceOptions() {
+      return [
+        { title: 'Controller (This Device)', value: 'controller' },
+        { title: 'Teleprompter Device', value: 'teleprompter' }
+      ]
     },
     
     // Parse markdown sections from script text
@@ -471,17 +619,45 @@ Happy teleprompting! 🎬`,
     // Get channel name from URL params
     this.channelName = this.$route.query.room || 'default'
     
+    // Check AI scrolling availability
+    this.checkAIScrollingAvailability()
+    
     // Connect to WebSocket
     this.connect()
   },
   
   beforeUnmount() {
+    // Clean up audio recording
+    if (this.audioRecording.active) {
+      this.stopAudioRecording()
+    }
+    
     if (this.ws) {
       this.ws.close()
     }
   },
   
   methods: {
+    async checkAIScrollingAvailability() {
+      try {
+        // Check if microphone access is available
+        const hasMediaDevices = navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+        
+        if (hasMediaDevices) {
+          // Check with backend if AI scrolling is available
+          const response = await fetch(`${config.getApiUrl()}/api/channel/${this.channelName}/ai-scrolling`)
+          const data = await response.json()
+          this.aiScrolling.available = data.available || false
+        } else {
+          this.aiScrolling.available = false
+        }
+        
+      } catch (error) {
+        console.warn('Could not check AI scrolling availability:', error)
+        this.aiScrolling.available = false
+      }
+    },
+    
     connect() {
       try {
         // Use configurable backend URL instead of hard-coded port
@@ -561,6 +737,37 @@ Happy teleprompting! 🎬`,
         case 'font_size':
           // Update font size when teleprompter changes font size
           this.fontSize = message.value
+          break
+          
+        case 'ai_scrolling_started':
+          this.aiScrolling.status = {
+            color: 'success',
+            icon: 'mdi-microphone',
+            text: 'AI Scrolling Active'
+          }
+          this.showSnackbar('AI Scrolling started', 'success')
+          break
+          
+        case 'ai_scrolling_stopped':
+          this.aiScrolling.status = {
+            color: 'default',
+            icon: 'mdi-microphone-off',
+            text: 'AI Scrolling Disabled'
+          }
+          this.showSnackbar('AI Scrolling stopped', 'info')
+          break
+          
+        case 'ai_scrolling_config_updated':
+          this.aiScrolling.config = { ...message.config }
+          break
+          
+        case 'ai_scrolling_error':
+          this.aiScrolling.status = {
+            color: 'error',
+            icon: 'mdi-alert',
+            text: `AI Error: ${message.error}`
+          }
+          this.showSnackbar(`AI Scrolling Error: ${message.error}`, 'error')
           break
           
         default:
@@ -718,6 +925,135 @@ Happy teleprompting! 🎬`,
         horizontal: this.horizontalMirror,
         vertical: this.verticalMirror
       })
+    },
+    
+    // AI Scrolling methods
+    async toggleAIScrolling() {
+      if (this.aiScrolling.enabled) {
+        await this.startAIScrolling()
+      } else {
+        await this.stopAIScrolling()
+      }
+    },
+    
+    async startAIScrolling() {
+      try {
+        // Check if we need to start audio recording
+        if (this.aiScrolling.config.audio_source === 'controller') {
+          await this.startAudioRecording()
+        }
+        
+        // Start AI scrolling session
+        this.sendMessage({
+          type: 'ai_scrolling_start',
+          script_content: this.scriptText,
+          config: this.aiScrolling.config
+        })
+        
+        this.aiScrolling.status = {
+          color: 'info',
+          icon: 'mdi-loading',
+          text: 'Starting AI Scrolling...'
+        }
+        
+      } catch (error) {
+        console.error('Error starting AI scrolling:', error)
+        this.aiScrolling.enabled = false
+        this.showSnackbar(`Failed to start AI scrolling: ${error.message}`, 'error')
+      }
+    },
+    
+    async stopAIScrolling() {
+      try {
+        // Stop audio recording if active
+        if (this.audioRecording.active) {
+          this.stopAudioRecording()
+        }
+        
+        // Stop AI scrolling session
+        this.sendMessage({
+          type: 'ai_scrolling_stop'
+        })
+        
+        this.aiScrolling.status = {
+          color: 'default',
+          icon: 'mdi-microphone-off',
+          text: 'AI Scrolling Disabled'
+        }
+        
+      } catch (error) {
+        console.error('Error stopping AI scrolling:', error)
+        this.showSnackbar(`Error stopping AI scrolling: ${error.message}`, 'error')
+      }
+    },
+    
+    updateAIScrollingConfig() {
+      if (this.aiScrolling.enabled) {
+        this.sendMessage({
+          type: 'ai_scrolling_config',
+          ...this.aiScrolling.config
+        })
+      }
+    },
+    
+    async startAudioRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            sampleRate: 16000,
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true
+          } 
+        })
+        
+        this.audioRecording.stream = stream
+        this.audioRecording.mediaRecorder = new MediaRecorder(stream, {
+          mimeType: 'audio/webm;codecs=opus'
+        })
+        
+        this.audioRecording.mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0 && this.aiScrolling.enabled) {
+            this.sendAudioChunk(event.data)
+          }
+        }
+        
+        // Record in small chunks for real-time processing
+        this.audioRecording.mediaRecorder.start(1000) // 1 second chunks
+        this.audioRecording.active = true
+        
+      } catch (error) {
+        throw new Error(`Microphone access denied: ${error.message}`)
+      }
+    },
+    
+    stopAudioRecording() {
+      if (this.audioRecording.mediaRecorder) {
+        this.audioRecording.mediaRecorder.stop()
+        this.audioRecording.mediaRecorder = null
+      }
+      
+      if (this.audioRecording.stream) {
+        this.audioRecording.stream.getTracks().forEach(track => track.stop())
+        this.audioRecording.stream = null
+      }
+      
+      this.audioRecording.active = false
+    },
+    
+    async sendAudioChunk(audioBlob) {
+      try {
+        const arrayBuffer = await audioBlob.arrayBuffer()
+        const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+        
+        this.sendMessage({
+          type: 'audio_chunk',
+          audio_data: base64Audio
+        })
+        
+      } catch (error) {
+        console.error('Error sending audio chunk:', error)
+      }
     },
     
     // Utility methods
