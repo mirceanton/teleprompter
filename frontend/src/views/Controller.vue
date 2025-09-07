@@ -46,10 +46,46 @@
         </v-card>
 
         <v-row>
-          <!-- Left Side - Navigation Controls and Table of Contents -->
+          <!-- Left Side - Table of Contents and Navigation Controls -->
           <v-col cols="12" lg="3">
-            <!-- Navigation Controls -->
+            <!-- Table of Contents -->
             <v-card elevation="4" class="mb-4">
+              <v-card-title class="text-h6">
+                <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
+                Table of Contents
+              </v-card-title>
+              
+              <v-card-text>
+                <div v-if="sections.length > 0" class="toc-list">
+                  <div 
+                    v-for="(section, index) in sections" 
+                    :key="index"
+                    class="toc-item"
+                    :class="`toc-level-${section.level}`"
+                    @click="goToSection(section)"
+                  >
+                    <v-btn 
+                      variant="text" 
+                      size="small"
+                      class="justify-start text-left"
+                      block
+                    >
+                      <span class="text-truncate">{{ section.title }}</span>
+                    </v-btn>
+                  </div>
+                </div>
+                <div v-else class="text-center text-disabled">
+                  <v-icon class="mb-2">mdi-format-list-bulleted-square</v-icon>
+                  <div class="text-caption">
+                    No sections could be parsed from the script.<br>
+                    Expected markdown headings (# ## ###).
+                  </div>
+                </div>
+              </v-card-text>
+            </v-card>
+
+            <!-- Navigation Controls -->
+            <v-card elevation="4">
               <v-card-title class="text-h6">
                 <v-icon class="mr-2">mdi-navigation-variant</v-icon>
                 Navigation Controls
@@ -154,85 +190,14 @@
                 </v-row>
               </v-card-text>
             </v-card>
-
-            <!-- Table of Contents -->
-            <v-card elevation="4">
-              <v-card-title class="text-h6">
-                <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
-                Table of Contents
-              </v-card-title>
-              
-              <v-card-text>
-                <div v-if="sections.length > 0" class="toc-list">
-                  <div 
-                    v-for="(section, index) in sections" 
-                    :key="index"
-                    class="toc-item"
-                    :class="`toc-level-${section.level}`"
-                    @click="goToSection(section)"
-                  >
-                    <v-btn 
-                      variant="text" 
-                      size="small"
-                      class="justify-start text-left"
-                      block
-                    >
-                      <span class="text-truncate">{{ section.title }}</span>
-                    </v-btn>
-                  </div>
-                </div>
-                <div v-else class="text-center text-disabled">
-                  <v-icon class="mb-2">mdi-format-list-bulleted-square</v-icon>
-                  <div class="text-caption">
-                    No sections could be parsed from the script.<br>
-                    Expected markdown headings (# ## ###).
-                  </div>
-                </div>
-              </v-card-text>
-            </v-card>
           </v-col>
 
           <!-- Script Editor -->
           <v-col cols="12" lg="6">
             <v-card elevation="4">
-              <v-card-title class="text-h5 d-flex align-center">
+              <v-card-title class="text-h5">
                 <v-icon class="mr-2">mdi-script-text</v-icon>
                 Script Editor
-                <v-spacer />
-                <!-- Text Settings Icons -->
-                <v-tooltip text="Text Width">
-                  <template v-slot:activator="{ props }">
-                    <v-btn 
-                      v-bind="props"
-                      icon="mdi-arrow-expand-horizontal"
-                      size="small"
-                      variant="text"
-                      @click="showTextWidthDialog = true"
-                    ></v-btn>
-                  </template>
-                </v-tooltip>
-                <v-tooltip text="Font Size">
-                  <template v-slot:activator="{ props }">
-                    <v-btn 
-                      v-bind="props"
-                      icon="mdi-format-size"
-                      size="small"
-                      variant="text"
-                      @click="showFontSizeDialog = true"
-                    ></v-btn>
-                  </template>
-                </v-tooltip>
-                <v-tooltip text="Mirror Settings">
-                  <template v-slot:activator="{ props }">
-                    <v-btn 
-                      v-bind="props"
-                      icon="mdi-flip-horizontal"
-                      size="small"
-                      variant="text"
-                      @click="showMirrorDialog = true"
-                    ></v-btn>
-                  </template>
-                </v-tooltip>
               </v-card-title>
               
               <v-card-text>
@@ -245,16 +210,6 @@
                   auto-grow
                   @input="debouncedSyncText"
                 />
-                
-                <v-btn 
-                  color="primary" 
-                  @click="syncText"
-                  class="mt-2"
-                  block
-                >
-                  <v-icon class="mr-2">mdi-sync</v-icon>
-                  🔄 Sync Text
-                </v-btn>
               </v-card-text>
             </v-card>
           </v-col>
@@ -297,6 +252,95 @@
                     split-buttons
                     @update:modelValue="updateSpeed"
                   ></v-number-input>
+                </div>
+
+                <!-- Sync Text Button -->
+                <v-btn 
+                  color="primary" 
+                  @click="syncText"
+                  class="mt-3"
+                  block
+                >
+                  <v-icon class="mr-2">mdi-sync</v-icon>
+                  🔄 Sync Text
+                </v-btn>
+              </v-card-text>
+            </v-card>
+
+            <!-- Text & Mirror Settings -->
+            <v-card elevation="4" class="mb-4">
+              <v-card-title class="text-h6">
+                <v-icon class="mr-2">mdi-format-font</v-icon>
+                Text & Mirror Settings
+              </v-card-title>
+              
+              <v-card-text>
+                <!-- Text Width -->
+                <div class="mb-3">
+                  <v-label class="mb-2">
+                    <v-icon class="mr-1">mdi-arrow-expand-horizontal</v-icon>
+                    Text Width
+                  </v-label>
+                  <v-number-input
+                    v-model="textWidth"
+                    :min="20"
+                    :max="100"
+                    :step="5"
+                    split-buttons
+                    suffix="%"
+                    @update:modelValue="updateWidth"
+                  ></v-number-input>
+                </div>
+
+                <!-- Font Size -->
+                <div class="mb-3">
+                  <v-label class="mb-2">
+                    <v-icon class="mr-1">mdi-format-size</v-icon>
+                    Font Size
+                  </v-label>
+                  <v-number-input
+                    v-model="fontSize"
+                    :min="0.5"
+                    :max="5"
+                    :step="0.1"
+                    split-buttons
+                    suffix="em"
+                    @update:modelValue="updateFontSize"
+                  ></v-number-input>
+                </div>
+
+                <!-- Mirror Settings -->
+                <div class="mb-3">
+                  <v-label class="mb-2">
+                    <v-icon class="mr-1">mdi-flip-horizontal</v-icon>
+                    Mirror Settings
+                  </v-label>
+                  <v-row>
+                    <v-col cols="6">
+                      <v-btn 
+                        :color="horizontalMirror ? 'primary' : 'secondary'"
+                        @click="toggleHorizontalMirror"
+                        block
+                        size="small"
+                        variant="outlined"
+                      >
+                        <v-icon class="mr-1">mdi-flip-horizontal</v-icon>
+                        Horizontal
+                      </v-btn>
+                    </v-col>
+                    <v-col cols="6">
+                      <v-btn 
+                        :color="verticalMirror ? 'primary' : 'secondary'"
+                        @click="toggleVerticalMirror"
+                        block
+                        size="small"
+                        variant="outlined"
+                      >
+                        <v-icon class="mr-1">mdi-flip-vertical</v-icon>
+                        Vertical
+                      </v-btn>
+                    </v-col>
+                  </v-row>
                 </div>
               </v-card-text>
             </v-card>
@@ -420,87 +464,6 @@
             </v-card>
           </v-col>
         </v-row>
-
-        <!-- Text Settings Dialogs -->
-        <v-dialog v-model="showTextWidthDialog" max-width="400">
-          <v-card>
-            <v-card-title>Text Width</v-card-title>
-            <v-card-text>
-              <v-number-input
-                v-model="textWidth"
-                :min="20"
-                :max="100"
-                :step="5"
-                split-buttons
-                suffix="%"
-                @update:modelValue="updateWidth"
-              ></v-number-input>
-            </v-card-text>
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn @click="showTextWidthDialog = false">Close</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
-
-        <v-dialog v-model="showFontSizeDialog" max-width="400">
-          <v-card>
-            <v-card-title>Font Size</v-card-title>
-            <v-card-text>
-              <v-number-input
-                v-model="fontSize"
-                :min="0.5"
-                :max="5"
-                :step="0.1"
-                split-buttons
-                suffix="em"
-                @update:modelValue="updateFontSize"
-              ></v-number-input>
-            </v-card-text>
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn @click="showFontSizeDialog = false">Close</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
-
-        <v-dialog v-model="showMirrorDialog" max-width="400">
-          <v-card>
-            <v-card-title>Mirror Settings</v-card-title>
-            <v-card-text>
-              <v-row>
-                <v-col cols="6">
-                  <v-btn 
-                    :color="horizontalMirror ? 'primary' : 'secondary'"
-                    @click="toggleHorizontalMirror"
-                    block
-                    size="small"
-                    variant="outlined"
-                  >
-                    <v-icon class="mr-1">mdi-flip-horizontal</v-icon>
-                    Horizontal
-                  </v-btn>
-                </v-col>
-                <v-col cols="6">
-                  <v-btn 
-                    :color="verticalMirror ? 'primary' : 'secondary'"
-                    @click="toggleVerticalMirror"
-                    block
-                    size="small"
-                    variant="outlined"
-                  >
-                    <v-icon class="mr-1">mdi-flip-vertical</v-icon>
-                    Vertical
-                  </v-btn>
-                </v-col>
-              </v-row>
-            </v-card-text>
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn @click="showMirrorDialog = false">Close</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
       </v-container>
     </v-main>
 
@@ -586,11 +549,6 @@ Happy teleprompting! 🎬`,
         text: '',
         color: 'success'
       },
-      
-      // Text Settings Dialogs
-      showTextWidthDialog: false,
-      showFontSizeDialog: false,
-      showMirrorDialog: false,
       
       // Debounce timer
       syncTimeout: null,
