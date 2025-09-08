@@ -18,6 +18,11 @@ export const config = {
     return `${protocol}//${host}:8001`
   },
   
+  // Get API URL for HTTP requests
+  getApiUrl() {
+    return this.getBackendUrl()
+  },
+  
   // Get WebSocket URL for the backend
   getWebSocketUrl() {
     const backendUrl = this.getBackendUrl()
