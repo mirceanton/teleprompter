@@ -601,6 +601,7 @@ export default {
       // Connection state
       ws: null,
       channelName: '',
+      roomSecret: '',
       connectionInfo: {
         show: false,
         count: 0
@@ -732,8 +733,9 @@ Happy teleprompting! 🎬`,
   },
   
   mounted() {
-    // Get channel name from URL params
+    // Get channel name and secret from URL params
     this.channelName = this.$route.query.room || 'default'
+    this.roomSecret = this.$route.query.secret || ''
     
     // Check AI scrolling availability
     this.checkAIScrollingAvailability()
@@ -790,30 +792,20 @@ Happy teleprompting! 🎬`,
     setupWebSocketHandlers() {
       this.ws.onopen = () => {
         console.log('WebSocket connected')
-        this.showSnackbar('Connected to teleprompter channel', 'success')
         
-        // Send mode information
-        this.sendMessage({ type: 'mode', mode: 'controller' })
-        
-        // Sync initial settings
-        setTimeout(() => {
-          this.syncText()
-          this.updateSpeed()
-          this.updateHorizontalMirror()
-          this.updateVerticalMirror()
-          this.updateFontSize()
-          this.updateWidth()
-        }, 500)
-        
-        // Request connection info
-        setTimeout(() => {
-          this.sendMessage({ type: 'request_connection_info' })
-        }, 1000)
+        // Send authentication first
+        this.sendMessage({
+          type: 'authenticate',
+          room_id: this.channelName,
+          secret: this.roomSecret,
+          mode: 'controller'
+        })
       }
       
       this.ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data)
+          console.log('Received message:', message)
           this.handleMessage(message)
         } catch (error) {
           console.error('Error parsing message:', error)
@@ -834,6 +826,38 @@ Happy teleprompting! 🎬`,
     
     handleMessage(message) {
       switch (message.type) {
+        case 'auth_success':
+          console.log('Authentication successful')
+          this.showSnackbar('Connected to teleprompter channel', 'success')
+          
+          // Sync initial settings after successful authentication
+          setTimeout(() => {
+            this.syncText()
+            this.updateSpeed()
+            this.updateHorizontalMirror()
+            this.updateVerticalMirror()
+            this.updateFontSize()
+            this.updateWidth()
+          }, 500)
+          
+          // Request room info
+          setTimeout(() => {
+            this.sendMessage({ type: 'request_connection_info' })
+          }, 1000)
+          break
+          
+        case 'auth_error':
+          console.error('Authentication failed:', message.message)
+          this.showSnackbar(`Authentication failed: ${message.message}`, 'error')
+          // Redirect back to landing page
+          this.$router.push('/')
+          break
+          
+        case 'room_update':
+          this.connectionInfo.count = message.participant_count
+          this.connectionInfo.show = true
+          break
+          
         case 'connection_update':
           this.connectionInfo.count = message.connection_count
           this.connectionInfo.show = true
