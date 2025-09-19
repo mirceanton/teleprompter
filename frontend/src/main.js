@@ -6,6 +6,7 @@ import * as directives from 'vuetify/directives'
 import 'vuetify/styles'
 import '@mdi/font/css/materialdesignicons.css'
 import App from './App.vue'
+import { config } from './utils/config.js'
 
 // Import views
 import Landing from './views/Landing.vue'
@@ -43,8 +44,20 @@ const vuetify = createVuetify({
   }
 })
 
-// Create and mount app
-createApp(App)
-  .use(router)
-  .use(vuetify)
-  .mount('#app')
+// Load configuration and create app
+async function initializeApp() {
+  try {
+    await config.loadConfig()
+  } catch (error) {
+    console.warn('Failed to load configuration, using defaults:', error)
+  }
+  
+  // Create and mount app
+  createApp(App)
+    .use(router)
+    .use(vuetify)
+    .mount('#app')
+}
+
+// Initialize the application
+initializeApp()

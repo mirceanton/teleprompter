@@ -34,6 +34,14 @@ RUN echo '#!/bin/sh' > /docker-entrypoint.d/30-substitute-env.sh && \
     echo 'else' >> /docker-entrypoint.d/30-substitute-env.sh && \
     echo '  echo "No BACKEND_URL provided, using default"' >> /docker-entrypoint.d/30-substitute-env.sh && \
     echo 'fi' >> /docker-entrypoint.d/30-substitute-env.sh && \
+    echo '' >> /docker-entrypoint.d/30-substitute-env.sh && \
+    echo '# Check if config.json exists and is writable (mounted)' >> /docker-entrypoint.d/30-substitute-env.sh && \
+    echo 'if [ ! -f "/usr/share/nginx/html/config.json" ]; then' >> /docker-entrypoint.d/30-substitute-env.sh && \
+    echo '  echo "No config.json found, creating default"' >> /docker-entrypoint.d/30-substitute-env.sh && \
+    echo '  echo "{\"backendUrl\":\"http://localhost:8001\"}" > /usr/share/nginx/html/config.json' >> /docker-entrypoint.d/30-substitute-env.sh && \
+    echo 'else' >> /docker-entrypoint.d/30-substitute-env.sh && \
+    echo '  echo "Using existing config.json"' >> /docker-entrypoint.d/30-substitute-env.sh && \
+    echo 'fi' >> /docker-entrypoint.d/30-substitute-env.sh && \
     chmod +x /docker-entrypoint.d/30-substitute-env.sh
 
 # Expose port
