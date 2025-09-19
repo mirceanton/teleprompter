@@ -12,9 +12,11 @@
         📱 Teleprompter - {{ channelName }}
       </v-toolbar-title>
       <v-spacer />
-      <v-chip :color="connectionStatus.color" variant="outlined" size="small">
-        <v-icon start size="small">{{ connectionStatus.icon }}</v-icon>
-        {{ connectionStatus.text }}
+      
+      <!-- Room ID display -->
+      <v-chip color="secondary" variant="outlined" size="small">
+        <v-icon start size="small">mdi-key</v-icon>
+        {{ channelName }}
       </v-chip>
     </v-app-bar>
 
@@ -191,6 +193,7 @@ export default {
       // Connection state
       ws: null,
       channelName: '',
+      roomSecret: '',
       
       // Teleprompter content and state
       teleprompterContent: '',
@@ -219,21 +222,6 @@ export default {
   },
   
   computed: {
-    connectionStatus() {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        return {
-          color: 'success',
-          icon: 'mdi-wifi',
-          text: 'Connected'
-        }
-      }
-      return {
-        color: 'error',
-        icon: 'mdi-wifi-off',
-        text: 'Disconnected'
-      }
-    },
-    
     teleprompterTransform() {
       // Build the transform string combining scroll position and mirror effects
       let transforms = [`translateX(-50%)`, `translateY(${this.scrollPosition}px)`]
@@ -251,8 +239,9 @@ export default {
   },
   
   mounted() {
-    // Get channel name from URL params
+    // Get channel name and secret from URL params
     this.channelName = this.$route.query.room || 'default'
+    this.roomSecret = this.$route.query.secret || ''
     
     // Connect to WebSocket
     this.connect()
@@ -296,15 +285,20 @@ export default {
     setupWebSocketHandlers() {
       this.ws.onopen = () => {
         console.log('WebSocket connected')
-        this.showSnackbar('Connected to teleprompter channel', 'success')
         
-        // Send mode information
-        this.sendMessage({ type: 'mode', mode: 'teleprompter' })
+        // Send authentication first
+        this.sendMessage({
+          type: 'authenticate',
+          room_id: this.channelName,
+          secret: this.roomSecret,
+          mode: 'teleprompter'
+        })
       }
       
       this.ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data)
+          console.log('Received message:', message)
           this.handleMessage(message)
         } catch (error) {
           console.error('Error parsing message:', error)
@@ -324,6 +318,18 @@ export default {
     
     handleMessage(message) {
       switch (message.type) {
+        case 'auth_success':
+          console.log('Authentication successful')
+          this.showSnackbar('Connected to teleprompter channel', 'success')
+          break
+          
+        case 'auth_error':
+          console.error('Authentication failed:', message.message)
+          this.showSnackbar(`Authentication failed: ${message.message}`, 'error')
+          // Redirect back to landing page
+          this.$router.push('/')
+          break
+          
         case 'text':
           this.teleprompterContent = message.content
           this.resetScrolling()
