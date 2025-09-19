@@ -9,7 +9,7 @@
       density="compact"
     >
       <v-toolbar-title class="text-subtitle-1">
-        📱 Teleprompter - {{ channelName }}
+        Teleprompter - {{ channelName }}
       </v-toolbar-title>
       <v-spacer />
       
