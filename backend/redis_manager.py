@@ -64,11 +64,11 @@ class RedisManager:
             return True
             
         except (ConnectionError, TimeoutError) as e:
-            logger.error(f"Redis connection failed: {e}. The application will exit.")
-            raise
+            logger.warning(f"Redis connection failed: {e}. Running without Redis support.")
+            return False
         except Exception as e:
-            logger.error(f"Unexpected error connecting to Redis: {e}")
-            raise
+            logger.warning(f"Unexpected error connecting to Redis: {e}. Running without Redis support.")
+            return False
     
     async def disconnect(self):
         """Close Redis connections"""
