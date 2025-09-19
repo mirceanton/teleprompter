@@ -43,11 +43,7 @@ The application will be available at:
 
 ### Configuration
 
-The frontend can be configured to use a different backend URL in multiple ways:
-
-#### Method 1: Runtime Configuration File (Recommended)
-
-The frontend loads its configuration from a `config.json` file at runtime, allowing you to use the same Docker image across environments.
+The frontend is configured using a `config.json` file at runtime, allowing you to use the same Docker image across different environments.
 
 **For Docker deployments:**
 ```bash
@@ -104,21 +100,7 @@ spec:
           name: teleprompter-config
 ```
 
-#### Method 2: Environment Variables (Legacy)
-
-```bash
-# Set custom backend URL via environment variable
-export FRONTEND_BACKEND_URL=http://my-backend-server:8001
-docker-compose up -d
-```
-
-#### Configuration Priority
-
-The frontend uses the following priority order for backend URL configuration:
-1. Docker environment variable injection (`BACKEND_URL`)
-2. **Runtime config.json file** (recommended)
-3. Build-time environment variable
-4. Default: same host on port 8001
+If no `config.json` file is provided, the frontend will create a default configuration file with the backend URL set to the same host on port 8001.
 
 #### Example Configurations
 

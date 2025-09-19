@@ -22,13 +22,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        - BACKEND_URL=${FRONTEND_BACKEND_URL:-http://localhost:8001}
     ports:
       - "3000:80"
-    environment:
-      # Runtime backend URL configuration - can be overridden
-      - BACKEND_URL=${FRONTEND_BACKEND_URL:-http://localhost:8001}
+    volumes:
+      # Mount custom config.json if needed
+      # - ./config.json:/usr/share/nginx/html/config.json:ro
     networks:
       - teleprompter-network
     restart: unless-stopped
