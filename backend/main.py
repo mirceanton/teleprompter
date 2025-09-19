@@ -36,7 +36,9 @@ async def startup_event():
     redis_connected = await redis_manager.connect()
     if redis_connected:
         # Start the Redis message listener in the background
-        asyncio.create_task(redis_manager.start_message_listener())
+        listener_task = asyncio.create_task(redis_manager.start_message_listener())
+        # Store the task to prevent it from being garbage collected
+        app.state.redis_listener_task = listener_task
         logger.info("Redis Pub/Sub enabled for horizontal scaling")
     else:
         logger.warning("Running in local-only mode (Redis unavailable)")
@@ -50,8 +52,6 @@ class ConnectionManager:
     def __init__(self):
         # Local connections for this instance only
         self.active_connections: Dict[str, Set[WebSocket]] = {}
-        # Track subscribed channels to avoid double subscriptions
-        self.subscribed_channels: Set[str] = set()
     
     async def connect(self, websocket: WebSocket, channel: str):
         await websocket.accept()
@@ -60,11 +60,6 @@ class ConnectionManager:
         self.active_connections[channel].add(websocket)
         connection_count = len(self.active_connections[channel])
         print(f"Client connected to channel: {channel} (total: {connection_count})")
-        
-        # Subscribe to Redis channel for this room if Redis is available and not already subscribed
-        if redis_manager.is_available() and channel not in self.subscribed_channels:
-            await redis_manager.subscribe_to_channel(channel, self._handle_redis_message)
-            self.subscribed_channels.add(channel)
     
     def disconnect(self, websocket: WebSocket, channel: str):
         if channel in self.active_connections:
@@ -73,11 +68,6 @@ class ConnectionManager:
             if not self.active_connections[channel]:
                 del self.active_connections[channel]
                 print(f"Client disconnected from channel: {channel} (channel closed)")
-                
-                # Unsubscribe from Redis channel if no local connections remain
-                if redis_manager.is_available() and channel in self.subscribed_channels:
-                    asyncio.create_task(redis_manager.unsubscribe_from_channel(channel))
-                    self.subscribed_channels.discard(channel)
             else:
                 print(f"Client disconnected from channel: {channel} (remaining: {connection_count})")
     

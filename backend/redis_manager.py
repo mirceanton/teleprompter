@@ -101,7 +101,6 @@ class RedisManager:
             redis_channel = self.get_channel_name(channel)
             message_json = json.dumps(message)
             await self.redis_client.publish(redis_channel, message_json)
-            logger.debug(f"Published message to Redis channel {redis_channel}: {message.get('type', 'unknown')}")
             return True
             
         except Exception as e:
@@ -155,16 +154,22 @@ class RedisManager:
         logger.info("Starting Redis message listener")
         
         try:
+            # Subscribe to all room channels using pattern matching
+            await self.pubsub.psubscribe("room:*")
+            logger.info("Subscribed to Redis pattern: room:*")
+            
             async for message in self.pubsub.listen():
-                if message['type'] == 'message':
-                    await self._handle_redis_message(message)
+                if message['type'] == 'pmessage':  # Pattern message
+                    await self._handle_redis_pattern_message(message)
                     
         except Exception as e:
             logger.error(f"Error in Redis message listener: {e}")
+            logger.exception("Full traceback:")
     
-    async def _handle_redis_message(self, redis_message):
-        """Handle incoming Redis messages"""
+    async def _handle_redis_pattern_message(self, redis_message):
+        """Handle incoming Redis pattern messages"""
         try:
+            pattern = redis_message['pattern']
             channel = redis_message['channel']
             data = redis_message['data']
             
@@ -176,21 +181,21 @@ class RedisManager:
             if channel.startswith('room:'):
                 teleprompter_channel = channel[5:]  # Remove "room:" prefix
                 
-                # Find and call the appropriate handler
-                handler = self.message_handlers.get(channel)
-                if handler:
-                    # Add channel info to message for the handler
-                    message['_teleprompter_channel'] = teleprompter_channel
-                    await handler(message)
-                else:
-                    logger.warning(f"No handler found for Redis channel: {channel}")
+                # Add channel info to message
+                message['_teleprompter_channel'] = teleprompter_channel
+                
+                # Call the connection manager's message handler
+                # Import here to avoid circular imports
+                from main import manager
+                await manager._handle_redis_message(message)
             else:
                 logger.warning(f"Invalid Redis channel format: {channel}")
                 
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON in Redis message: {e}")
         except Exception as e:
-            logger.error(f"Error handling Redis message: {e}")
+            logger.error(f"Error handling Redis pattern message: {e}")
+            logger.exception("Full traceback:")
     
     def is_available(self) -> bool:
         """Check if Redis is available"""
