@@ -3,7 +3,7 @@
     <!-- Top Control Bar (hidden in fullscreen mode) -->
     <v-app-bar v-if="!isFullscreen" app color="primary" dark density="compact">
       <v-toolbar-title class="text-subtitle-1">
-        📱 Teleprompter - {{ channelName }}
+        Prompter - {{ channelName }}
       </v-toolbar-title>
       <v-spacer />
       <v-chip :color="connectionStatus.color" variant="outlined" size="small">

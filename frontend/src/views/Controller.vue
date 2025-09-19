@@ -2,7 +2,7 @@
   <v-app>
     <v-app-bar app color="primary" dark>
       <v-toolbar-title>
-        💻 Controller Mode - {{ channelName }}
+        Admin - {{ channelName }}
       </v-toolbar-title>
       <v-spacer />
       <v-chip :color="connectionStatus.color" variant="outlined">
