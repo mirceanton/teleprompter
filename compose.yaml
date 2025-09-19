@@ -1,38 +1,33 @@
+---
 services:
-  # Backend API Service
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "8001:8001"
-    environment:
-      - PORT=8001
-    networks:
-      - teleprompter-network
+    build: ./backend
+    ports: [ "8001:8001" ]
     restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     healthcheck:
       test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8001/api/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # Unified Frontend Service
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:80"
-    volumes:
-      # Mount custom config.json if needed
-      # - ./config.json:/usr/share/nginx/html/config.json:ro
-    networks:
-      - teleprompter-network
+    build: ./frontend
+    ports: ["8000:80"]
     restart: unless-stopped
-    depends_on:
-      - backend
+    volumes:
+      - ./frontend/public/config.json:/usr/share/nginx/html/config.json:ro
 
-networks:
-  teleprompter-network:
-    driver: bridge
+  redis:
+    image: redis:8.2.1-alpine
+    ports: ["6379:6379"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
