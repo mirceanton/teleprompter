@@ -15,9 +15,5 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'src')
     }
-  },
-  define: {
-    // Make environment variables available at build time
-    __BACKEND_URL__: JSON.stringify(process.env.BACKEND_URL || 'http://localhost:8001')
   }
 })

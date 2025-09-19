@@ -43,13 +43,64 @@ The application will be available at:
 
 ### Configuration
 
-The frontend can be configured to use a different backend URL via environment variables:
+The frontend is configured using a `config.json` file at runtime, allowing you to use the same Docker image across different environments.
 
+**For Docker deployments:**
 ```bash
-# Set custom backend URL
-export FRONTEND_BACKEND_URL=http://my-backend-server:8001
-docker-compose up -d
+# Create a custom config file
+echo '{"backendUrl":"http://my-backend:8001"}' > ./my-config.json
+
+# Mount the config file into the container
+docker run -p 3000:80 \
+  -v $(pwd)/my-config.json:/usr/share/nginx/html/config.json:ro \
+  teleprompter-frontend
 ```
+
+**For Docker Compose:**
+```yaml
+services:
+  frontend:
+    image: teleprompter-frontend
+    ports:
+      - "3000:80"
+    volumes:
+      - ./config.json:/usr/share/nginx/html/config.json:ro
+```
+
+**For Kubernetes:**
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: teleprompter-config
+data:
+  config.json: |
+    {
+      "backendUrl": "http://teleprompter-backend:8001"
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teleprompter-frontend
+spec:
+  template:
+    spec:
+      containers:
+      - name: frontend
+        image: teleprompter-frontend
+        volumeMounts:
+        - name: config
+          mountPath: /usr/share/nginx/html/config.json
+          subPath: config.json
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: teleprompter-config
+```
+
+If no `config.json` file is provided, the frontend will use smart defaults with the backend URL set to the same host on port 8001.
 
 ### Usage
 1. Open http://localhost:3000 in your web browser
