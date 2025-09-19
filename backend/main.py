@@ -61,18 +61,33 @@ class ConnectionManager:
     def __init__(self):
         # Local connections for this instance only
         self.active_connections: Dict[str, Set[WebSocket]] = {}
+        # Track participant information: websocket -> {mode, service_id, channel}
+        self.participants: Dict[WebSocket, Dict] = {}
     
     async def connect(self, websocket: WebSocket, channel: str):
         await websocket.accept()
         if channel not in self.active_connections:
             self.active_connections[channel] = set()
         self.active_connections[channel].add(websocket)
+        
+        # Initialize participant info (will be updated when mode is sent)
+        self.participants[websocket] = {
+            "mode": "unknown",
+            "service_id": None,
+            "channel": channel,
+            "can_be_kicked": True
+        }
+        
         connection_count = len(self.active_connections[channel])
         print(f"Client connected to channel: {channel} (total: {connection_count})")
     
     def disconnect(self, websocket: WebSocket, channel: str):
         if channel in self.active_connections:
             self.active_connections[channel].discard(websocket)
+            
+            # Remove participant info
+            self.participants.pop(websocket, None)
+            
             connection_count = len(self.active_connections[channel])
             if not self.active_connections[channel]:
                 del self.active_connections[channel]
@@ -80,13 +95,43 @@ class ConnectionManager:
             else:
                 print(f"Client disconnected from channel: {channel} (remaining: {connection_count})")
     
+    def update_participant_info(self, websocket: WebSocket, mode: str, service_id: str = None):
+        """Update participant information"""
+        if websocket in self.participants:
+            self.participants[websocket]["mode"] = mode
+            self.participants[websocket]["service_id"] = service_id
+            
+            # AI scroller participants cannot be kicked
+            if mode == "ai_scroller":
+                self.participants[websocket]["can_be_kicked"] = False
+            
+    def get_participants_list(self, channel: str) -> list:
+        """Get list of participants in a channel"""
+        if channel not in self.active_connections:
+            return []
+            
+        participants = []
+        for websocket in self.active_connections[channel]:
+            if websocket in self.participants:
+                participant = self.participants[websocket].copy()
+                participant["websocket_id"] = id(websocket)  # Use memory address as unique ID
+                participants.append(participant)
+        
+        return participants
+    
+    def can_kick_participant(self, websocket: WebSocket) -> bool:
+        """Check if a participant can be kicked"""
+        participant_info = self.participants.get(websocket, {})
+        return participant_info.get("can_be_kicked", True)
+    
     def get_channel_info(self, channel: str) -> dict:
         """Get information about local connections in a channel"""
         if channel not in self.active_connections:
-            return {"exists": False, "connection_count": 0}
+            return {"exists": False, "connection_count": 0, "participants": []}
         return {
             "exists": True, 
-            "connection_count": len(self.active_connections[channel])
+            "connection_count": len(self.active_connections[channel]),
+            "participants": self.get_participants_list(channel)
         }
     
     async def broadcast_to_channel(self, message: str, channel: str, exclude: WebSocket = None):
@@ -106,6 +151,20 @@ class ConnectionManager:
             if channel in self.active_connections:
                 for conn in disconnected:
                     self.active_connections[channel].discard(conn)
+    
+    async def forward_to_participants(self, message: dict, channel: str, participant_mode: str):
+        """Forward message to specific participant types in a channel"""
+        if channel not in self.active_connections:
+            return
+            
+        message_str = json.dumps(message)
+        for websocket in self.active_connections[channel]:
+            participant_info = self.participants.get(websocket, {})
+            if participant_info.get("mode") == participant_mode:
+                try:
+                    await websocket.send_text(message_str)
+                except Exception as e:
+                    logger.error(f"Error forwarding message to {participant_mode}: {e}")
     
     async def broadcast_to_all_instances(self, message_dict: dict, channel: str, exclude: WebSocket = None):
         """Broadcast message to all instances via Redis and local connections"""
@@ -172,7 +231,22 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
             # Handle special messages
             message_type = message.get('type')
             
-            if message_type == 'request_connection_info':
+            if message_type == 'mode':
+                # Handle participant mode announcement
+                mode = message.get("mode", "unknown")
+                service_id = message.get("service_id")
+                manager.update_participant_info(websocket, mode, service_id)
+                
+                # Broadcast participant list update
+                participants_update = {
+                    "type": "participants_update",
+                    "participants": manager.get_participants_list(channel)
+                }
+                await manager.broadcast_to_all_instances(participants_update, channel)
+                
+                logger.info(f"Participant {mode} ({service_id}) joined channel {channel}")
+                
+            elif message_type == 'request_connection_info':
                 # Send current connection count to requesting client
                 connection_update_str = json.dumps({
                     "type": "connection_update",
@@ -181,26 +255,24 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
                 })
                 await websocket.send_text(connection_update_str)
             elif message_type == 'ai_scrolling_config':
-                # Handle AI scrolling configuration
-                await handle_ai_scrolling_config(channel, message, websocket)
+                # Forward AI scrolling configuration to AI scroller participants
+                await manager.forward_to_participants(message, channel, "ai_scroller")
             elif message_type == 'audio_chunk':
-                # Handle audio chunk for AI scrolling
-                await handle_audio_chunk(channel, message, websocket)
+                # Forward audio chunk to AI scroller participants
+                await manager.forward_to_participants(message, channel, "ai_scroller")
             elif message_type == 'ai_scrolling_start':
-                # Start AI scrolling session
-                await handle_ai_scrolling_start(channel, message, websocket)
+                # Forward AI scrolling start to AI scroller participants
+                await manager.forward_to_participants(message, channel, "ai_scroller")
             elif message_type == 'ai_scrolling_stop':
-                # Stop AI scrolling session
-                await handle_ai_scrolling_stop(channel, message, websocket)
+                # Forward AI scrolling stop to AI scroller participants
+                await manager.forward_to_participants(message, channel, "ai_scroller")
             else:
                 # Broadcast to all other clients in the same channel across all instances
                 await manager.broadcast_to_all_instances(message, channel, exclude=websocket)
             
     except WebSocketDisconnect:
         manager.disconnect(websocket, channel)
-        # Clean up AI scrolling session if needed
-        ai_scrolling_service.remove_session(channel)
-        # Broadcast updated connection count
+        # Broadcast updated connection count and participants
         connection_info = manager.get_channel_info(channel)
         if connection_info["exists"]:
             connection_update = {
@@ -209,12 +281,16 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
                 "connection_count": connection_info["connection_count"]
             }
             await manager.broadcast_to_all_instances(connection_update, channel)
+            
+            participants_update = {
+                "type": "participants_update",
+                "participants": connection_info["participants"]
+            }
+            await manager.broadcast_to_all_instances(participants_update, channel)
     except Exception as e:
         print(f"Error in channel {channel}: {e}")
         manager.disconnect(websocket, channel)
-        # Clean up AI scrolling session if needed
-        ai_scrolling_service.remove_session(channel)
-        # Broadcast updated connection count  
+        # Broadcast updated connection count and participants
         connection_info = manager.get_channel_info(channel)
         if connection_info["exists"]:
             connection_update = {
@@ -223,6 +299,12 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
                 "connection_count": connection_info["connection_count"]
             }
             await manager.broadcast_to_all_instances(connection_update, channel)
+            
+            participants_update = {
+                "type": "participants_update",
+                "participants": connection_info["participants"]
+            }
+            await manager.broadcast_to_all_instances(participants_update, channel)
 
 # AI Scrolling message handlers
 async def handle_ai_scrolling_config(channel: str, message: dict, websocket: WebSocket):
@@ -336,6 +418,39 @@ async def handle_audio_chunk(channel: str, message: dict, websocket: WebSocket):
 async def get_channel_info(channel: str):
     """Get information about a specific channel"""
     return manager.get_channel_info(channel)
+
+@app.get("/api/channel/{channel}/participants")
+async def get_channel_participants(channel: str):
+    """Get participants list for a specific channel"""
+    participants = manager.get_participants_list(channel)
+    return {"participants": participants}
+
+@app.post("/api/channel/{channel}/participants/{websocket_id}/kick")
+async def kick_participant(channel: str, websocket_id: int):
+    """Kick a participant from a channel"""
+    if channel not in manager.active_connections:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    
+    # Find the websocket by ID
+    target_websocket = None
+    for websocket in manager.active_connections[channel]:
+        if id(websocket) == websocket_id:
+            target_websocket = websocket
+            break
+    
+    if not target_websocket:
+        raise HTTPException(status_code=404, detail="Participant not found")
+    
+    # Check if participant can be kicked
+    if not manager.can_kick_participant(target_websocket):
+        raise HTTPException(status_code=403, detail="This participant cannot be kicked")
+    
+    try:
+        # Close the websocket connection
+        await target_websocket.close()
+        return {"success": True, "message": "Participant kicked successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to kick participant: {str(e)}")
 
 @app.get("/api/health")
 async def health_check():
