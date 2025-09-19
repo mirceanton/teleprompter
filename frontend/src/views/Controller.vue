@@ -5,10 +5,85 @@
         💻 Controller Mode - {{ channelName }}
       </v-toolbar-title>
       <v-spacer />
-      <v-chip :color="connectionStatus.color" variant="outlined">
-        <v-icon start>{{ connectionStatus.icon }}</v-icon>
-        {{ connectionStatus.text }}
-      </v-chip>
+      
+      <!-- Participants Dropdown -->
+      <v-menu offset-y>
+        <template v-slot:activator="{ props }">
+          <v-btn
+            icon
+            v-bind="props"
+            v-if="roomInfo.participants && roomInfo.participants.length > 0"
+          >
+            <v-badge 
+              :content="roomInfo.participants.length" 
+              color="secondary"
+              overlap
+            >
+              <v-icon>mdi-account-group</v-icon>
+            </v-badge>
+          </v-btn>
+        </template>
+        
+        <v-card min-width="300">
+          <v-card-title class="text-h6">
+            <v-icon class="mr-2">mdi-account-group</v-icon>
+            Room Participants
+          </v-card-title>
+          
+          <v-card-text>
+            <v-list>
+              <v-list-item 
+                v-for="participant in roomInfo.participants" 
+                :key="participant.participant_id"
+              >
+                <template v-slot:prepend>
+                  <v-icon :color="participant.is_controller ? 'primary' : 'secondary'">
+                    {{ participant.mode === 'controller' ? 'mdi-laptop' : 'mdi-cellphone' }}
+                  </v-icon>
+                </template>
+                
+                <v-list-item-title>
+                  {{ participant.mode === 'controller' ? '💻 Controller' : '📱 Teleprompter' }}
+                  <v-chip 
+                    v-if="participant.is_controller" 
+                    size="x-small" 
+                    color="primary" 
+                    class="ml-2"
+                  >
+                    Host
+                  </v-chip>
+                </v-list-item-title>
+                
+                <v-list-item-subtitle>
+                  ID: {{ participant.participant_id.slice(0, 8) }}...
+                </v-list-item-subtitle>
+                
+                <template v-slot:append v-if="!participant.is_controller && isController">
+                  <v-btn
+                    icon="mdi-account-remove"
+                    size="small"
+                    color="error"
+                    variant="text"
+                    @click="kickParticipant(participant.participant_id)"
+                  />
+                </template>
+              </v-list-item>
+            </v-list>
+            
+            <v-divider class="my-3" />
+            
+            <v-btn
+              block
+              color="primary"
+              variant="outlined"
+              @click="showRoomInfo = true"
+            >
+              <v-icon class="mr-2">mdi-information</v-icon>
+              Room Info & Sharing
+            </v-btn>
+          </v-card-text>
+        </v-card>
+      </v-menu>
     </v-app-bar>
 
     <v-main>
@@ -580,6 +655,110 @@
         </v-btn>
       </template>
     </v-snackbar>
+
+    <!-- Room Info Dialog -->
+    <v-dialog v-model="showRoomInfo" max-width="600px">
+      <v-card>
+        <v-card-title>
+          <v-icon class="mr-2">mdi-information</v-icon>
+          Room Information & Sharing
+        </v-card-title>
+        
+        <v-card-text>
+          <v-row>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                label="Room ID"
+                :model-value="channelName"
+                readonly
+                variant="outlined"
+                density="compact"
+              >
+                <template v-slot:append-inner>
+                  <v-btn
+                    icon="mdi-content-copy"
+                    size="small"
+                    variant="text"
+                    @click="copyToClipboard(channelName, 'Room ID copied!')"
+                  />
+                </template>
+              </v-text-field>
+            </v-col>
+            
+            <v-col cols="12" sm="6">
+              <v-text-field
+                label="Room Secret"
+                :model-value="roomSecret"
+                readonly
+                variant="outlined"
+                density="compact"
+              >
+                <template v-slot:append-inner>
+                  <v-btn
+                    icon="mdi-content-copy"
+                    size="small"
+                    variant="text"
+                    @click="copyToClipboard(roomSecret, 'Room Secret copied!')"
+                  />
+                </template>
+              </v-text-field>
+            </v-col>
+          </v-row>
+          
+          <v-divider class="my-4" />
+          
+          <h4 class="text-h6 mb-3">Quick Join Options</h4>
+          
+          <v-text-field
+            label="Direct Join URL"
+            :model-value="joinUrl"
+            readonly
+            variant="outlined"
+            density="compact"
+            class="mb-3"
+          >
+            <template v-slot:append-inner>
+              <v-btn
+                icon="mdi-content-copy"
+                size="small"
+                variant="text"
+                @click="copyToClipboard(joinUrl, 'Join URL copied!')"
+              />
+            </template>
+          </v-text-field>
+          
+          <v-alert type="info" variant="tonal" class="mb-3">
+            <strong>Share this URL:</strong> Anyone can use this link to join directly as a teleprompter.
+          </v-alert>
+          
+          <div class="text-center">
+            <div class="mb-3">
+              <v-btn
+                color="primary"
+                variant="outlined"
+                @click="generateQrCode"
+                :loading="generatingQr"
+              >
+                <v-icon class="mr-2">mdi-qrcode</v-icon>
+                Generate QR Code
+              </v-btn>
+            </div>
+            
+            <div v-if="qrCodeUrl" class="qr-code-container">
+              <img :src="qrCodeUrl" alt="QR Code for room joining" class="qr-code-image" />
+              <p class="text-caption mt-2">Scan to join as teleprompter</p>
+            </div>
+          </div>
+        </v-card-text>
+        
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="showRoomInfo = false">
+            Close
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
@@ -606,6 +785,14 @@ export default {
         show: false,
         count: 0
       },
+      
+      // Room info
+      roomInfo: {
+        participants: []
+      },
+      showRoomInfo: false,
+      qrCodeUrl: '',
+      generatingQr: false,
       
       // Script content
       scriptText: `# Welcome to Remote Teleprompter!
@@ -688,19 +875,16 @@ Happy teleprompting! 🎬`,
   },
   
   computed: {
-    connectionStatus() {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        return {
-          color: 'success',
-          icon: 'mdi-wifi',
-          text: 'Connected'
-        }
-      }
-      return {
-        color: 'error',
-        icon: 'mdi-wifi-off',
-        text: 'Disconnected'
-      }
+    // Check if current user is the controller
+    isController() {
+      const currentParticipant = this.roomInfo.participants.find(p => p.is_controller)
+      return currentParticipant && currentParticipant.mode === 'controller'
+    },
+    
+    // Generate join URL for sharing
+    joinUrl() {
+      const baseUrl = window.location.origin
+      return `${baseUrl}/teleprompter?room=${this.channelName}&secret=${this.roomSecret}`
     },
     
     // Audio source options for AI scrolling
@@ -856,6 +1040,7 @@ Happy teleprompting! 🎬`,
         case 'room_update':
           this.connectionInfo.count = message.participant_count
           this.connectionInfo.show = true
+          this.roomInfo.participants = message.participants || []
           break
           
         case 'connection_update':
@@ -1210,6 +1395,38 @@ Happy teleprompting! 🎬`,
       this.$router.push('/')
     },
     
+    // Room management methods
+    kickParticipant(participantId) {
+      this.sendMessage({
+        type: 'kick_participant',
+        target_participant_id: participantId
+      })
+      this.showSnackbar('Participant removed from room', 'warning')
+    },
+    
+    async copyToClipboard(text, message) {
+      try {
+        await navigator.clipboard.writeText(text)
+        this.showSnackbar(message, 'success')
+      } catch (err) {
+        this.showSnackbar('Failed to copy to clipboard', 'error')
+      }
+    },
+    
+    async generateQrCode() {
+      this.generatingQr = true
+      try {
+        // Use QR Server API for QR code generation
+        const qrText = encodeURIComponent(this.joinUrl)
+        this.qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrText}`
+        this.showSnackbar('QR code generated!', 'success')
+      } catch (error) {
+        this.showSnackbar('Failed to generate QR code', 'error')
+      } finally {
+        this.generatingQr = false
+      }
+    },
+    
     showSnackbar(text, color = 'success') {
       this.snackbar.text = text
       this.snackbar.color = color
@@ -1268,5 +1485,19 @@ Happy teleprompting! 🎬`,
 .toc-item:hover {
   background-color: rgba(var(--v-theme-primary), 0.1);
   border-radius: 4px;
+}
+
+.qr-code-container {
+  display: inline-block;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.qr-code-image {
+  max-width: 200px;
+  height: auto;
+  display: block;
 }
 </style>

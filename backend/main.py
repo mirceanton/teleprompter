@@ -178,8 +178,9 @@ class ConnectionManager:
         # Local connections for this instance only
         self.active_connections: Dict[str, Set[WebSocket]] = {}
     
-    async def connect(self, websocket: WebSocket, channel: str):
-        await websocket.accept()
+    async def connect(self, websocket: WebSocket, channel: str, already_accepted: bool = False):
+        if not already_accepted:
+            await websocket.accept()
         if channel not in self.active_connections:
             self.active_connections[channel] = set()
         self.active_connections[channel].add(websocket)
@@ -316,7 +317,7 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
         }))
         
         # Connect to legacy connection manager for backward compatibility
-        await manager.connect(websocket, room_id)
+        await manager.connect(websocket, room_id, already_accepted=True)
         
         # Send connection count update to all clients in channel
         connection_info = manager.get_channel_info(room_id)
