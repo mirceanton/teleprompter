@@ -683,6 +683,8 @@ export default {
       // Connection state
       ws: null,
       channelName: "",
+      roomCredentials: null,
+      participantId: null,
       connectionInfo: {
         show: false,
         count: 0,
@@ -815,15 +817,23 @@ Happy teleprompting! 🎬`,
     },
   },
 
-  mounted() {
+  async mounted() {
     // Get channel name from URL params
     this.channelName = this.$route.query.room || "default";
+
+    // Initialize room authentication
+    await this.initializeRoomAuth();
 
     // Check AI scrolling availability
     this.checkAIScrollingAvailability();
 
     // Connect to WebSocket
-    this.connect();
+    if (this.roomCredentials) {
+      this.connect();
+    } else {
+      this.showSnackbar("No room credentials found. Please create or join a room.", "error");
+      this.$router.push("/");
+    }
   },
 
   beforeUnmount() {
@@ -838,6 +848,75 @@ Happy teleprompting! 🎬`,
   },
 
   methods: {
+    async initializeRoomAuth() {
+      try {
+        // Get room credentials from session storage
+        const credentialsStr = sessionStorage.getItem('room_credentials');
+        if (!credentialsStr) {
+          return false;
+        }
+
+        this.roomCredentials = JSON.parse(credentialsStr);
+        
+        // Verify this is a controller role
+        if (this.roomCredentials.role !== 'controller') {
+          this.showSnackbar("Access denied: Not authorized as controller", "error");
+          return false;
+        }
+
+        // If no participant_id, we need to join the room first
+        if (!this.roomCredentials.participant_id) {
+          const joinData = await this.joinRoomAsController();
+          if (!joinData) {
+            return false;
+          }
+          this.roomCredentials.participant_id = joinData.participant_id;
+          // Update session storage
+          sessionStorage.setItem('room_credentials', JSON.stringify(this.roomCredentials));
+        }
+        
+        this.participantId = this.roomCredentials.participant_id;
+        return true;
+        
+      } catch (error) {
+        console.error('Error initializing room auth:', error);
+        this.showSnackbar("Failed to initialize room authentication", "error");
+        return false;
+      }
+    },
+
+    async joinRoomAsController() {
+      try {
+        const response = await fetch(`${config.getApiUrl()}/api/rooms/join`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            room_id: this.roomCredentials.room_id,
+            room_secret: this.roomCredentials.room_secret,
+            role: 'controller'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to join room');
+        }
+
+        const joinData = await response.json();
+        if (!joinData.success) {
+          this.showSnackbar(joinData.message, 'error');
+          return null;
+        }
+
+        return joinData;
+      } catch (error) {
+        console.error('Error joining room as controller:', error);
+        this.showSnackbar("Failed to join room as controller", "error");
+        return null;
+      }
+    },
+
     async checkAIScrollingAvailability() {
       try {
         // Check if microphone access is available
@@ -862,9 +941,13 @@ Happy teleprompting! 🎬`,
 
     connect() {
       try {
-        // Use configurable backend URL instead of hard-coded port
+        if (!this.roomCredentials || !this.participantId) {
+          throw new Error("Missing room credentials or participant ID");
+        }
+
+        // Use new WebSocket format with room_id and participant_id
         const wsUrl = config.getWebSocketUrl();
-        this.ws = new WebSocket(`${wsUrl}/api/ws/${this.channelName}`);
+        this.ws = new WebSocket(`${wsUrl}/api/ws/${this.roomCredentials.room_id}/${this.participantId}`);
 
         this.setupWebSocketHandlers();
       } catch (error) {
