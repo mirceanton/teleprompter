@@ -2,10 +2,10 @@
   <v-app>
     <v-app-bar app color="primary" dark>
       <v-toolbar-title>
-        💻 Controller Mode - {{ roomName || channelName }}
+        Controller - {{ roomName || channelName }}
       </v-toolbar-title>
       <v-spacer />
-      
+
       <!-- Participants Dropdown -->
       <v-menu offset-y>
         <template v-slot:activator="{ props }">
@@ -14,8 +14,8 @@
             v-bind="props"
             v-if="roomInfo.participants && roomInfo.participants.length > 0"
           >
-            <v-badge 
-              :content="roomInfo.participants.length" 
+            <v-badge
+              :content="roomInfo.participants.length"
               color="secondary"
               overlap
             >
@@ -23,42 +23,43 @@
             </v-badge>
           </v-btn>
         </template>
-        
+
         <v-card min-width="300">
           <v-card-title class="text-h6">
             <v-icon class="mr-2">mdi-account-group</v-icon>
             Room Participants
           </v-card-title>
-          
+
           <v-card-text>
             <v-list>
-              <v-list-item 
-                v-for="participant in roomInfo.participants" 
+              <v-list-item
+                v-for="participant in roomInfo.participants"
                 :key="participant.participant_id"
               >
-                <template v-slot:prepend>
-                  <v-icon :color="participant.is_controller ? 'primary' : 'secondary'">
-                    {{ participant.mode === 'controller' ? 'mdi-laptop' : 'mdi-cellphone' }}
-                  </v-icon>
-                </template>
-                
                 <v-list-item-title>
-                  {{ participant.mode === 'controller' ? '💻 Controller' : '📱 Teleprompter' }}
-                  <v-chip 
-                    v-if="participant.is_controller" 
-                    size="x-small" 
-                    color="primary" 
+                  {{
+                    participant.mode === "controller"
+                      ? "💻 Controller"
+                      : "📱 Teleprompter"
+                  }}
+                  <v-chip
+                    v-if="participant.is_controller"
+                    size="x-small"
+                    color="primary"
                     class="ml-2"
                   >
                     Host
                   </v-chip>
                 </v-list-item-title>
-                
+
                 <v-list-item-subtitle>
                   ID: {{ participant.participant_id.slice(0, 8) }}...
                 </v-list-item-subtitle>
-                
-                <template v-slot:append v-if="!participant.is_controller && isController">
+
+                <template
+                  v-slot:append
+                  v-if="!participant.is_controller && isController"
+                >
                   <v-tooltip text="Remove participant from room">
                     <template v-slot:activator="{ props }">
                       <v-btn
@@ -74,9 +75,9 @@
                 </template>
               </v-list-item>
             </v-list>
-            
+
             <v-divider class="my-3" />
-            
+
             <v-btn
               block
               color="primary"
@@ -84,7 +85,14 @@
               @click="showRoomInfo = true"
             >
               <v-icon class="mr-2">mdi-information</v-icon>
-              Room Information
+              Join Information
+            </v-btn>
+
+            <v-divider class="my-3" />
+
+            <v-btn block color="error" variant="outlined" @click="disconnect">
+              <v-icon class="mr-2">mdi-logout</v-icon>
+              Disconnect
             </v-btn>
           </v-card-text>
         </v-card>
@@ -93,38 +101,6 @@
 
     <v-main>
       <v-container fluid>
-        
-        <!-- Connection Info -->
-        <v-card class="mb-4" elevation="2" v-if="connectionInfo.show">
-          <v-card-text>
-            <v-row align="center">
-              <v-col>
-                <v-icon class="mr-2">mdi-account-group</v-icon>
-                <strong>{{ connectionInfo.count }}</strong> clients connected
-                <v-chip 
-                  v-if="connectionInfo.count > 1" 
-                  color="success" 
-                  size="small" 
-                  class="ml-2"
-                >
-                  📱 Multi-teleprompter setup
-                </v-chip>
-              </v-col>
-              <v-col cols="auto">
-                <v-btn 
-                  color="error" 
-                  variant="outlined" 
-                  @click="disconnect"
-                  size="small"
-                >
-                  <v-icon class="mr-2">mdi-logout</v-icon>
-                  Disconnect
-                </v-btn>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
-
         <v-row>
           <!-- Left Side - Navigation Controls and Table of Contents -->
           <v-col cols="12" lg="3">
@@ -134,13 +110,13 @@
                 <v-icon class="mr-2">mdi-navigation-variant</v-icon>
                 Navigation Controls
               </v-card-title>
-              
+
               <v-card-text>
                 <v-row>
                   <!-- Scroll back -->
                   <v-col cols="6">
-                    <v-btn 
-                      color="secondary" 
+                    <v-btn
+                      color="secondary"
                       @click="scrollBackLines"
                       block
                       size="large"
@@ -151,15 +127,17 @@
                   </v-col>
                   <!-- Scroll forward -->
                   <v-col cols="6">
-                    <v-btn 
-                      color="secondary" 
+                    <v-btn
+                      color="secondary"
                       @click="scrollForwardLines"
                       block
                       size="large"
                     >
                       <v-icon>mdi-arrow-down</v-icon>
                     </v-btn>
-                    <div class="text-center text-caption mt-1">Scroll Forward</div>
+                    <div class="text-center text-caption mt-1">
+                      Scroll Forward
+                    </div>
                   </v-col>
                 </v-row>
 
@@ -175,17 +153,17 @@
                   density="compact"
                 >
                   <template v-slot:prepend-inner>
-                    <v-btn 
-                      icon="mdi-minus" 
-                      size="x-small" 
+                    <v-btn
+                      icon="mdi-minus"
+                      size="x-small"
                       variant="text"
                       @click="scrollLines = Math.max(1, scrollLines - 1)"
                     />
                   </template>
                   <template v-slot:append-inner>
-                    <v-btn 
-                      icon="mdi-plus" 
-                      size="x-small" 
+                    <v-btn
+                      icon="mdi-plus"
+                      size="x-small"
                       variant="text"
                       @click="scrollLines = Math.min(20, scrollLines + 1)"
                     />
@@ -197,8 +175,8 @@
                   <v-label class="mb-2">Section Navigation</v-label>
                   <v-row>
                     <v-col cols="6">
-                      <v-btn 
-                        color="accent" 
+                      <v-btn
+                        color="accent"
                         @click="goToPreviousSection"
                         :disabled="!canGoToPreviousSection"
                         block
@@ -206,11 +184,13 @@
                       >
                         <v-icon>mdi-page-previous</v-icon>
                       </v-btn>
-                      <div class="text-center text-caption mt-1">Previous Section</div>
+                      <div class="text-center text-caption mt-1">
+                        Previous Section
+                      </div>
                     </v-col>
                     <v-col cols="6">
-                      <v-btn 
-                        color="accent" 
+                      <v-btn
+                        color="accent"
                         @click="goToNextSection"
                         :disabled="!canGoToNextSection"
                         block
@@ -218,7 +198,9 @@
                       >
                         <v-icon>mdi-page-next</v-icon>
                       </v-btn>
-                      <div class="text-center text-caption mt-1">Next Section</div>
+                      <div class="text-center text-caption mt-1">
+                        Next Section
+                      </div>
                     </v-col>
                   </v-row>
                 </div>
@@ -226,8 +208,8 @@
                 <v-row>
                   <!-- Go to beginning -->
                   <v-col cols="6">
-                    <v-btn 
-                      color="primary" 
+                    <v-btn
+                      color="primary"
                       @click="goToBeginning"
                       block
                       size="large"
@@ -238,12 +220,7 @@
                   </v-col>
                   <!-- Go to end -->
                   <v-col cols="6">
-                    <v-btn 
-                      color="primary" 
-                      @click="goToEnd"
-                      block
-                      size="large"
-                    >
+                    <v-btn color="primary" @click="goToEnd" block size="large">
                       <v-icon>mdi-skip-next</v-icon>
                     </v-btn>
                     <div class="text-center text-caption mt-1">Go to End</div>
@@ -258,18 +235,18 @@
                 <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
                 Table of Contents
               </v-card-title>
-              
+
               <v-card-text>
                 <div v-if="sections.length > 0" class="toc-list">
-                  <div 
-                    v-for="(section, index) in sections" 
+                  <div
+                    v-for="(section, index) in sections"
                     :key="index"
                     class="toc-item"
                     :class="`toc-level-${section.level}`"
                     @click="goToSection(section)"
                   >
-                    <v-btn 
-                      variant="text" 
+                    <v-btn
+                      variant="text"
                       size="small"
                       class="justify-start text-left"
                       block
@@ -281,7 +258,7 @@
                 <div v-else class="text-center text-disabled">
                   <v-icon class="mb-2">mdi-format-list-bulleted-square</v-icon>
                   <div class="text-caption">
-                    No sections could be parsed from the script.<br>
+                    No sections could be parsed from the script.<br />
                     Expected markdown headings (# ## ###).
                   </div>
                 </div>
@@ -296,7 +273,7 @@
                 <v-icon class="mr-2">mdi-script-text</v-icon>
                 Script Editor
               </v-card-title>
-              
+
               <v-card-text>
                 <v-textarea
                   v-model="scriptText"
@@ -319,19 +296,23 @@
                 <v-icon class="mr-2">mdi-play-circle</v-icon>
                 Playback Controls
               </v-card-title>
-              
+
               <v-card-text>
                 <v-row>
                   <!-- Play/Pause Toggle Button (Full Width) -->
                   <v-col cols="12">
-                    <v-btn 
-                      :color="isPlaying ? 'warning' : 'success'" 
+                    <v-btn
+                      :color="isPlaying ? 'warning' : 'success'"
                       @click="togglePlayback"
                       block
                       size="large"
                     >
-                      <v-icon>{{ isPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
-                      <span class="ml-2">{{ isPlaying ? 'Pause' : 'Start' }}</span>
+                      <v-icon>{{
+                        isPlaying ? "mdi-pause" : "mdi-play"
+                      }}</v-icon>
+                      <span class="ml-2">{{
+                        isPlaying ? "Pause" : "Start"
+                      }}</span>
                     </v-btn>
                   </v-col>
                 </v-row>
@@ -350,30 +331,37 @@
                   @input="updateSpeed"
                 >
                   <template v-slot:prepend-inner>
-                    <v-btn 
-                      icon="mdi-minus" 
-                      size="x-small" 
+                    <v-btn
+                      icon="mdi-minus"
+                      size="x-small"
                       variant="text"
-                      @click="scrollSpeed = Math.max(0.1, Math.round((scrollSpeed - 0.1) * 10) / 10); updateSpeed()"
+                      @click="
+                        scrollSpeed = Math.max(
+                          0.1,
+                          Math.round((scrollSpeed - 0.1) * 10) / 10
+                        );
+                        updateSpeed();
+                      "
                     />
                   </template>
                   <template v-slot:append-inner>
-                    <v-btn 
-                      icon="mdi-plus" 
-                      size="x-small" 
+                    <v-btn
+                      icon="mdi-plus"
+                      size="x-small"
                       variant="text"
-                      @click="scrollSpeed = Math.min(10, Math.round((scrollSpeed + 0.1) * 10) / 10); updateSpeed()"
+                      @click="
+                        scrollSpeed = Math.min(
+                          10,
+                          Math.round((scrollSpeed + 0.1) * 10) / 10
+                        );
+                        updateSpeed();
+                      "
                     />
                   </template>
                 </v-text-field>
 
                 <!-- Sync Text Button -->
-                <v-btn 
-                  color="primary" 
-                  @click="syncText"
-                  class="mt-3"
-                  block
-                >
+                <v-btn color="primary" @click="syncText" class="mt-3" block>
                   <v-icon class="mr-2">mdi-sync</v-icon>
                   🔄 Sync Text
                 </v-btn>
@@ -395,7 +383,7 @@
                   density="compact"
                 />
               </v-card-title>
-              
+
               <v-card-text v-if="aiScrolling.enabled">
                 <!-- Audio Source Selection - Compact -->
                 <v-select
@@ -426,19 +414,31 @@
                         @input="updateAIScrollingConfig"
                       >
                         <template v-slot:prepend-inner>
-                          <v-btn 
-                            icon="mdi-minus" 
-                            size="x-small" 
+                          <v-btn
+                            icon="mdi-minus"
+                            size="x-small"
                             variant="text"
-                            @click="aiScrolling.config.look_ahead_chars = Math.max(50, aiScrolling.config.look_ahead_chars - 10); updateAIScrollingConfig()"
+                            @click="
+                              aiScrolling.config.look_ahead_chars = Math.max(
+                                50,
+                                aiScrolling.config.look_ahead_chars - 10
+                              );
+                              updateAIScrollingConfig();
+                            "
                           />
                         </template>
                         <template v-slot:append-inner>
-                          <v-btn 
-                            icon="mdi-plus" 
-                            size="x-small" 
+                          <v-btn
+                            icon="mdi-plus"
+                            size="x-small"
                             variant="text"
-                            @click="aiScrolling.config.look_ahead_chars = Math.min(500, aiScrolling.config.look_ahead_chars + 10); updateAIScrollingConfig()"
+                            @click="
+                              aiScrolling.config.look_ahead_chars = Math.min(
+                                500,
+                                aiScrolling.config.look_ahead_chars + 10
+                              );
+                              updateAIScrollingConfig();
+                            "
                           />
                         </template>
                       </v-text-field>
@@ -455,19 +455,31 @@
                         @input="updateAIScrollingConfig"
                       >
                         <template v-slot:prepend-inner>
-                          <v-btn 
-                            icon="mdi-minus" 
-                            size="x-small" 
+                          <v-btn
+                            icon="mdi-minus"
+                            size="x-small"
                             variant="text"
-                            @click="aiScrolling.config.look_behind_chars = Math.max(25, aiScrolling.config.look_behind_chars - 5); updateAIScrollingConfig()"
+                            @click="
+                              aiScrolling.config.look_behind_chars = Math.max(
+                                25,
+                                aiScrolling.config.look_behind_chars - 5
+                              );
+                              updateAIScrollingConfig();
+                            "
                           />
                         </template>
                         <template v-slot:append-inner>
-                          <v-btn 
-                            icon="mdi-plus" 
-                            size="x-small" 
+                          <v-btn
+                            icon="mdi-plus"
+                            size="x-small"
                             variant="text"
-                            @click="aiScrolling.config.look_behind_chars = Math.min(200, aiScrolling.config.look_behind_chars + 5); updateAIScrollingConfig()"
+                            @click="
+                              aiScrolling.config.look_behind_chars = Math.min(
+                                200,
+                                aiScrolling.config.look_behind_chars + 5
+                              );
+                              updateAIScrollingConfig();
+                            "
                           />
                         </template>
                       </v-text-field>
@@ -487,7 +499,9 @@
 
                       <!-- Pause Threshold -->
                       <v-text-field
-                        v-model.number="aiScrolling.config.pause_threshold_seconds"
+                        v-model.number="
+                          aiScrolling.config.pause_threshold_seconds
+                        "
                         label="Pause Threshold (seconds)"
                         type="number"
                         :min="1.0"
@@ -499,19 +513,43 @@
                         @input="updateAIScrollingConfig"
                       >
                         <template v-slot:prepend-inner>
-                          <v-btn 
-                            icon="mdi-minus" 
-                            size="x-small" 
+                          <v-btn
+                            icon="mdi-minus"
+                            size="x-small"
                             variant="text"
-                            @click="aiScrolling.config.pause_threshold_seconds = Math.max(1.0, Math.round((aiScrolling.config.pause_threshold_seconds - 0.5) * 10) / 10); updateAIScrollingConfig()"
+                            @click="
+                              aiScrolling.config.pause_threshold_seconds =
+                                Math.max(
+                                  1.0,
+                                  Math.round(
+                                    (aiScrolling.config
+                                      .pause_threshold_seconds -
+                                      0.5) *
+                                      10
+                                  ) / 10
+                                );
+                              updateAIScrollingConfig();
+                            "
                           />
                         </template>
                         <template v-slot:append-inner>
-                          <v-btn 
-                            icon="mdi-plus" 
-                            size="x-small" 
+                          <v-btn
+                            icon="mdi-plus"
+                            size="x-small"
                             variant="text"
-                            @click="aiScrolling.config.pause_threshold_seconds = Math.min(10.0, Math.round((aiScrolling.config.pause_threshold_seconds + 0.5) * 10) / 10); updateAIScrollingConfig()"
+                            @click="
+                              aiScrolling.config.pause_threshold_seconds =
+                                Math.min(
+                                  10.0,
+                                  Math.round(
+                                    (aiScrolling.config
+                                      .pause_threshold_seconds +
+                                      0.5) *
+                                      10
+                                  ) / 10
+                                );
+                              updateAIScrollingConfig();
+                            "
                           />
                         </template>
                       </v-text-field>
@@ -527,14 +565,19 @@
                     size="small"
                     class="mb-1"
                   >
-                    <v-icon start size="small">{{ aiScrolling.status.icon }}</v-icon>
+                    <v-icon start size="small">{{
+                      aiScrolling.status.icon
+                    }}</v-icon>
                     {{ aiScrolling.status.text }}
                   </v-chip>
                 </div>
               </v-card-text>
-              
+
               <v-card-text v-else>
-                <div v-if="!aiScrolling.available" class="text-caption text-error text-center">
+                <div
+                  v-if="!aiScrolling.available"
+                  class="text-caption text-error text-center"
+                >
                   Speech recognition not available
                 </div>
                 <div v-else class="text-caption text-disabled text-center">
@@ -549,7 +592,7 @@
                 <v-icon class="mr-2">mdi-format-font</v-icon>
                 Text & Mirror Settings
               </v-card-title>
-              
+
               <v-card-text>
                 <!-- Text Width -->
                 <v-text-field
@@ -564,19 +607,25 @@
                   @input="updateWidth"
                 >
                   <template v-slot:prepend-inner>
-                    <v-btn 
-                      icon="mdi-minus" 
-                      size="x-small" 
+                    <v-btn
+                      icon="mdi-minus"
+                      size="x-small"
                       variant="text"
-                      @click="textWidth = Math.max(20, textWidth - 5); updateWidth()"
+                      @click="
+                        textWidth = Math.max(20, textWidth - 5);
+                        updateWidth();
+                      "
                     />
                   </template>
                   <template v-slot:append-inner>
-                    <v-btn 
-                      icon="mdi-plus" 
-                      size="x-small" 
+                    <v-btn
+                      icon="mdi-plus"
+                      size="x-small"
                       variant="text"
-                      @click="textWidth = Math.min(100, textWidth + 5); updateWidth()"
+                      @click="
+                        textWidth = Math.min(100, textWidth + 5);
+                        updateWidth();
+                      "
                     />
                   </template>
                 </v-text-field>
@@ -595,19 +644,31 @@
                   @input="updateFontSize"
                 >
                   <template v-slot:prepend-inner>
-                    <v-btn 
-                      icon="mdi-minus" 
-                      size="x-small" 
+                    <v-btn
+                      icon="mdi-minus"
+                      size="x-small"
                       variant="text"
-                      @click="fontSize = Math.max(0.5, Math.round((fontSize - 0.1) * 10) / 10); updateFontSize()"
+                      @click="
+                        fontSize = Math.max(
+                          0.5,
+                          Math.round((fontSize - 0.1) * 10) / 10
+                        );
+                        updateFontSize();
+                      "
                     />
                   </template>
                   <template v-slot:append-inner>
-                    <v-btn 
-                      icon="mdi-plus" 
-                      size="x-small" 
+                    <v-btn
+                      icon="mdi-plus"
+                      size="x-small"
                       variant="text"
-                      @click="fontSize = Math.min(5, Math.round((fontSize + 0.1) * 10) / 10); updateFontSize()"
+                      @click="
+                        fontSize = Math.min(
+                          5,
+                          Math.round((fontSize + 0.1) * 10) / 10
+                        );
+                        updateFontSize();
+                      "
                     />
                   </template>
                 </v-text-field>
@@ -620,7 +681,7 @@
                   </v-label>
                   <v-row>
                     <v-col cols="6">
-                      <v-btn 
+                      <v-btn
                         :color="horizontalMirror ? 'primary' : 'secondary'"
                         @click="toggleHorizontalMirror"
                         block
@@ -632,7 +693,7 @@
                       </v-btn>
                     </v-col>
                     <v-col cols="6">
-                      <v-btn 
+                      <v-btn
                         :color="verticalMirror ? 'primary' : 'secondary'"
                         @click="toggleVerticalMirror"
                         block
@@ -652,17 +713,15 @@
       </v-container>
     </v-main>
 
-    <v-snackbar 
-      v-model="snackbar.show" 
+    <v-snackbar
+      v-model="snackbar.show"
       :color="snackbar.color"
       location="top center"
       :timeout="4000"
     >
       {{ snackbar.text }}
       <template v-slot:actions>
-        <v-btn variant="text" @click="snackbar.show = false">
-          Close
-        </v-btn>
+        <v-btn variant="text" @click="snackbar.show = false"> Close </v-btn>
       </template>
     </v-snackbar>
 
@@ -673,7 +732,7 @@
           <v-icon class="mr-2">mdi-information</v-icon>
           Room Information
         </v-card-title>
-        
+
         <v-card-text class="pa-6 pt-0">
           <v-row>
             <v-col cols="12" sm="6">
@@ -694,7 +753,7 @@
                 </template>
               </v-text-field>
             </v-col>
-            
+
             <v-col cols="12" sm="6">
               <v-text-field
                 label="Room Secret"
@@ -714,15 +773,16 @@
               </v-text-field>
             </v-col>
           </v-row>
-          
+
           <v-divider class="my-4" />
-          
+
           <h4 class="text-h6 mb-3">Quick Join Options</h4>
-          
+
           <v-alert type="info" variant="tonal" class="mb-4">
-            <strong>Share this URL:</strong> Anyone can use this link to join directly as a teleprompter.
+            <strong>Share this URL:</strong> Anyone can use this link to join
+            directly as a teleprompter.
           </v-alert>
-          
+
           <v-text-field
             label="Direct Join URL"
             :model-value="joinUrl"
@@ -740,20 +800,22 @@
               />
             </template>
           </v-text-field>
-          
+
           <div class="text-center">
             <div class="qr-code-container">
-              <img :src="qrCodeUrl" alt="QR Code for room joining" class="qr-code-image-large" />
+              <img
+                :src="qrCodeUrl"
+                alt="QR Code for room joining"
+                class="qr-code-image-large"
+              />
               <p class="text-caption mt-2">Scan to join as teleprompter</p>
             </div>
           </div>
         </v-card-text>
-        
+
         <v-card-actions class="pa-6 pt-0">
           <v-spacer />
-          <v-btn variant="text" @click="showRoomInfo = false">
-            Close
-          </v-btn>
+          <v-btn variant="text" @click="showRoomInfo = false"> Close </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -761,36 +823,36 @@
 </template>
 
 <script>
-import { config } from '@/utils/config.js'
-import { 
-  parseMarkdownSections, 
-  getCurrentSection, 
-  getNextSection, 
+import { config } from "@/utils/config.js";
+import {
+  parseMarkdownSections,
+  getCurrentSection,
+  getNextSection,
   getPreviousSection,
-  generateTableOfContents 
-} from '@/utils/markdown.js'
+  generateTableOfContents,
+} from "@/utils/markdown.js";
 
 export default {
-  name: 'Controller',
-  
+  name: "Controller",
+
   data() {
     return {
       // Connection state
       ws: null,
-      channelName: '',
-      roomName: '',
-      roomSecret: '',
+      channelName: "",
+      roomName: "",
+      roomSecret: "",
       connectionInfo: {
         show: false,
-        count: 0
+        count: 0,
       },
-      
+
       // Room info
       roomInfo: {
-        participants: []
+        participants: [],
       },
       showRoomInfo: false,
-      
+
       // Script content
       scriptText: `# Welcome to Remote Teleprompter!
 
@@ -825,24 +887,24 @@ Happy teleprompting! 🎬`,
       fontSize: 2.5,
       horizontalMirror: false,
       verticalMirror: false,
-      
+
       // Navigation settings
       isPlaying: false,
       scrollLines: 5,
       currentScrollPosition: 0, // Track current scroll position in lines
-      
+
       // Section navigation
-      
+
       // UI state
       snackbar: {
         show: false,
-        text: '',
-        color: 'success'
+        text: "",
+        color: "success",
       },
-      
+
       // Debounce timer
       syncTimeout: null,
-      
+
       // AI Scrolling state
       aiScrolling: {
         enabled: false,
@@ -853,612 +915,639 @@ Happy teleprompting! 🎬`,
           confidence_threshold: 0.7,
           pause_threshold_seconds: 3.0,
           scroll_speed_multiplier: 1.0,
-          audio_source: 'controller'
+          audio_source: "controller",
         },
         status: {
-          color: 'default',
-          icon: 'mdi-microphone-off',
-          text: 'AI Scrolling Disabled'
-        }
+          color: "default",
+          icon: "mdi-microphone-off",
+          text: "AI Scrolling Disabled",
+        },
       },
-      
+
       // Audio recording state
       audioRecording: {
         active: false,
         mediaRecorder: null,
-        stream: null
-      }
-    }
+        stream: null,
+      },
+    };
   },
-  
+
   computed: {
     // Check if current user is the controller
     isController() {
-      const currentParticipant = this.roomInfo.participants.find(p => p.is_controller)
-      return currentParticipant && currentParticipant.mode === 'controller'
+      const currentParticipant = this.roomInfo.participants.find(
+        (p) => p.is_controller
+      );
+      return currentParticipant && currentParticipant.mode === "controller";
     },
-    
+
     // Generate join URL for sharing
     joinUrl() {
-      const baseUrl = window.location.origin
-      return `${baseUrl}/teleprompter?room=${this.channelName}&secret=${this.roomSecret}`
+      const baseUrl = window.location.origin;
+      return `${baseUrl}/teleprompter?room=${this.channelName}&secret=${this.roomSecret}`;
     },
-    
+
     // Auto-generate QR code URL
     qrCodeUrl() {
-      if (!this.joinUrl) return ''
-      const qrText = encodeURIComponent(this.joinUrl)
-      return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrText}`
+      if (!this.joinUrl) return "";
+      const qrText = encodeURIComponent(this.joinUrl);
+      return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrText}`;
     },
-    
+
     // Audio source options for AI scrolling
     audioSourceOptions() {
       return [
-        { title: 'Controller (This Device)', value: 'controller' },
-        { title: 'Teleprompter Device', value: 'teleprompter' }
-      ]
+        { title: "Controller (This Device)", value: "controller" },
+        { title: "Teleprompter Device", value: "teleprompter" },
+      ];
     },
-    
+
     // Parse markdown sections from script text
     sections() {
-      return parseMarkdownSections(this.scriptText)
+      return parseMarkdownSections(this.scriptText);
     },
-    
+
     // Current section based on scroll position
     currentSection() {
-      return getCurrentSection(this.sections, this.currentScrollPosition)
+      return getCurrentSection(this.sections, this.currentScrollPosition);
     },
-    
+
     // Check if can navigate to previous section
     canGoToPreviousSection() {
-      return getPreviousSection(this.sections, this.currentScrollPosition) !== null
+      return (
+        getPreviousSection(this.sections, this.currentScrollPosition) !== null
+      );
     },
-    
+
     // Check if can navigate to next section
     canGoToNextSection() {
-      return getNextSection(this.sections, this.currentScrollPosition) !== null
-    }
+      return getNextSection(this.sections, this.currentScrollPosition) !== null;
+    },
   },
-  
+
   mounted() {
     // Get channel name and secret from URL params
-    this.channelName = this.$route.query.room || 'default'
-    this.roomSecret = this.$route.query.secret || ''
-    
+    this.channelName = this.$route.query.room || "default";
+    this.roomSecret = this.$route.query.secret || "";
+
     // Fetch room information to get room name
-    this.fetchRoomInfo()
-    
+    this.fetchRoomInfo();
+
     // Check AI scrolling availability
-    this.checkAIScrollingAvailability()
-    
+    this.checkAIScrollingAvailability();
+
     // Connect to WebSocket
-    this.connect()
+    this.connect();
   },
-  
+
   beforeUnmount() {
     // Clean up audio recording
     if (this.audioRecording.active) {
-      this.stopAudioRecording()
+      this.stopAudioRecording();
     }
-    
+
     if (this.ws) {
-      this.ws.close()
+      this.ws.close();
     }
   },
-  
+
   methods: {
     async fetchRoomInfo() {
       try {
-        const response = await fetch(`${config.getApiUrl()}/api/rooms/${this.channelName}`)
+        const response = await fetch(
+          `${config.getApiUrl()}/api/rooms/${this.channelName}`
+        );
         if (response.ok) {
-          const roomData = await response.json()
-          this.roomName = roomData.room_name || this.channelName
+          const roomData = await response.json();
+          this.roomName = roomData.room_name || this.channelName;
         }
       } catch (error) {
-        console.warn('Could not fetch room info:', error)
+        console.warn("Could not fetch room info:", error);
         // Fallback to using channelName
       }
     },
-    
+
     async checkAIScrollingAvailability() {
       try {
         // Check if microphone access is available
-        const hasMediaDevices = navigator.mediaDevices && navigator.mediaDevices.getUserMedia
-        
+        const hasMediaDevices =
+          navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+
         if (hasMediaDevices) {
           // Check with backend if AI scrolling is available
-          const response = await fetch(`${config.getApiUrl()}/api/channel/${this.channelName}/ai-scrolling`)
-          const data = await response.json()
-          this.aiScrolling.available = data.available || false
+          const response = await fetch(
+            `${config.getApiUrl()}/api/channel/${this.channelName}/ai-scrolling`
+          );
+          const data = await response.json();
+          this.aiScrolling.available = data.available || false;
         } else {
-          this.aiScrolling.available = false
+          this.aiScrolling.available = false;
         }
-        
       } catch (error) {
-        console.warn('Could not check AI scrolling availability:', error)
-        this.aiScrolling.available = false
+        console.warn("Could not check AI scrolling availability:", error);
+        this.aiScrolling.available = false;
       }
     },
-    
+
     connect() {
       try {
         // Use configurable backend URL instead of hard-coded port
-        const wsUrl = config.getWebSocketUrl()
-        this.ws = new WebSocket(`${wsUrl}/api/ws/${this.channelName}`)
-        
-        this.setupWebSocketHandlers()
+        const wsUrl = config.getWebSocketUrl();
+        this.ws = new WebSocket(`${wsUrl}/api/ws/${this.channelName}`);
+
+        this.setupWebSocketHandlers();
       } catch (error) {
-        this.showSnackbar('Failed to connect to server', 'error')
-        console.error('WebSocket connection error:', error)
+        this.showSnackbar("Failed to connect to server", "error");
+        console.error("WebSocket connection error:", error);
       }
     },
-    
+
     setupWebSocketHandlers() {
       this.ws.onopen = () => {
-        console.log('WebSocket connected')
-        
+        console.log("WebSocket connected");
+
         // Send authentication first
         this.sendMessage({
-          type: 'authenticate',
+          type: "authenticate",
           room_id: this.channelName,
           secret: this.roomSecret,
-          mode: 'controller'
-        })
-      }
-      
+          mode: "controller",
+        });
+      };
+
       this.ws.onmessage = (event) => {
         try {
-          const message = JSON.parse(event.data)
-          console.log('Received message:', message)
-          this.handleMessage(message)
+          const message = JSON.parse(event.data);
+          console.log("Received message:", message);
+          this.handleMessage(message);
         } catch (error) {
-          console.error('Error parsing message:', error)
+          console.error("Error parsing message:", error);
         }
-      }
-      
+      };
+
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error)
-        this.showSnackbar('Connection error', 'error')
-      }
-      
+        console.error("WebSocket error:", error);
+        this.showSnackbar("Connection error", "error");
+      };
+
       this.ws.onclose = () => {
-        console.log('WebSocket disconnected')
-        this.showSnackbar('Disconnected from server', 'warning')
-        this.connectionInfo.show = false
-      }
+        console.log("WebSocket disconnected");
+        this.showSnackbar("Disconnected from server", "warning");
+        this.connectionInfo.show = false;
+      };
     },
-    
+
     handleMessage(message) {
       switch (message.type) {
-        case 'auth_success':
-          console.log('Authentication successful')
-          this.showSnackbar('Connected to teleprompter channel', 'success')
-          
+        case "auth_success":
+          console.log("Authentication successful");
+          this.showSnackbar("Connected to teleprompter channel", "success");
+
           // Sync initial settings after successful authentication
           setTimeout(() => {
-            this.syncText()
-            this.updateSpeed()
-            this.updateHorizontalMirror()
-            this.updateVerticalMirror()
-            this.updateFontSize()
-            this.updateWidth()
-          }, 500)
-          
+            this.syncText();
+            this.updateSpeed();
+            this.updateHorizontalMirror();
+            this.updateVerticalMirror();
+            this.updateFontSize();
+            this.updateWidth();
+          }, 500);
+
           // Request room info
           setTimeout(() => {
-            this.sendMessage({ type: 'request_connection_info' })
-          }, 1000)
-          break
-          
-        case 'auth_error':
-          console.error('Authentication failed:', message.message)
-          this.showSnackbar(`Authentication failed: ${message.message}`, 'error')
+            this.sendMessage({ type: "request_connection_info" });
+          }, 1000);
+          break;
+
+        case "auth_error":
+          console.error("Authentication failed:", message.message);
+          this.showSnackbar(
+            `Authentication failed: ${message.message}`,
+            "error"
+          );
           // Redirect back to landing page
-          this.$router.push('/')
-          break
-          
-        case 'room_update':
+          this.$router.push("/");
+          break;
+
+        case "room_update":
           // Check for new participants joining
-          const currentParticipantIds = new Set(this.roomInfo.participants.map(p => p.participant_id))
-          const newParticipantIds = new Set((message.participants || []).map(p => p.participant_id))
-          
+          const currentParticipantIds = new Set(
+            this.roomInfo.participants.map((p) => p.participant_id)
+          );
+          const newParticipantIds = new Set(
+            (message.participants || []).map((p) => p.participant_id)
+          );
+
           // Find newly joined participants
-          const joinedParticipants = (message.participants || []).filter(p => 
-            !currentParticipantIds.has(p.participant_id) && p.mode === 'teleprompter'
-          )
-          
+          const joinedParticipants = (message.participants || []).filter(
+            (p) =>
+              !currentParticipantIds.has(p.participant_id) &&
+              p.mode === "teleprompter"
+          );
+
           // Show notification for new teleprompter joins
           if (joinedParticipants.length > 0) {
-            const newCount = joinedParticipants.length
+            const newCount = joinedParticipants.length;
             this.showSnackbar(
-              newCount === 1 
-                ? 'New teleprompter joined the room' 
-                : `${newCount} new teleprompters joined the room`, 
-              'info'
-            )
+              newCount === 1
+                ? "New teleprompter joined the room"
+                : `${newCount} new teleprompters joined the room`,
+              "info"
+            );
           }
-          
-          this.connectionInfo.count = message.participant_count
-          this.connectionInfo.show = true
-          this.roomInfo.participants = message.participants || []
-          break
-          
-        case 'connection_update':
-          this.connectionInfo.count = message.connection_count
-          this.connectionInfo.show = true
-          break
-          
-        case 'mirror':
+
+          this.connectionInfo.count = message.participant_count;
+          this.connectionInfo.show = true;
+          this.roomInfo.participants = message.participants || [];
+          break;
+
+        case "connection_update":
+          this.connectionInfo.count = message.connection_count;
+          this.connectionInfo.show = true;
+          break;
+
+        case "mirror":
           // Update mirror toggles when teleprompter changes mirror mode
-          this.horizontalMirror = message.horizontal
-          this.verticalMirror = message.vertical
-          break
-          
-        case 'width':
+          this.horizontalMirror = message.horizontal;
+          this.verticalMirror = message.vertical;
+          break;
+
+        case "width":
           // Update width when teleprompter changes width setting
-          this.textWidth = message.value
-          break
-          
-        case 'font_size':
+          this.textWidth = message.value;
+          break;
+
+        case "font_size":
           // Update font size when teleprompter changes font size
-          this.fontSize = message.value
-          break
-          
-        case 'ai_scrolling_started':
+          this.fontSize = message.value;
+          break;
+
+        case "ai_scrolling_started":
           this.aiScrolling.status = {
-            color: 'success',
-            icon: 'mdi-microphone',
-            text: 'AI Scrolling Active'
-          }
-          this.showSnackbar('AI Scrolling started', 'success')
-          break
-          
-        case 'ai_scrolling_stopped':
+            color: "success",
+            icon: "mdi-microphone",
+            text: "AI Scrolling Active",
+          };
+          this.showSnackbar("AI Scrolling started", "success");
+          break;
+
+        case "ai_scrolling_stopped":
           this.aiScrolling.status = {
-            color: 'default',
-            icon: 'mdi-microphone-off',
-            text: 'AI Scrolling Disabled'
-          }
-          this.showSnackbar('AI Scrolling stopped', 'info')
-          break
-          
-        case 'ai_scrolling_config_updated':
-          this.aiScrolling.config = { ...message.config }
-          break
-          
-        case 'ai_scrolling_error':
+            color: "default",
+            icon: "mdi-microphone-off",
+            text: "AI Scrolling Disabled",
+          };
+          this.showSnackbar("AI Scrolling stopped", "info");
+          break;
+
+        case "ai_scrolling_config_updated":
+          this.aiScrolling.config = { ...message.config };
+          break;
+
+        case "ai_scrolling_error":
           this.aiScrolling.status = {
-            color: 'error',
-            icon: 'mdi-alert',
-            text: `AI Error: ${message.error}`
-          }
-          this.showSnackbar(`AI Scrolling Error: ${message.error}`, 'error')
-          break
-          
+            color: "error",
+            icon: "mdi-alert",
+            text: `AI Error: ${message.error}`,
+          };
+          this.showSnackbar(`AI Scrolling Error: ${message.error}`, "error");
+          break;
+
         default:
-          console.log('Received message:', message)
+          console.log("Received message:", message);
       }
     },
-    
+
     // WebSocket communication
     sendMessage(message) {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        this.ws.send(JSON.stringify(message))
+        this.ws.send(JSON.stringify(message));
       } else {
-        console.warn('WebSocket not connected')
+        console.warn("WebSocket not connected");
       }
     },
-    
+
     // Playback controls
     togglePlayback() {
       if (this.isPlaying) {
-        this.pauseScrolling()
+        this.pauseScrolling();
       } else {
-        this.startScrolling()
+        this.startScrolling();
       }
     },
-    
+
     startScrolling() {
-      this.isPlaying = true
-      this.sendMessage({ type: 'start' })
-      this.showSnackbar('Teleprompter started', 'success')
+      this.isPlaying = true;
+      this.sendMessage({ type: "start" });
+      this.showSnackbar("Teleprompter started", "success");
     },
-    
+
     pauseScrolling() {
-      this.isPlaying = false
-      this.sendMessage({ type: 'pause' })
-      this.showSnackbar('Teleprompter paused', 'warning')
+      this.isPlaying = false;
+      this.sendMessage({ type: "pause" });
+      this.showSnackbar("Teleprompter paused", "warning");
     },
 
     // Navigation controls
     goToBeginning() {
-      this.sendMessage({ type: 'go_to_beginning' })
+      this.sendMessage({ type: "go_to_beginning" });
     },
 
     goToEnd() {
-      this.sendMessage({ type: 'go_to_end' })
+      this.sendMessage({ type: "go_to_end" });
     },
 
     scrollBackLines() {
-      this.sendMessage({ 
-        type: 'scroll_lines', 
-        direction: 'back',
-        lines: this.scrollLines 
-      })
+      this.sendMessage({
+        type: "scroll_lines",
+        direction: "back",
+        lines: this.scrollLines,
+      });
     },
 
     scrollForwardLines() {
-      this.sendMessage({ 
-        type: 'scroll_lines', 
-        direction: 'forward',
-        lines: this.scrollLines 
-      })
+      this.sendMessage({
+        type: "scroll_lines",
+        direction: "forward",
+        lines: this.scrollLines,
+      });
     },
 
     // Section navigation controls
     goToPreviousSection() {
-      const prevSection = getPreviousSection(this.sections, this.currentScrollPosition)
+      const prevSection = getPreviousSection(
+        this.sections,
+        this.currentScrollPosition
+      );
       if (prevSection) {
-        this.goToSection(prevSection)
+        this.goToSection(prevSection);
       }
     },
 
     goToNextSection() {
-      const nextSection = getNextSection(this.sections, this.currentScrollPosition)
+      const nextSection = getNextSection(
+        this.sections,
+        this.currentScrollPosition
+      );
       if (nextSection) {
-        this.goToSection(nextSection)
+        this.goToSection(nextSection);
       }
     },
 
     goToSection(section) {
-      this.currentScrollPosition = section.start
-      this.sendMessage({ 
-        type: 'go_to_section', 
+      this.currentScrollPosition = section.start;
+      this.sendMessage({
+        type: "go_to_section",
         sectionLine: section.start,
-        sectionTitle: section.title 
-      })
+        sectionTitle: section.title,
+      });
     },
-    
+
     // Text sync
     syncText() {
-      this.sendMessage({ 
-        type: 'text', 
-        content: this.scriptText 
-      })
-      this.showSnackbar('Text synced to teleprompters', 'success')
+      this.sendMessage({
+        type: "text",
+        content: this.scriptText,
+      });
+      this.showSnackbar("Text synced to teleprompters", "success");
     },
-    
+
     debouncedSyncText() {
-      clearTimeout(this.syncTimeout)
+      clearTimeout(this.syncTimeout);
       this.syncTimeout = setTimeout(() => {
-        this.syncText()
-      }, 1000)
+        this.syncText();
+      }, 1000);
     },
-    
+
     // Speed controls
     updateSpeed() {
-      this.sendMessage({ 
-        type: 'speed', 
-        value: this.scrollSpeed 
-      })
+      this.sendMessage({
+        type: "speed",
+        value: this.scrollSpeed,
+      });
     },
-    
+
     // Font size controls
     updateFontSize() {
-      this.sendMessage({ 
-        type: 'font_size', 
-        value: this.fontSize 
-      })
+      this.sendMessage({
+        type: "font_size",
+        value: this.fontSize,
+      });
     },
-    
+
     // Width controls
     updateWidth() {
-      this.sendMessage({ 
-        type: 'width', 
-        value: this.textWidth 
-      })
+      this.sendMessage({
+        type: "width",
+        value: this.textWidth,
+      });
     },
-    
+
     // Mirror controls
     toggleHorizontalMirror() {
-      this.horizontalMirror = !this.horizontalMirror
-      this.updateHorizontalMirror()
+      this.horizontalMirror = !this.horizontalMirror;
+      this.updateHorizontalMirror();
     },
 
     toggleVerticalMirror() {
-      this.verticalMirror = !this.verticalMirror
-      this.updateVerticalMirror()
+      this.verticalMirror = !this.verticalMirror;
+      this.updateVerticalMirror();
     },
 
     updateHorizontalMirror() {
       this.sendMessage({
-        type: 'mirror',
+        type: "mirror",
         horizontal: this.horizontalMirror,
-        vertical: this.verticalMirror
-      })
+        vertical: this.verticalMirror,
+      });
     },
-    
+
     updateVerticalMirror() {
       this.sendMessage({
-        type: 'mirror',
+        type: "mirror",
         horizontal: this.horizontalMirror,
-        vertical: this.verticalMirror
-      })
+        vertical: this.verticalMirror,
+      });
     },
-    
+
     // AI Scrolling methods
     async toggleAIScrolling() {
       if (this.aiScrolling.enabled) {
-        await this.startAIScrolling()
+        await this.startAIScrolling();
       } else {
-        await this.stopAIScrolling()
+        await this.stopAIScrolling();
       }
     },
-    
+
     async startAIScrolling() {
       try {
         // Check if we need to start audio recording
-        if (this.aiScrolling.config.audio_source === 'controller') {
-          await this.startAudioRecording()
+        if (this.aiScrolling.config.audio_source === "controller") {
+          await this.startAudioRecording();
         }
-        
+
         // Start AI scrolling session
         this.sendMessage({
-          type: 'ai_scrolling_start',
+          type: "ai_scrolling_start",
           script_content: this.scriptText,
-          config: this.aiScrolling.config
-        })
-        
+          config: this.aiScrolling.config,
+        });
+
         this.aiScrolling.status = {
-          color: 'info',
-          icon: 'mdi-loading',
-          text: 'Starting AI Scrolling...'
-        }
-        
+          color: "info",
+          icon: "mdi-loading",
+          text: "Starting AI Scrolling...",
+        };
       } catch (error) {
-        console.error('Error starting AI scrolling:', error)
+        console.error("Error starting AI scrolling:", error);
         // Don't disable the UI checkbox, just show error status
         this.aiScrolling.status = {
-          color: 'error',
-          icon: 'mdi-alert',
-          text: `Error: ${error.message}`
-        }
-        this.showSnackbar(`Failed to start AI scrolling: ${error.message}`, 'error')
+          color: "error",
+          icon: "mdi-alert",
+          text: `Error: ${error.message}`,
+        };
+        this.showSnackbar(
+          `Failed to start AI scrolling: ${error.message}`,
+          "error"
+        );
       }
     },
-    
+
     async stopAIScrolling() {
       try {
         // Stop audio recording if active
         if (this.audioRecording.active) {
-          this.stopAudioRecording()
+          this.stopAudioRecording();
         }
-        
+
         // Stop AI scrolling session
         this.sendMessage({
-          type: 'ai_scrolling_stop'
-        })
-        
+          type: "ai_scrolling_stop",
+        });
+
         this.aiScrolling.status = {
-          color: 'default',
-          icon: 'mdi-microphone-off',
-          text: 'AI Scrolling Disabled'
-        }
-        
+          color: "default",
+          icon: "mdi-microphone-off",
+          text: "AI Scrolling Disabled",
+        };
       } catch (error) {
-        console.error('Error stopping AI scrolling:', error)
-        this.showSnackbar(`Error stopping AI scrolling: ${error.message}`, 'error')
+        console.error("Error stopping AI scrolling:", error);
+        this.showSnackbar(
+          `Error stopping AI scrolling: ${error.message}`,
+          "error"
+        );
       }
     },
-    
+
     updateAIScrollingConfig() {
       if (this.aiScrolling.enabled) {
         this.sendMessage({
-          type: 'ai_scrolling_config',
-          ...this.aiScrolling.config
-        })
+          type: "ai_scrolling_config",
+          ...this.aiScrolling.config,
+        });
       }
     },
-    
+
     async startAudioRecording() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
+        const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             sampleRate: 16000,
             channelCount: 1,
             echoCancellation: true,
-            noiseSuppression: true
-          } 
-        })
-        
-        this.audioRecording.stream = stream
+            noiseSuppression: true,
+          },
+        });
+
+        this.audioRecording.stream = stream;
         this.audioRecording.mediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'audio/webm;codecs=opus'
-        })
-        
+          mimeType: "audio/webm;codecs=opus",
+        });
+
         this.audioRecording.mediaRecorder.ondataavailable = (event) => {
           if (event.data.size > 0 && this.aiScrolling.enabled) {
-            this.sendAudioChunk(event.data)
+            this.sendAudioChunk(event.data);
           }
-        }
-        
+        };
+
         // Record in small chunks for real-time processing
-        this.audioRecording.mediaRecorder.start(1000) // 1 second chunks
-        this.audioRecording.active = true
-        
+        this.audioRecording.mediaRecorder.start(1000); // 1 second chunks
+        this.audioRecording.active = true;
       } catch (error) {
-        throw new Error(`Microphone access denied: ${error.message}`)
+        throw new Error(`Microphone access denied: ${error.message}`);
       }
     },
-    
+
     stopAudioRecording() {
       if (this.audioRecording.mediaRecorder) {
-        this.audioRecording.mediaRecorder.stop()
-        this.audioRecording.mediaRecorder = null
+        this.audioRecording.mediaRecorder.stop();
+        this.audioRecording.mediaRecorder = null;
       }
-      
+
       if (this.audioRecording.stream) {
-        this.audioRecording.stream.getTracks().forEach(track => track.stop())
-        this.audioRecording.stream = null
+        this.audioRecording.stream.getTracks().forEach((track) => track.stop());
+        this.audioRecording.stream = null;
       }
-      
-      this.audioRecording.active = false
+
+      this.audioRecording.active = false;
     },
-    
+
     async sendAudioChunk(audioBlob) {
       try {
-        const arrayBuffer = await audioBlob.arrayBuffer()
-        const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
-        
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        const base64Audio = btoa(
+          String.fromCharCode(...new Uint8Array(arrayBuffer))
+        );
+
         this.sendMessage({
-          type: 'audio_chunk',
-          audio_data: base64Audio
-        })
-        
+          type: "audio_chunk",
+          audio_data: base64Audio,
+        });
       } catch (error) {
-        console.error('Error sending audio chunk:', error)
+        console.error("Error sending audio chunk:", error);
       }
     },
-    
+
     // Utility methods
     disconnect() {
       if (this.ws) {
-        this.ws.close()
+        this.ws.close();
       }
       // Navigate back to landing page using Vue Router
-      this.$router.push('/')
+      this.$router.push("/");
     },
-    
+
     // Room management methods
     kickParticipant(participantId) {
       this.sendMessage({
-        type: 'kick_participant',
-        target_participant_id: participantId
-      })
-      this.showSnackbar('Participant removed from room', 'warning')
+        type: "kick_participant",
+        target_participant_id: participantId,
+      });
+      this.showSnackbar("Participant removed from room", "warning");
     },
-    
+
     async copyToClipboard(text, message) {
       try {
-        await navigator.clipboard.writeText(text)
-        this.showSnackbar(message, 'success')
+        await navigator.clipboard.writeText(text);
+        this.showSnackbar(message, "success");
       } catch (err) {
-        this.showSnackbar('Failed to copy to clipboard', 'error')
+        this.showSnackbar("Failed to copy to clipboard", "error");
       }
     },
-    
-    showSnackbar(text, color = 'success') {
-      this.snackbar.text = text
-      this.snackbar.color = color
-      this.snackbar.show = true
-    }
-  }
-}
+
+    showSnackbar(text, color = "success") {
+      this.snackbar.text = text;
+      this.snackbar.color = color;
+      this.snackbar.show = true;
+    },
+  },
+};
 </script>
 
 <style scoped>
 .v-textarea :deep(.v-field__input) {
-  font-family: 'Roboto Mono', monospace;
+  font-family: "Roboto Mono", monospace;
   line-height: 1.6;
 }
 
@@ -1512,7 +1601,7 @@ Happy teleprompting! 🎬`,
   padding: 16px;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .qr-code-image {
