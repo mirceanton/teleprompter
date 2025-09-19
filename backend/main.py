@@ -10,10 +10,36 @@ import asyncio
 import logging
 from typing import Dict, Set
 from pathlib import Path
+from contextlib import asynccontextmanager
 from ai_scrolling import ai_scrolling_service, AIScrollingConfig
 from redis_manager import redis_manager
 
-app = FastAPI(title="Remote Teleprompter API", openapi_url="/api/openapi.json", docs_url="/api/docs")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Handles startup and shutdown events for the FastAPI application.
+    """
+    await redis_manager.connect()
+    await ai_scrolling_service.initialize()
+    # Start the Redis message listener in the background
+    listener_task = asyncio.create_task(redis_manager.start_message_listener())
+
+    # Store the task to prevent it from being garbage collected
+    app.state.redis_listener_task = listener_task
+    logger.info("Redis Pub/Sub enabled for horizontal scaling")
+    
+    yield
+    
+    # Shutdown logic
+    await redis_manager.disconnect()
+
+app = FastAPI(
+    title="Remote Teleprompter API", 
+    openapi_url="/api/openapi.json", 
+    docs_url="/api/docs",
+    lifespan=lifespan
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -28,21 +54,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize services on startup
-@app.on_event("startup")
-async def startup_event():
-    await redis_manager.connect()
-    await ai_scrolling_service.initialize()
-    # Start the Redis message listener in the background
-    listener_task = asyncio.create_task(redis_manager.start_message_listener())
 
-    # Store the task to prevent it from being garbage collected
-    app.state.redis_listener_task = listener_task
-    logger.info("Redis Pub/Sub enabled for horizontal scaling")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    await redis_manager.disconnect()
 
 # Store active connections by channel with Redis Pub/Sub support
 class ConnectionManager:
