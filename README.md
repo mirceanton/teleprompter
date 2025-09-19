@@ -43,13 +43,91 @@ The application will be available at:
 
 ### Configuration
 
-The frontend can be configured to use a different backend URL via environment variables:
+The frontend can be configured to use a different backend URL in multiple ways:
+
+#### Method 1: Runtime Configuration File (Recommended)
+
+The frontend loads its configuration from a `config.json` file at runtime, allowing you to use the same Docker image across environments.
+
+**For Docker deployments:**
+```bash
+# Create a custom config file
+echo '{"backendUrl":"http://my-backend:8001"}' > ./my-config.json
+
+# Mount the config file into the container
+docker run -p 3000:80 \
+  -v $(pwd)/my-config.json:/usr/share/nginx/html/config.json:ro \
+  teleprompter-frontend
+```
+
+**For Docker Compose:**
+```yaml
+services:
+  frontend:
+    image: teleprompter-frontend
+    ports:
+      - "3000:80"
+    volumes:
+      - ./examples/config-production.json:/usr/share/nginx/html/config.json:ro
+```
+
+**For Kubernetes:**
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: teleprompter-config
+data:
+  config.json: |
+    {
+      "backendUrl": "http://teleprompter-backend:8001"
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: teleprompter-frontend
+spec:
+  template:
+    spec:
+      containers:
+      - name: frontend
+        image: teleprompter-frontend
+        volumeMounts:
+        - name: config
+          mountPath: /usr/share/nginx/html/config.json
+          subPath: config.json
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: teleprompter-config
+```
+
+#### Method 2: Environment Variables (Legacy)
 
 ```bash
-# Set custom backend URL
+# Set custom backend URL via environment variable
 export FRONTEND_BACKEND_URL=http://my-backend-server:8001
 docker-compose up -d
 ```
+
+#### Configuration Priority
+
+The frontend uses the following priority order for backend URL configuration:
+1. Docker environment variable injection (`BACKEND_URL`)
+2. **Runtime config.json file** (recommended)
+3. Build-time environment variable
+4. Default: same host on port 8001
+
+#### Example Configurations
+
+The `examples/` directory contains sample configuration files:
+- `config-development.json` - Local development setup
+- `config-staging.json` - Staging environment with HTTPS
+- `config-production.json` - Production environment
+
+Use these as templates for your own deployments.
 
 ### Usage
 1. Open http://localhost:3000 in your web browser
