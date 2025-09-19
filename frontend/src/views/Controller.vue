@@ -41,6 +41,49 @@
                 </v-btn>
               </v-col>
             </v-row>
+            
+            <!-- Participants List -->
+            <div v-if="participants.length > 0" class="mt-3">
+              <v-divider class="mb-2"></v-divider>
+              <div class="text-subtitle2 mb-2">
+                <v-icon class="mr-1" size="small">mdi-account-multiple</v-icon>
+                Active Participants:
+              </div>
+              <v-row>
+                <v-col 
+                  v-for="participant in participants" 
+                  :key="participant.websocket_id"
+                  cols="auto"
+                >
+                  <v-chip
+                    :color="getParticipantColor(participant.mode)"
+                    variant="outlined"
+                    size="small"
+                    class="mr-2 mb-1"
+                  >
+                    <v-icon :icon="getParticipantIcon(participant.mode)" class="mr-1" size="small"></v-icon>
+                    {{ getParticipantDisplayName(participant) }}
+                    <v-btn
+                      v-if="participant.can_be_kicked"
+                      icon
+                      size="x-small"
+                      variant="text"
+                      class="ml-1"
+                      @click="kickParticipant(participant)"
+                    >
+                      <v-icon>mdi-close</v-icon>
+                    </v-btn>
+                    <v-icon
+                      v-else
+                      class="ml-1"
+                      size="x-small"
+                      color="warning"
+                      title="Protected participant"
+                    >mdi-shield</v-icon>
+                  </v-chip>
+                </v-col>
+              </v-row>
+            </div>
           </v-card-text>
         </v-card>
 
@@ -687,6 +730,7 @@ export default {
         show: false,
         count: 0,
       },
+      participants: [],
 
       // Script content
       scriptText: `# Welcome to Remote Teleprompter!
@@ -923,6 +967,10 @@ Happy teleprompting! 🎬`,
         case "connection_update":
           this.connectionInfo.count = message.connection_count;
           this.connectionInfo.show = true;
+          break;
+
+        case "participants_update":
+          this.participants = message.participants || [];
           break;
 
         case "mirror":
@@ -1286,6 +1334,75 @@ Happy teleprompting! 🎬`,
       this.snackbar.text = text;
       this.snackbar.color = color;
       this.snackbar.show = true;
+    },
+
+    // Participant management methods
+    getParticipantColor(mode) {
+      switch (mode) {
+        case "controller":
+          return "primary";
+        case "teleprompter":
+          return "success";
+        case "ai_scroller":
+          return "warning";
+        default:
+          return "grey";
+      }
+    },
+
+    getParticipantIcon(mode) {
+      switch (mode) {
+        case "controller":
+          return "mdi-laptop";
+        case "teleprompter":
+          return "mdi-tablet";
+        case "ai_scroller":
+          return "mdi-microphone";
+        default:
+          return "mdi-account";
+      }
+    },
+
+    getParticipantDisplayName(participant) {
+      switch (participant.mode) {
+        case "controller":
+          return "Controller";
+        case "teleprompter":
+          return "Teleprompter";
+        case "ai_scroller":
+          return participant.service_id || "AI Scroller";
+        default:
+          return participant.mode || "Unknown";
+      }
+    },
+
+    async kickParticipant(participant) {
+      if (!participant.can_be_kicked) {
+        this.showSnackbar("This participant cannot be kicked", "error");
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${this.getApiUrl()}/api/channel/${this.channelName}/participants/${participant.websocket_id}/kick`,
+          { method: "POST" }
+        );
+
+        if (response.ok) {
+          this.showSnackbar("Participant kicked successfully", "success");
+        } else {
+          const error = await response.json();
+          this.showSnackbar(`Failed to kick participant: ${error.detail}`, "error");
+        }
+      } catch (error) {
+        console.error("Error kicking participant:", error);
+        this.showSnackbar("Failed to kick participant", "error");
+      }
+    },
+
+    getApiUrl() {
+      // Get API URL from the same host
+      return `${window.location.protocol}//${window.location.hostname}:8001`;
     },
   },
 };
