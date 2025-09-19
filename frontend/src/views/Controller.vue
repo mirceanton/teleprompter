@@ -2,9 +2,103 @@
   <v-app>
     <v-app-bar app color="primary" dark>
       <v-toolbar-title>
-        Admin - {{ channelName }}
+        Admin - {{ roomCredentials?.room_name || channelName }}
       </v-toolbar-title>
       <v-spacer />
+      
+      <!-- Participant Management Dropdown -->
+      <v-menu offset-y>
+        <template v-slot:activator="{ props }">
+          <v-btn 
+            icon="mdi-account-group" 
+            v-bind="props"
+            class="mr-2"
+          >
+            <v-badge 
+              :content="participants.length" 
+              color="secondary"
+              overlap
+            >
+              <v-icon>mdi-account-group</v-icon>
+            </v-badge>
+          </v-btn>
+        </template>
+        
+        <v-card min-width="300">
+          <v-card-title class="text-h6 pa-4">
+            <v-icon class="mr-2">mdi-account-group</v-icon>
+            Room Participants
+          </v-card-title>
+          
+          <v-divider />
+          
+          <!-- Participants List -->
+          <v-list>
+            <v-list-item
+              v-for="participant in participants"
+              :key="participant.id"
+              :class="{ 'bg-primary': participant.id === participantId }"
+            >
+              <template v-slot:prepend>
+                <v-avatar size="small" :color="participant.role === 'controller' ? 'primary' : 'secondary'">
+                  <v-icon>{{ participant.role === 'controller' ? 'mdi-laptop' : 'mdi-cellphone' }}</v-icon>
+                </v-avatar>
+              </template>
+              
+              <v-list-item-title>
+                {{ participant.role === 'controller' ? '💻 Controller' : '📱 Teleprompter' }}
+                <v-chip 
+                  v-if="participant.id === participantId" 
+                  size="x-small" 
+                  color="primary" 
+                  variant="outlined"
+                  class="ml-2"
+                >
+                  You
+                </v-chip>
+              </v-list-item-title>
+              
+              <v-list-item-subtitle>
+                Joined {{ formatTime(participant.joined_at) }}
+              </v-list-item-subtitle>
+              
+              <template v-slot:append v-if="participant.id !== participantId">
+                <v-btn
+                  icon="mdi-account-remove"
+                  size="small"
+                  color="error"
+                  variant="text"
+                  @click="kickParticipant(participant.id)"
+                >
+                </v-btn>
+              </template>
+            </v-list-item>
+          </v-list>
+          
+          <v-divider />
+          
+          <!-- Room Actions -->
+          <v-card-actions>
+            <v-btn
+              prepend-icon="mdi-information"
+              variant="text"
+              @click="showRoomInfoDialog = true"
+            >
+              Room Info
+            </v-btn>
+            <v-spacer />
+            <v-btn
+              prepend-icon="mdi-logout"
+              color="error"
+              variant="text"
+              @click="disconnect"
+            >
+              Leave Room
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-menu>
+      
       <v-chip :color="connectionStatus.color" variant="outlined">
         <v-icon start>{{ connectionStatus.icon }}</v-icon>
         {{ connectionStatus.text }}
@@ -656,6 +750,124 @@
       </v-container>
     </v-main>
 
+    <!-- Room Info Dialog -->
+    <v-dialog v-model="showRoomInfoDialog" max-width="600">
+      <v-card>
+        <v-card-title class="text-h5 pa-4">
+          <v-icon class="mr-2">mdi-information</v-icon>
+          Room Information
+        </v-card-title>
+        
+        <v-divider />
+        
+        <v-card-text class="pa-4">
+          <!-- Editable Room Name -->
+          <v-text-field
+            v-model="editableRoomName"
+            label="Room Name"
+            prepend-icon="mdi-tag"
+            variant="outlined"
+            class="mb-4"
+            @blur="updateRoomName"
+            @keypress.enter="updateRoomName"
+          />
+          
+          <!-- Room ID (Read-only) -->
+          <v-text-field
+            :model-value="roomCredentials?.room_id"
+            label="Room ID"
+            prepend-icon="mdi-key"
+            variant="outlined"
+            readonly
+            class="mb-4"
+          >
+            <template v-slot:append-inner>
+              <v-btn
+                icon="mdi-content-copy"
+                size="small"
+                variant="text"
+                @click="copyToClipboard(roomCredentials?.room_id, 'Room ID copied!')"
+              />
+            </template>
+          </v-text-field>
+          
+          <!-- Room Secret (Read-only) -->
+          <v-text-field
+            :model-value="roomCredentials?.room_secret"
+            label="Room Secret"
+            prepend-icon="mdi-lock"
+            variant="outlined"
+            :type="showSecret ? 'text' : 'password'"
+            readonly
+            class="mb-4"
+          >
+            <template v-slot:append-inner>
+              <v-btn
+                :icon="showSecret ? 'mdi-eye-off' : 'mdi-eye'"
+                size="small"
+                variant="text"
+                @click="showSecret = !showSecret"
+                class="mr-1"
+              />
+              <v-btn
+                icon="mdi-content-copy"
+                size="small"
+                variant="text"
+                @click="copyToClipboard(roomCredentials?.room_secret, 'Room secret copied!')"
+              />
+            </template>
+          </v-text-field>
+          
+          <!-- Join URL -->
+          <v-text-field
+            :model-value="joinUrl"
+            label="Teleprompter Join URL"
+            prepend-icon="mdi-link"
+            variant="outlined"
+            readonly
+            class="mb-4"
+          >
+            <template v-slot:append-inner>
+              <v-btn
+                icon="mdi-content-copy"
+                size="small"
+                variant="text"
+                @click="copyToClipboard(joinUrl, 'Join URL copied!')"
+              />
+            </template>
+          </v-text-field>
+          
+          <!-- QR Code placeholder -->
+          <div class="text-center mb-4">
+            <v-card variant="outlined" class="pa-4">
+              <v-icon size="64" color="grey">mdi-qrcode</v-icon>
+              <p class="text-body-2 mt-2">QR Code for easy joining</p>
+              <p class="text-caption text-grey">
+                (QR code generation to be implemented)
+              </p>
+            </v-card>
+          </div>
+        </v-card-text>
+        
+        <v-card-actions>
+          <v-btn
+            prepend-icon="mdi-content-copy"
+            variant="outlined"
+            @click="copyCredentials"
+          >
+            Copy All Credentials
+          </v-btn>
+          <v-spacer />
+          <v-btn
+            color="primary"
+            @click="showRoomInfoDialog = false"
+          >
+            Close
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-snackbar v-model="snackbar.show" :color="snackbar.color">
       {{ snackbar.text }}
       <template v-slot:actions>
@@ -685,10 +897,16 @@ export default {
       channelName: "",
       roomCredentials: null,
       participantId: null,
+      participants: [],
       connectionInfo: {
         show: false,
         count: 0,
       },
+
+      // Room management UI
+      showRoomInfoDialog: false,
+      editableRoomName: "",
+      showSecret: false,
 
       // Script content
       scriptText: `# Welcome to Remote Teleprompter!
@@ -771,6 +989,16 @@ Happy teleprompting! 🎬`,
   },
 
   computed: {
+    joinUrl() {
+      if (!this.roomCredentials) return '';
+      const baseUrl = window.location.origin;
+      const credentials = {
+        room_id: this.roomCredentials.room_id,
+        room_secret: this.roomCredentials.room_secret
+      };
+      return `${baseUrl}/?join=${encodeURIComponent(JSON.stringify(credentials))}`;
+    },
+
     connectionStatus() {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         return {
@@ -876,6 +1104,7 @@ Happy teleprompting! 🎬`,
         }
         
         this.participantId = this.roomCredentials.participant_id;
+        this.editableRoomName = this.roomCredentials.room_name || '';
         return true;
         
       } catch (error) {
@@ -1006,6 +1235,10 @@ Happy teleprompting! 🎬`,
         case "connection_update":
           this.connectionInfo.count = message.connection_count;
           this.connectionInfo.show = true;
+          // Update participants list if available
+          if (message.participants) {
+            this.participants = message.participants;
+          }
           break;
 
         case "mirror":
@@ -1369,6 +1602,64 @@ Happy teleprompting! 🎬`,
       this.snackbar.text = text;
       this.snackbar.color = color;
       this.snackbar.show = true;
+    },
+
+    // Room management methods
+    async kickParticipant(participantId) {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        this.showSnackbar("Cannot kick participant: not connected", "error");
+        return;
+      }
+
+      if (confirm("Are you sure you want to kick this participant?")) {
+        this.sendMessage({
+          type: "kick_participant",
+          target_participant_id: participantId
+        });
+        this.showSnackbar("Participant kicked", "info");
+      }
+    },
+
+    formatTime(timestamp) {
+      return new Date(timestamp).toLocaleTimeString();
+    },
+
+    async copyToClipboard(text, successMessage) {
+      try {
+        await navigator.clipboard.writeText(text);
+        this.showSnackbar(successMessage, "success");
+      } catch (error) {
+        this.showSnackbar("Failed to copy to clipboard", "error");
+      }
+    },
+
+    async copyCredentials() {
+      if (!this.roomCredentials) return;
+      
+      const credentials = {
+        room_id: this.roomCredentials.room_id,
+        room_secret: this.roomCredentials.room_secret,
+        room_name: this.roomCredentials.room_name || this.editableRoomName
+      };
+      
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(credentials, null, 2));
+        this.showSnackbar("Room credentials copied to clipboard!", "success");
+      } catch (error) {
+        this.showSnackbar("Failed to copy credentials", "error");
+      }
+    },
+
+    updateRoomName() {
+      // TODO: Implement room name update API call
+      if (this.editableRoomName && this.editableRoomName !== this.roomCredentials?.room_name) {
+        // For now, just update locally
+        if (this.roomCredentials) {
+          this.roomCredentials.room_name = this.editableRoomName;
+          sessionStorage.setItem('room_credentials', JSON.stringify(this.roomCredentials));
+        }
+        this.showSnackbar("Room name updated locally", "info");
+      }
     },
   },
 };
