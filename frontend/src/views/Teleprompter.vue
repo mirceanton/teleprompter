@@ -344,6 +344,15 @@ export default {
           }, 2000)
           break
           
+        case 'room_closed':
+          console.log('Room closed:', message.message)
+          this.showSnackbar('Room session ended. Controller has left.', 'warning')
+          // Redirect back to landing page after a short delay
+          setTimeout(() => {
+            this.$router.push('/')
+          }, 2000)
+          break
+          
         case 'text':
           this.teleprompterContent = message.content
           this.resetScrolling()

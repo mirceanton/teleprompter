@@ -67,7 +67,7 @@
     </v-main>
 
     <!-- Create Room Dialog -->
-    <v-dialog v-model="showCreateRoom" max-width="600px">
+    <v-dialog v-model="showCreateRoom" max-width="600px" persistent>
       <v-card>
         <v-card-title class="pa-6">
           <v-icon class="mr-2">mdi-plus-circle</v-icon>
@@ -75,20 +75,50 @@
         </v-card-title>
         
         <v-card-text class="pa-6 pt-0">
-          <p class="mb-4">
-            Creating a new room will automatically generate a room ID and secret. 
-            You'll enter the room as the controller.
-          </p>
+          <v-text-field
+            v-model="createForm.roomName"
+            label="Room Name"
+            :placeholder="defaultRoomName"
+            prepend-icon="mdi-rename-box"
+            variant="outlined"
+            class="mb-4"
+            hint="Give your room a friendly name (optional)"
+            persistent-hint
+          />
+          
+          <v-row v-if="roomPreview.roomId">
+            <v-col cols="12" sm="6">
+              <v-text-field
+                label="Room ID"
+                :model-value="roomPreview.roomId"
+                readonly
+                variant="outlined"
+                density="compact"
+                class="greyed-out"
+                prepend-icon="mdi-identifier"
+              />
+            </v-col>
+            <v-col cols="12" sm="6">
+              <v-text-field
+                label="Room Secret"
+                :model-value="roomPreview.secret ? roomPreview.secret.substring(0, 20) + '...' : ''"
+                readonly
+                variant="outlined"
+                density="compact"
+                class="greyed-out"
+                prepend-icon="mdi-lock"
+              />
+            </v-col>
+          </v-row>
           
           <v-alert type="info" variant="tonal" class="mb-4">
-            <strong>Note:</strong> Only controllers can create rooms. After creating, 
-            share the room credentials with teleprompter users.
+            <strong>Note:</strong> You'll enter as the controller. Share the room credentials with teleprompter users after creation.
           </v-alert>
         </v-card-text>
         
         <v-card-actions class="pa-6 pt-0">
           <v-spacer />
-          <v-btn variant="text" @click="showCreateRoom = false">
+          <v-btn variant="text" @click="cancelCreateRoom">
             Cancel
           </v-btn>
           <v-btn 
@@ -207,6 +237,14 @@ export default {
       creating: false,
       joining: false,
       verifying: false,
+      createForm: {
+        roomName: ''
+      },
+      roomPreview: {
+        roomId: '',
+        secret: ''
+      },
+      defaultRoomName: 'My Teleprompter Room',
       joinForm: {
         roomId: '',
         secret: ''
@@ -231,15 +269,55 @@ export default {
     }
   },
   
+  mounted() {
+    this.defaultRoomName = this.generateDefaultRoomName()
+    this.generateRoomPreview()
+  },
+  
+  watch: {
+    showCreateRoom(newVal) {
+      if (newVal) {
+        this.generateRoomPreview()
+      }
+    }
+  },
+  
   methods: {
+    generateDefaultRoomName() {
+      // Generate a default room name using adjective + animal pattern
+      const adjectives = ['Amazing', 'Brilliant', 'Creative', 'Dynamic', 'Elegant', 'Fantastic', 'Great', 'Happy', 'Incredible', 'Joyful']
+      const animals = ['Lion', 'Eagle', 'Tiger', 'Wolf', 'Bear', 'Fox', 'Hawk', 'Whale', 'Dolphin', 'Shark']
+      const adjective = adjectives[Math.floor(Math.random() * adjectives.length)]
+      const animal = animals[Math.floor(Math.random() * animals.length)]
+      return `${adjective} ${animal} Room`
+    },
+    
+    async generateRoomPreview() {
+      // Generate preview credentials for display
+      this.roomPreview.roomId = `room-${Math.random().toString(36).substring(2, 10)}`
+      this.roomPreview.secret = Array.from({length: 48}, () => Math.random().toString(36).charAt(0)).join('').toUpperCase()
+    },
+    
+    cancelCreateRoom() {
+      this.showCreateRoom = false
+      this.createForm.roomName = ''
+      this.roomPreview = { roomId: '', secret: '' }
+    },
+    
     async createRoom() {
       this.creating = true
       try {
+        const requestBody = {}
+        if (this.createForm.roomName.trim()) {
+          requestBody.room_name = this.createForm.roomName.trim()
+        }
+        
         const response = await fetch(`${config.getApiUrl()}/api/rooms`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify(requestBody)
         })
         
         if (!response.ok) {
@@ -392,6 +470,14 @@ export default {
 .action-card:hover {
   transform: translateY(-2px);
   border-color: rgba(var(--v-theme-primary), 0.3);
+}
+
+.greyed-out {
+  opacity: 0.7;
+}
+
+.greyed-out :deep(.v-field__input) {
+  color: rgba(var(--v-theme-on-surface), 0.6);
 }
 
 .fill-height {

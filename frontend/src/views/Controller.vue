@@ -2,7 +2,7 @@
   <v-app>
     <v-app-bar app color="primary" dark>
       <v-toolbar-title>
-        💻 Controller Mode - {{ channelName }}
+        💻 Controller Mode - {{ roomName || channelName }}
       </v-toolbar-title>
       <v-spacer />
       
@@ -778,6 +778,7 @@ export default {
       // Connection state
       ws: null,
       channelName: '',
+      roomName: '',
       roomSecret: '',
       connectionInfo: {
         show: false,
@@ -924,6 +925,9 @@ Happy teleprompting! 🎬`,
     this.channelName = this.$route.query.room || 'default'
     this.roomSecret = this.$route.query.secret || ''
     
+    // Fetch room information to get room name
+    this.fetchRoomInfo()
+    
     // Check AI scrolling availability
     this.checkAIScrollingAvailability()
     
@@ -943,6 +947,19 @@ Happy teleprompting! 🎬`,
   },
   
   methods: {
+    async fetchRoomInfo() {
+      try {
+        const response = await fetch(`${config.getApiUrl()}/api/rooms/${this.channelName}`)
+        if (response.ok) {
+          const roomData = await response.json()
+          this.roomName = roomData.room_name || this.channelName
+        }
+      } catch (error) {
+        console.warn('Could not fetch room info:', error)
+        // Fallback to using channelName
+      }
+    },
+    
     async checkAIScrollingAvailability() {
       try {
         // Check if microphone access is available
