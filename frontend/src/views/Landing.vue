@@ -20,7 +20,7 @@
               
               <v-card-text class="pa-6">
                 <p class="text-body-1 mb-6">
-                  Create a new teleprompter room or join an existing one using a room ID and secret.
+                  Create a new teleprompter room or join an existing one.
                 </p>
 
                 <v-row>
@@ -35,7 +35,7 @@
                         <v-icon size="48" color="primary" class="mb-2">mdi-plus-circle</v-icon>
                         <h4 class="text-h6 mb-2">Create New Room</h4>
                         <p class="text-body-2">
-                          Start a new teleprompter session as the controller
+                          Start a new teleprompter session as the controller.
                         </p>
                       </v-card-text>
                     </v-card>
@@ -52,7 +52,7 @@
                         <v-icon size="48" color="secondary" class="mb-2">mdi-login</v-icon>
                         <h4 class="text-h6 mb-2">Join Existing Room</h4>
                         <p class="text-body-2">
-                          Join a room as the teleprompter using the room ID and secret.
+                          Join an existing teleprompter session as a prompter display.
                         </p>
                       </v-card-text>
                     </v-card>
