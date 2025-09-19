@@ -1,16 +1,14 @@
 {
   "name": "teleprompter-frontend",
-  "version": "1.0.0",
+  "description": "Remote Teleprompter Application Frontend",
+  "version": "0.0.0",
   "main": "index.js",
+  "license": "ISC",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "Remote Teleprompter Unified Frontend",
   "dependencies": {
     "@mdi/font": "^7.4.47",
     "@vitejs/plugin-vue": "^6.0.1",

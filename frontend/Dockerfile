@@ -1,30 +1,24 @@
-# Frontend Dockerfile for unified teleprompter application
-FROM node:20-alpine AS builder
+# =================================================================================================
+# Builder Stage
+# =================================================================================================
+FROM docker.io/node:24-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Copy source code
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Production stage with nginx
-FROM nginx:alpine
 
-# Copy built files
+# =================================================================================================
+# Production Stage
+# =================================================================================================
+FROM docker.io/nginx:1.29.1-alpine-slim
+
 COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Expose port
-EXPOSE 80
+COPY public/config.json /usr/share/nginx/html/config.json
 
 CMD ["nginx", "-g", "daemon off;"]

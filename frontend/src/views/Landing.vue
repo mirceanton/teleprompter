@@ -1,23 +1,20 @@
 <template>
   <v-app>
     <v-app-bar app color="primary" dark>
-      <v-toolbar-title>
-        📱 Remote Teleprompter
-      </v-toolbar-title>
+      <v-toolbar-title> 📱 Remote Teleprompter </v-toolbar-title>
     </v-app-bar>
 
     <v-main>
       <v-container fluid class="fill-height">
         <v-row justify="center" align="center" class="fill-height">
           <v-col cols="12" md="8" lg="6">
-            
             <!-- Room Setup Card -->
             <v-card elevation="8">
               <v-card-title class="text-h5 pa-6">
                 <v-icon class="mr-2">mdi-account-group</v-icon>
                 Join or Create a Room
               </v-card-title>
-              
+
               <v-card-text class="pa-6">
                 <v-text-field
                   v-model="channelName"
@@ -64,13 +61,15 @@
                   <v-col cols="12" md="6">
                     <v-card
                       class="role-card"
-                      :class="{ 'selected': selectedRole === 'controller' }"
+                      :class="{ selected: selectedRole === 'controller' }"
                       @click="selectedRole = 'controller'"
                       elevation="2"
                       hover
                     >
                       <v-card-text class="text-center pa-6">
-                        <v-icon size="48" color="primary" class="mb-2">mdi-laptop</v-icon>
+                        <v-icon size="48" color="primary" class="mb-2"
+                          >mdi-laptop</v-icon
+                        >
                         <h4 class="text-h6 mb-2">💻 Controller</h4>
                         <p class="text-body-2">
                           Edit scripts and control playback from your computer
@@ -78,17 +77,19 @@
                       </v-card-text>
                     </v-card>
                   </v-col>
-                  
+
                   <v-col cols="12" md="6">
                     <v-card
                       class="role-card"
-                      :class="{ 'selected': selectedRole === 'teleprompter' }"
+                      :class="{ selected: selectedRole === 'teleprompter' }"
                       @click="selectedRole = 'teleprompter'"
                       elevation="2"
                       hover
                     >
                       <v-card-text class="text-center pa-6">
-                        <v-icon size="48" color="primary" class="mb-2">mdi-cellphone</v-icon>
+                        <v-icon size="48" color="primary" class="mb-2"
+                          >mdi-cellphone</v-icon
+                        >
                         <h4 class="text-h6 mb-2">📱 Teleprompter</h4>
                         <p class="text-body-2">
                           Display scrolling text on your phone or tablet
@@ -111,7 +112,6 @@
                 </v-btn>
               </v-card-text>
             </v-card>
-
           </v-col>
         </v-row>
       </v-container>
@@ -120,9 +120,7 @@
     <v-snackbar v-model="snackbar.show" :color="snackbar.color">
       {{ snackbar.text }}
       <template v-slot:actions>
-        <v-btn variant="text" @click="snackbar.show = false">
-          Close
-        </v-btn>
+        <v-btn variant="text" @click="snackbar.show = false"> Close </v-btn>
       </template>
     </v-snackbar>
   </v-app>
@@ -130,63 +128,72 @@
 
 <script>
 export default {
-  name: 'Landing',
+  name: "Landing",
   data() {
     return {
-      channelName: '',
-      selectedRole: '',
+      channelName: "",
+      selectedRole: "",
       snackbar: {
         show: false,
-        text: '',
-        color: 'success'
-      }
-    }
+        text: "",
+        color: "success",
+      },
+    };
   },
-  
+
   mounted() {
     // Generate initial room ID
-    this.generateRoomId()
+    this.generateRoomId();
   },
-  
+
   methods: {
     generateRoomId() {
-      this.channelName = 'room-' + Math.random().toString(36).substring(2, 8)
-      this.showSnackbar('New room ID generated!', 'success')
+      this.channelName = "room-" + Math.random().toString(36).substring(2, 8);
+      this.showSnackbar("New room ID generated!", "success");
     },
-    
+
     async pasteRoomId() {
       try {
-        const text = await navigator.clipboard.readText()
+        const text = await navigator.clipboard.readText();
         if (text.trim()) {
-          this.channelName = text.trim()
-          this.showSnackbar('Room ID pasted!', 'success')
+          this.channelName = text.trim();
+          this.showSnackbar("Room ID pasted!", "success");
         }
       } catch (err) {
-        this.showSnackbar('Could not access clipboard. Please paste manually.', 'warning')
+        this.showSnackbar(
+          "Could not access clipboard. Please paste manually.",
+          "warning"
+        );
       }
     },
-    
+
     handleJoin() {
       if (!this.channelName || !this.selectedRole) {
-        this.showSnackbar('Please enter a room ID and select a role.', 'error')
-        return
+        this.showSnackbar("Please enter a room ID and select a role.", "error");
+        return;
       }
-      
+
       // Navigate using Vue Router instead of window.location.href
-      if (this.selectedRole === 'controller') {
-        this.$router.push({ path: '/controller', query: { room: this.channelName } })
+      if (this.selectedRole === "controller") {
+        this.$router.push({
+          path: "/controller",
+          query: { room: this.channelName },
+        });
       } else {
-        this.$router.push({ path: '/teleprompter', query: { room: this.channelName } })
+        this.$router.push({
+          path: "/teleprompter",
+          query: { room: this.channelName },
+        });
       }
     },
-    
-    showSnackbar(text, color = 'success') {
-      this.snackbar.text = text
-      this.snackbar.color = color
-      this.snackbar.show = true
-    }
-  }
-}
+
+    showSnackbar(text, color = "success") {
+      this.snackbar.text = text;
+      this.snackbar.color = color;
+      this.snackbar.show = true;
+    },
+  },
+};
 </script>
 
 <style scoped>
