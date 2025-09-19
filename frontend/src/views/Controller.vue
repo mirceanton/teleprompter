@@ -59,13 +59,18 @@
                 </v-list-item-subtitle>
                 
                 <template v-slot:append v-if="!participant.is_controller && isController">
-                  <v-btn
-                    icon="mdi-account-remove"
-                    size="small"
-                    color="error"
-                    variant="text"
-                    @click="kickParticipant(participant.participant_id)"
-                  />
+                  <v-tooltip text="Remove participant from room">
+                    <template v-slot:activator="{ props }">
+                      <v-btn
+                        v-bind="props"
+                        icon="mdi-account-remove"
+                        size="small"
+                        color="error"
+                        variant="text"
+                        @click="kickParticipant(participant.participant_id)"
+                      />
+                    </template>
+                  </v-tooltip>
                 </template>
               </v-list-item>
             </v-list>
@@ -647,7 +652,12 @@
       </v-container>
     </v-main>
 
-    <v-snackbar v-model="snackbar.show" :color="snackbar.color">
+    <v-snackbar 
+      v-model="snackbar.show" 
+      :color="snackbar.color"
+      location="top center"
+      :timeout="4000"
+    >
       {{ snackbar.text }}
       <template v-slot:actions>
         <v-btn variant="text" @click="snackbar.show = false">
@@ -659,12 +669,12 @@
     <!-- Room Info Dialog -->
     <v-dialog v-model="showRoomInfo" max-width="600px">
       <v-card>
-        <v-card-title>
+        <v-card-title class="pa-6">
           <v-icon class="mr-2">mdi-information</v-icon>
           Room Information
         </v-card-title>
         
-        <v-card-text>
+        <v-card-text class="pa-6 pt-0">
           <v-row>
             <v-col cols="12" sm="6">
               <v-text-field
@@ -709,13 +719,17 @@
           
           <h4 class="text-h6 mb-3">Quick Join Options</h4>
           
+          <v-alert type="info" variant="tonal" class="mb-4">
+            <strong>Share this URL:</strong> Anyone can use this link to join directly as a teleprompter.
+          </v-alert>
+          
           <v-text-field
             label="Direct Join URL"
             :model-value="joinUrl"
             readonly
             variant="outlined"
             density="compact"
-            class="mb-3"
+            class="mb-4"
           >
             <template v-slot:append-inner>
               <v-btn
@@ -727,28 +741,15 @@
             </template>
           </v-text-field>
           
-          <v-alert type="info" variant="tonal" class="mb-3">
-            <strong>Share this URL:</strong> Anyone can use this link to join directly as a teleprompter.
-          </v-alert>
-          
           <div class="text-center">
-            <div class="qr-code-container mb-3">
-              <img :src="qrCodeUrl" alt="QR Code for room joining" class="qr-code-image" />
+            <div class="qr-code-container">
+              <img :src="qrCodeUrl" alt="QR Code for room joining" class="qr-code-image-large" />
               <p class="text-caption mt-2">Scan to join as teleprompter</p>
             </div>
-            
-            <v-btn
-              color="primary"
-              variant="outlined"
-              @click="copyToClipboard(joinUrl, 'Join URL copied!')"
-            >
-              <v-icon class="mr-2">mdi-content-copy</v-icon>
-              Copy Link
-            </v-btn>
           </div>
         </v-card-text>
         
-        <v-card-actions>
+        <v-card-actions class="pa-6 pt-0">
           <v-spacer />
           <v-btn variant="text" @click="showRoomInfo = false">
             Close
@@ -1040,6 +1041,26 @@ Happy teleprompting! 🎬`,
           break
           
         case 'room_update':
+          // Check for new participants joining
+          const currentParticipantIds = new Set(this.roomInfo.participants.map(p => p.participant_id))
+          const newParticipantIds = new Set((message.participants || []).map(p => p.participant_id))
+          
+          // Find newly joined participants
+          const joinedParticipants = (message.participants || []).filter(p => 
+            !currentParticipantIds.has(p.participant_id) && p.mode === 'teleprompter'
+          )
+          
+          // Show notification for new teleprompter joins
+          if (joinedParticipants.length > 0) {
+            const newCount = joinedParticipants.length
+            this.showSnackbar(
+              newCount === 1 
+                ? 'New teleprompter joined the room' 
+                : `${newCount} new teleprompters joined the room`, 
+              'info'
+            )
+          }
+          
           this.connectionInfo.count = message.participant_count
           this.connectionInfo.show = true
           this.roomInfo.participants = message.participants || []
@@ -1135,12 +1156,10 @@ Happy teleprompting! 🎬`,
     // Navigation controls
     goToBeginning() {
       this.sendMessage({ type: 'go_to_beginning' })
-      this.showSnackbar('Teleprompter moved to beginning', 'info')
     },
 
     goToEnd() {
       this.sendMessage({ type: 'go_to_end' })
-      this.showSnackbar('Teleprompter moved to end', 'info')
     },
 
     scrollBackLines() {
@@ -1149,7 +1168,6 @@ Happy teleprompting! 🎬`,
         direction: 'back',
         lines: this.scrollLines 
       })
-      this.showSnackbar(`Scrolled back ${this.scrollLines} lines`, 'info')
     },
 
     scrollForwardLines() {
@@ -1158,7 +1176,6 @@ Happy teleprompting! 🎬`,
         direction: 'forward',
         lines: this.scrollLines 
       })
-      this.showSnackbar(`Scrolled forward ${this.scrollLines} lines`, 'info')
     },
 
     // Section navigation controls
@@ -1166,7 +1183,6 @@ Happy teleprompting! 🎬`,
       const prevSection = getPreviousSection(this.sections, this.currentScrollPosition)
       if (prevSection) {
         this.goToSection(prevSection)
-        this.showSnackbar(`Moved to: ${prevSection.title}`, 'info')
       }
     },
 
@@ -1174,7 +1190,6 @@ Happy teleprompting! 🎬`,
       const nextSection = getNextSection(this.sections, this.currentScrollPosition)
       if (nextSection) {
         this.goToSection(nextSection)
-        this.showSnackbar(`Moved to: ${nextSection.title}`, 'info')
       }
     },
 
@@ -1485,6 +1500,12 @@ Happy teleprompting! 🎬`,
 
 .qr-code-image {
   max-width: 200px;
+  height: auto;
+  display: block;
+}
+
+.qr-code-image-large {
+  max-width: 300px;
   height: auto;
   display: block;
 }

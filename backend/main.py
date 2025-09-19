@@ -545,14 +545,52 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
             elif message_type == 'kick_participant':
                 # Handle participant kick (only controller can kick)
                 target_participant_id = message.get('target_participant_id')
-                if room_manager.kick_participant(room_id, target_participant_id, participant_id):
-                    # Broadcast kick notification
-                    kick_message = {
-                        "type": "participant_kicked",
-                        "participant_id": target_participant_id,
-                        "kicked_by": participant_id
-                    }
-                    await manager.broadcast_to_all_instances(kick_message, room_id)
+                room = await room_manager.get_room(room_id)
+                
+                if room and room.controller_id == participant_id and target_participant_id != participant_id:
+                    # Find the target participant's websocket and close it
+                    target_websocket = None
+                    for ws, info in manager.websocket_to_participant.items():
+                        if info.get('participant_id') == target_participant_id and info.get('room_id') == room_id:
+                            target_websocket = ws
+                            break
+                    
+                    if target_websocket:
+                        # Send kick notification to the target participant
+                        kick_notification = {
+                            "type": "kicked_from_room",
+                            "message": "You have been removed from the room"
+                        }
+                        try:
+                            await target_websocket.send_text(json.dumps(kick_notification))
+                        except:
+                            pass  # WebSocket might already be closed
+                        
+                        # Close the websocket connection
+                        try:
+                            await target_websocket.close(code=1000, reason="Kicked from room")
+                        except:
+                            pass  # WebSocket might already be closed
+                        
+                        # Clean up participant data
+                        await room_manager.remove_participant(room_id, target_participant_id)
+                        
+                        # Broadcast updated room info
+                        updated_room = await room_manager.get_room(room_id)
+                        if updated_room:
+                            room_info = {
+                                "type": "room_update",
+                                "room_id": room_id,
+                                "participant_count": len(updated_room.participants),
+                                "participants": [
+                                    {
+                                        "participant_id": pid,
+                                        "mode": participant_data.get("mode"),
+                                        "is_controller": pid == updated_room.controller_id
+                                    } for pid, participant_data in updated_room.participants.items()
+                                ]
+                            }
+                            await manager.broadcast_to_all_instances(room_info, room_id)
             elif message_type == 'ai_scrolling_config':
                 # Handle AI scrolling configuration
                 await handle_ai_scrolling_config(room_id, message, websocket)

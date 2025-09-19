@@ -69,12 +69,12 @@
     <!-- Create Room Dialog -->
     <v-dialog v-model="showCreateRoom" max-width="600px">
       <v-card>
-        <v-card-title>
+        <v-card-title class="pa-6">
           <v-icon class="mr-2">mdi-plus-circle</v-icon>
           Create New Room
         </v-card-title>
         
-        <v-card-text>
+        <v-card-text class="pa-6 pt-0">
           <p class="mb-4">
             Creating a new room will automatically generate a room ID and secret. 
             You'll enter the room as the controller.
@@ -86,7 +86,7 @@
           </v-alert>
         </v-card-text>
         
-        <v-card-actions>
+        <v-card-actions class="pa-6 pt-0">
           <v-spacer />
           <v-btn variant="text" @click="showCreateRoom = false">
             Cancel
@@ -107,12 +107,12 @@
     <!-- Join Room Dialog -->
     <v-dialog v-model="showJoinRoom" max-width="600px">
       <v-card>
-        <v-card-title>
+        <v-card-title class="pa-6">
           <v-icon class="mr-2">mdi-login</v-icon>
           Join Existing Room
         </v-card-title>
         
-        <v-card-text>
+        <v-card-text class="pa-6 pt-0">
           <v-text-field
             v-model="joinForm.roomId"
             label="Room ID"
@@ -132,35 +132,6 @@
             class="mb-4"
             :error-messages="joinErrors.secret"
           />
-
-          <v-divider class="my-4" />
-
-          <h4 class="text-h6 mb-3">Select Your Role:</h4>
-
-          <v-radio-group v-model="joinForm.mode" class="mb-4">
-            <v-radio value="controller" color="primary">
-              <template v-slot:label>
-                <div class="d-flex align-center">
-                  <v-icon class="mr-2">mdi-laptop</v-icon>
-                  <div>
-                    <strong>💻 Controller</strong>
-                    <div class="text-caption">Edit scripts and control playback</div>
-                  </div>
-                </div>
-              </template>
-            </v-radio>
-            <v-radio value="teleprompter" color="secondary">
-              <template v-slot:label>
-                <div class="d-flex align-center">
-                  <v-icon class="mr-2">mdi-cellphone</v-icon>
-                  <div>
-                    <strong>📱 Teleprompter</strong>
-                    <div class="text-caption">Display scrolling text</div>
-                  </div>
-                </div>
-              </template>
-            </v-radio>
-          </v-radio-group>
 
           <v-row class="mb-4">
             <v-col cols="6">
@@ -189,7 +160,7 @@
           </v-row>
         </v-card-text>
         
-        <v-card-actions>
+        <v-card-actions class="pa-6 pt-0">
           <v-spacer />
           <v-btn variant="text" @click="showJoinRoom = false">
             Cancel
@@ -208,7 +179,12 @@
       </v-card>
     </v-dialog>
 
-    <v-snackbar v-model="snackbar.show" :color="snackbar.color">
+    <v-snackbar 
+      v-model="snackbar.show" 
+      :color="snackbar.color"
+      location="top center"
+      :timeout="4000"
+    >
       {{ snackbar.text }}
       <template v-slot:actions>
         <v-btn variant="text" @click="snackbar.show = false">
@@ -233,8 +209,7 @@ export default {
       verifying: false,
       joinForm: {
         roomId: '',
-        secret: '',
-        mode: 'teleprompter'
+        secret: ''
       },
       joinErrors: {
         roomId: [],
@@ -252,7 +227,6 @@ export default {
     canJoin() {
       return this.joinForm.roomId && 
              this.joinForm.secret && 
-             this.joinForm.mode && 
              !this.joining
     }
   },
@@ -340,10 +314,9 @@ export default {
       }
       
       try {
-        // Navigate to the appropriate view with credentials
-        const routePath = this.joinForm.mode === 'controller' ? '/controller' : '/teleprompter'
+        // Always navigate to teleprompter view since we removed role selection
         this.$router.push({ 
-          path: routePath, 
+          path: '/teleprompter', 
           query: { 
             room: this.joinForm.roomId, 
             secret: this.joinForm.secret 

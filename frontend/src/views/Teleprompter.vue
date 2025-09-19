@@ -170,7 +170,12 @@
       </div>
     </v-main>
 
-    <v-snackbar v-model="snackbar.show" :color="snackbar.color">
+    <v-snackbar 
+      v-model="snackbar.show" 
+      :color="snackbar.color"
+      location="top center"
+      :timeout="4000"
+    >
       {{ snackbar.text }}
       <template v-slot:actions>
         <v-btn variant="text" @click="snackbar.show = false">
@@ -328,6 +333,15 @@ export default {
           this.showSnackbar(`Authentication failed: ${message.message}`, 'error')
           // Redirect back to landing page
           this.$router.push('/')
+          break
+          
+        case 'kicked_from_room':
+          console.log('Kicked from room:', message.message)
+          this.showSnackbar('You have been removed from the room', 'error')
+          // Redirect back to landing page after a short delay
+          setTimeout(() => {
+            this.$router.push('/')
+          }, 2000)
           break
           
         case 'text':
