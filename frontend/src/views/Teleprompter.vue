@@ -3,9 +3,42 @@
     <!-- Top Control Bar (hidden in fullscreen mode) -->
     <v-app-bar v-if="!isFullscreen" app color="primary" dark density="compact">
       <v-toolbar-title class="text-subtitle-1">
-        Prompter - {{ channelName }}
+        Prompter - {{ roomCredentials?.room_name || channelName }}
       </v-toolbar-title>
       <v-spacer />
+      
+      <!-- Room Menu Dropdown -->
+      <v-menu offset-y>
+        <template v-slot:activator="{ props }">
+          <v-btn 
+            icon="mdi-menu" 
+            v-bind="props"
+            size="small"
+            class="mr-2"
+          />
+        </template>
+        
+        <v-card min-width="250">
+          <v-card-title class="text-subtitle-1 pa-3">
+            <v-icon class="mr-2">mdi-cellphone</v-icon>
+            {{ roomCredentials?.room_name || 'Room Menu' }}
+          </v-card-title>
+          
+          <v-divider />
+          
+          <v-card-actions>
+            <v-btn
+              prepend-icon="mdi-logout"
+              color="error"
+              variant="text"
+              @click="exitTeleprompter"
+            >
+              Leave Room
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-menu>
+      
       <v-chip :color="connectionStatus.color" variant="outlined" size="small">
         <v-icon start size="small">{{ connectionStatus.icon }}</v-icon>
         {{ connectionStatus.text }}
@@ -167,6 +200,8 @@ export default {
       // Connection state
       ws: null,
       channelName: "",
+      roomCredentials: null,
+      participantId: null,
 
       // Teleprompter content and state
       teleprompterContent: "",
@@ -229,12 +264,20 @@ export default {
     },
   },
 
-  mounted() {
+  async mounted() {
     // Get channel name from URL params
     this.channelName = this.$route.query.room || "default";
 
+    // Initialize room authentication
+    await this.initializeRoomAuth();
+
     // Connect to WebSocket
-    this.connect();
+    if (this.roomCredentials) {
+      this.connect();
+    } else {
+      this.showSnackbar("No room credentials found. Please join a room.", "error");
+      this.$router.push("/");
+    }
 
     // Setup fullscreen detection
     document.addEventListener("fullscreenchange", this.onFullscreenChange);
@@ -268,11 +311,84 @@ export default {
   },
 
   methods: {
+    async initializeRoomAuth() {
+      try {
+        // Get room credentials from session storage
+        const credentialsStr = sessionStorage.getItem('room_credentials');
+        if (!credentialsStr) {
+          return false;
+        }
+
+        this.roomCredentials = JSON.parse(credentialsStr);
+        
+        // Verify this is a teleprompter role
+        if (this.roomCredentials.role !== 'teleprompter') {
+          this.showSnackbar("Access denied: Not authorized as teleprompter", "error");
+          return false;
+        }
+
+        // If no participant_id, we need to join the room first
+        if (!this.roomCredentials.participant_id) {
+          const joinData = await this.joinRoomAsTeleprompter();
+          if (!joinData) {
+            return false;
+          }
+          this.roomCredentials.participant_id = joinData.participant_id;
+          // Update session storage
+          sessionStorage.setItem('room_credentials', JSON.stringify(this.roomCredentials));
+        }
+        
+        this.participantId = this.roomCredentials.participant_id;
+        return true;
+        
+      } catch (error) {
+        console.error('Error initializing room auth:', error);
+        this.showSnackbar("Failed to initialize room authentication", "error");
+        return false;
+      }
+    },
+
+    async joinRoomAsTeleprompter() {
+      try {
+        const response = await fetch(`${config.getApiUrl()}/api/rooms/join`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            room_id: this.roomCredentials.room_id,
+            room_secret: this.roomCredentials.room_secret,
+            role: 'teleprompter'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to join room');
+        }
+
+        const joinData = await response.json();
+        if (!joinData.success) {
+          this.showSnackbar(joinData.message, 'error');
+          return null;
+        }
+
+        return joinData;
+      } catch (error) {
+        console.error('Error joining room as teleprompter:', error);
+        this.showSnackbar("Failed to join room as teleprompter", "error");
+        return null;
+      }
+    },
+
     connect() {
       try {
-        // Use configurable backend URL instead of hard-coded port
+        if (!this.roomCredentials || !this.participantId) {
+          throw new Error("Missing room credentials or participant ID");
+        }
+
+        // Use new WebSocket format with room_id and participant_id
         const wsUrl = config.getWebSocketUrl();
-        this.ws = new WebSocket(`${wsUrl}/api/ws/${this.channelName}`);
+        this.ws = new WebSocket(`${wsUrl}/api/ws/${this.roomCredentials.room_id}/${this.participantId}`);
 
         this.setupWebSocketHandlers();
       } catch (error) {
