@@ -64,7 +64,7 @@ services:
     ports:
       - "3000:80"
     volumes:
-      - ./examples/config-production.json:/usr/share/nginx/html/config.json:ro
+      - ./config.json:/usr/share/nginx/html/config.json:ro
 ```
 
 **For Kubernetes:**
@@ -100,16 +100,7 @@ spec:
           name: teleprompter-config
 ```
 
-If no `config.json` file is provided, the frontend will create a default configuration file with the backend URL set to the same host on port 8001.
-
-#### Example Configurations
-
-The `examples/` directory contains sample configuration files:
-- `config-development.json` - Local development setup
-- `config-staging.json` - Staging environment with HTTPS
-- `config-production.json` - Production environment
-
-Use these as templates for your own deployments.
+If no `config.json` file is provided, the frontend will use smart defaults with the backend URL set to the same host on port 8001.
 
 ### Usage
 1. Open http://localhost:3000 in your web browser
