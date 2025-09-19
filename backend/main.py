@@ -5,14 +5,16 @@ FastAPI backend providing WebSocket communication and API endpoints for teleprom
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import json
 import asyncio
 import logging
-from typing import Dict, Set
+from typing import Dict, Set, Optional
 from pathlib import Path
 from contextlib import asynccontextmanager
 from ai_scrolling import ai_scrolling_service, AIScrollingConfig
 from redis_manager import redis_manager
+from room_manager import room_manager
 
 
 @asynccontextmanager
@@ -53,6 +55,31 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Pydantic models for API requests/responses
+class CreateRoomRequest(BaseModel):
+    room_name: Optional[str] = None
+
+class CreateRoomResponse(BaseModel):
+    room_id: str
+    room_secret: str
+    room_name: str
+
+class JoinRoomRequest(BaseModel):
+    room_id: str
+    room_secret: str
+    role: str  # "controller" or "teleprompter"
+
+class JoinRoomResponse(BaseModel):
+    success: bool
+    participant_id: Optional[str] = None
+    message: str
+
+class RoomInfoResponse(BaseModel):
+    room_id: str
+    room_name: str
+    participants: list
+    controller_id: Optional[str]
 
 
 
@@ -146,17 +173,139 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@app.websocket("/api/ws/{channel}")
-async def websocket_endpoint(websocket: WebSocket, channel: str):
-    """WebSocket endpoint for real-time communication"""
+# Room Management Endpoints
+@app.post("/api/rooms", response_model=CreateRoomResponse)
+async def create_room(request: CreateRoomRequest):
+    """Create a new room (controller only)"""
+    try:
+        room_id, room_secret, room_name = await room_manager.create_room(request.room_name)
+        return CreateRoomResponse(
+            room_id=room_id,
+            room_secret=room_secret,
+            room_name=room_name
+        )
+    except Exception as e:
+        logger.error(f"Error creating room: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create room")
+
+@app.post("/api/rooms/join", response_model=JoinRoomResponse)
+async def join_room(request: JoinRoomRequest):
+    """Join an existing room with authentication"""
+    try:
+        # Verify room exists and secret is correct
+        if not await room_manager.verify_room_access(request.room_id, request.room_secret):
+            return JoinRoomResponse(
+                success=False,
+                message="Invalid room ID or secret"
+            )
+        
+        # Add participant to room
+        participant_id = await room_manager.add_participant(request.room_id, request.role)
+        if not participant_id:
+            return JoinRoomResponse(
+                success=False,
+                message="Failed to join room. Room may be full or role unavailable."
+            )
+        
+        return JoinRoomResponse(
+            success=True,
+            participant_id=participant_id,
+            message="Successfully joined room"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error joining room: {e}")
+        raise HTTPException(status_code=500, detail="Failed to join room")
+
+@app.get("/api/rooms/{room_id}", response_model=RoomInfoResponse)
+async def get_room_info(room_id: str):
+    """Get room information"""
+    try:
+        room = await room_manager.get_room(room_id)
+        if not room:
+            raise HTTPException(status_code=404, detail="Room not found")
+        
+        participants = []
+        for participant in room.participants.values():
+            participants.append({
+                "id": participant.id,
+                "role": participant.role,
+                "joined_at": participant.joined_at,
+                "last_seen": participant.last_seen
+            })
+        
+        return RoomInfoResponse(
+            room_id=room.room_id,
+            room_name=room.room_name,
+            participants=participants,
+            controller_id=room.controller_id
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting room info: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get room info")
+
+@app.delete("/api/rooms/{room_id}/participants/{participant_id}")
+async def kick_participant(room_id: str, participant_id: str, kicker_id: str):
+    """Kick a participant from a room (controller only)"""
+    try:
+        # Verify kicker is the controller
+        if not await room_manager.is_controller(room_id, kicker_id):
+            raise HTTPException(status_code=403, detail="Only the controller can kick participants")
+        
+        # Don't allow controller to kick themselves
+        if kicker_id == participant_id:
+            raise HTTPException(status_code=400, detail="Controller cannot kick themselves")
+        
+        success = await room_manager.remove_participant(room_id, participant_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Participant not found")
+        
+        return {"success": True, "message": "Participant kicked successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error kicking participant: {e}")
+        raise HTTPException(status_code=500, detail="Failed to kick participant")
+
+@app.websocket("/api/ws/{room_id}/{participant_id}")
+async def websocket_endpoint(websocket: WebSocket, room_id: str, participant_id: str):
+    """WebSocket endpoint for real-time communication with room authentication"""
+    
+    # Verify participant is in the room
+    room = await room_manager.get_room(room_id)
+    if not room or participant_id not in room.participants:
+        await websocket.close(code=4003, reason="Invalid room or participant")
+        return
+    
+    # Use room_id as the channel for backward compatibility
+    channel = room_id
     await manager.connect(websocket, channel)
+    
+    # Update participant last seen
+    await room_manager.update_participant_last_seen(room_id, participant_id)
     
     # Send connection count update to all clients in channel (including the new one)
     connection_info = manager.get_channel_info(channel)
+    participants = await room_manager.get_room_participants(room_id)
+    
     connection_update = {
         "type": "connection_update",
         "channel": channel,
-        "connection_count": connection_info["connection_count"]
+        "room_id": room_id,
+        "connection_count": connection_info["connection_count"],
+        "participants": [
+            {
+                "id": p.id,
+                "role": p.role,
+                "joined_at": p.joined_at,
+                "last_seen": p.last_seen
+            }
+            for p in participants
+        ]
     }
     await manager.broadcast_to_all_instances(connection_update, channel)
     
@@ -166,20 +315,51 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
             data = await websocket.receive_text()
             message = json.loads(data)
             
+            # Add participant info to message
+            message["sender_id"] = participant_id
+            message["room_id"] = room_id
+            
             # Log the message type for debugging
-            print(f"Channel {channel}: Received {message.get('type', 'unknown')} message")
+            print(f"Channel {channel}: Received {message.get('type', 'unknown')} message from {participant_id}")
+            
+            # Update participant last seen on any activity
+            await room_manager.update_participant_last_seen(room_id, participant_id)
             
             # Handle special messages
             message_type = message.get('type')
             
             if message_type == 'request_connection_info':
-                # Send current connection count to requesting client
+                # Send current connection count and participants to requesting client
+                participants = await room_manager.get_room_participants(room_id)
                 connection_update_str = json.dumps({
                     "type": "connection_update",
                     "channel": channel,
-                    "connection_count": manager.get_channel_info(channel)["connection_count"]
+                    "room_id": room_id,
+                    "connection_count": manager.get_channel_info(channel)["connection_count"],
+                    "participants": [
+                        {
+                            "id": p.id,
+                            "role": p.role,
+                            "joined_at": p.joined_at,
+                            "last_seen": p.last_seen
+                        }
+                        for p in participants
+                    ]
                 })
                 await websocket.send_text(connection_update_str)
+            elif message_type == 'kick_participant':
+                # Handle participant kick (controller only)
+                target_participant_id = message.get('target_participant_id')
+                if await room_manager.is_controller(room_id, participant_id) and target_participant_id:
+                    if target_participant_id != participant_id:  # Can't kick self
+                        await room_manager.remove_participant(room_id, target_participant_id)
+                        # Broadcast kick notification
+                        kick_message = {
+                            "type": "participant_kicked",
+                            "participant_id": target_participant_id,
+                            "room_id": room_id
+                        }
+                        await manager.broadcast_to_all_instances(kick_message, channel)
             elif message_type == 'ai_scrolling_config':
                 # Handle AI scrolling configuration
                 await handle_ai_scrolling_config(channel, message, websocket)
@@ -198,31 +378,78 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
             
     except WebSocketDisconnect:
         manager.disconnect(websocket, channel)
+        # Remove participant from room
+        await room_manager.remove_participant(room_id, participant_id)
         # Clean up AI scrolling session if needed
         ai_scrolling_service.remove_session(channel)
-        # Broadcast updated connection count
-        connection_info = manager.get_channel_info(channel)
-        if connection_info["exists"]:
+        
+        # Check if room still exists and broadcast updated connection count
+        room = await room_manager.get_room(room_id)
+        if room:
+            connection_info = manager.get_channel_info(channel)
+            participants = await room_manager.get_room_participants(room_id)
             connection_update = {
                 "type": "connection_update",
                 "channel": channel,
-                "connection_count": connection_info["connection_count"]
+                "room_id": room_id,
+                "connection_count": connection_info["connection_count"],
+                "participants": [
+                    {
+                        "id": p.id,
+                        "role": p.role,
+                        "joined_at": p.joined_at,
+                        "last_seen": p.last_seen
+                    }
+                    for p in participants
+                ]
             }
             await manager.broadcast_to_all_instances(connection_update, channel)
+        else:
+            # Room was deleted, notify any remaining connections
+            room_deleted_message = {
+                "type": "room_deleted",
+                "room_id": room_id,
+                "message": "Room has been closed"
+            }
+            await manager.broadcast_to_all_instances(room_deleted_message, channel)
+            
     except Exception as e:
         print(f"Error in channel {channel}: {e}")
         manager.disconnect(websocket, channel)
+        # Remove participant from room
+        await room_manager.remove_participant(room_id, participant_id)
         # Clean up AI scrolling session if needed
         ai_scrolling_service.remove_session(channel)
-        # Broadcast updated connection count  
-        connection_info = manager.get_channel_info(channel)
-        if connection_info["exists"]:
+        
+        # Check if room still exists and broadcast updated connection count
+        room = await room_manager.get_room(room_id)
+        if room:
+            connection_info = manager.get_channel_info(channel)
+            participants = await room_manager.get_room_participants(room_id)
             connection_update = {
                 "type": "connection_update",
                 "channel": channel,
-                "connection_count": connection_info["connection_count"]
+                "room_id": room_id,
+                "connection_count": connection_info["connection_count"],
+                "participants": [
+                    {
+                        "id": p.id,
+                        "role": p.role,
+                        "joined_at": p.joined_at,
+                        "last_seen": p.last_seen
+                    }
+                    for p in participants
+                ]
             }
             await manager.broadcast_to_all_instances(connection_update, channel)
+        else:
+            # Room was deleted, notify any remaining connections
+            room_deleted_message = {
+                "type": "room_deleted",
+                "room_id": room_id,
+                "message": "Room has been closed"
+            }
+            await manager.broadcast_to_all_instances(room_deleted_message, channel)
 
 # AI Scrolling message handlers
 async def handle_ai_scrolling_config(channel: str, message: dict, websocket: WebSocket):
