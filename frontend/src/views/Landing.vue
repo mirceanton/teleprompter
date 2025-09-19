@@ -76,7 +76,6 @@
           <v-text-field
             v-model="createForm.roomName"
             label="Room Name"
-            :placeholder="defaultRoomName"
             prepend-inner-icon="mdi-rename-box"
             variant="outlined"
             class="mb-4"
@@ -258,7 +257,9 @@ export default {
   watch: {
     showCreateRoom(newVal) {
       if (newVal) {
+        this.defaultRoomName = this.generateDefaultRoomName();
         this.generateRoomPreview();
+        this.createForm.roomName = this.defaultRoomName;
       }
     },
   },
