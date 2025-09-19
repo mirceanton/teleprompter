@@ -3,16 +3,36 @@ Remote Teleprompter API Backend
 FastAPI backend providing WebSocket communication and API endpoints for teleprompter microservices.
 """
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 import json
 import asyncio
 import logging
+import os
 from typing import Dict, Set
 from pathlib import Path
 from ai_scrolling import ai_scrolling_service, AIScrollingConfig
 
-app = FastAPI(title="Remote Teleprompter API", openapi_url="/api/openapi.json", docs_url="/api/docs")
+# Get environment variables for configuration
+TELEPROMPTER_WS_URL = os.getenv("TELEPROMPTER_WS_URL", "")
+TELEPROMPTER_UI_SUBPATH = os.getenv("TELEPROMPTER_UI_SUBPATH", "")
+
+# Determine subpath for API and UI routes
+ui_subpath = TELEPROMPTER_UI_SUBPATH.rstrip('/') if TELEPROMPTER_UI_SUBPATH else ""
+api_subpath = f"{ui_subpath}/api" if ui_subpath else "/api"
+
+app = FastAPI(
+    title="Remote Teleprompter API", 
+    openapi_url=f"{api_subpath}/openapi.json", 
+    docs_url=f"{api_subpath}/docs"
+)
+
+# Configure templates and static files
+templates = Jinja2Templates(directory="templates")
+app.mount(f"{ui_subpath}/assets", StaticFiles(directory="static/assets"), name="static")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -83,7 +103,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@app.websocket("/api/ws/{channel}")
+@app.websocket(f"{api_subpath}/ws/{{channel}}")
 async def websocket_endpoint(websocket: WebSocket, channel: str):
     """WebSocket endpoint for real-time communication"""
     await manager.connect(websocket, channel)
@@ -266,17 +286,17 @@ async def handle_audio_chunk(channel: str, message: dict, websocket: WebSocket):
     except Exception as e:
         logger.error(f"Error processing audio chunk: {e}")
 
-@app.get("/api/channel/{channel}/info")
+@app.get(f"{api_subpath}/channel/{{channel}}/info")
 async def get_channel_info(channel: str):
     """Get information about a specific channel"""
     return manager.get_channel_info(channel)
 
-@app.get("/api/health")
+@app.get(f"{api_subpath}/health")
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "active_channels": len(manager.active_connections)}
 
-@app.get("/api/channel/{channel}/ai-scrolling")
+@app.get(f"{api_subpath}/channel/{{channel}}/ai-scrolling")
 async def get_ai_scrolling_info(channel: str):
     """Get AI scrolling information for a channel"""
     session_info = ai_scrolling_service.get_session_info(channel)
@@ -285,7 +305,7 @@ async def get_ai_scrolling_info(channel: str):
     else:
         return {"enabled": False, "available": ai_scrolling_service.is_available()}
 
-@app.post("/api/channel/{channel}/ai-scrolling/config")
+@app.post(f"{api_subpath}/channel/{{channel}}/ai-scrolling/config")
 async def update_ai_scrolling_config(channel: str, config: dict):
     """Update AI scrolling configuration for a channel"""
     try:
@@ -305,6 +325,47 @@ async def update_ai_scrolling_config(channel: str, config: dict):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# Frontend routes
+@app.get(f"{ui_subpath}/", response_class=HTMLResponse)
+@app.get(f"{ui_subpath}/controller", response_class=HTMLResponse)
+@app.get(f"{ui_subpath}/teleprompter", response_class=HTMLResponse)
+async def serve_frontend(request: Request):
+    """Serve the frontend application with injected environment variables"""
+    # Determine WebSocket URL
+    ws_url = TELEPROMPTER_WS_URL
+    if not ws_url:
+        # Auto-detect WebSocket URL based on request
+        scheme = "wss" if request.url.scheme == "https" else "ws"
+        host = request.headers.get("host", "localhost:8001")
+        ws_url = f"{scheme}://{host}{api_subpath}"
+    
+    # Prepare configuration object
+    config = {
+        "backendUrl": ws_url.replace("ws://", "http://").replace("wss://", "https://"),
+        "wsUrl": ws_url,
+        "subpath": ui_subpath
+    }
+    
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "teleprompter_config": json.dumps(config)
+    })
+
+# Catch-all route for Vue Router (must be last)
+if ui_subpath:
+    @app.get(f"{ui_subpath}/{{full_path:path}}", response_class=HTMLResponse)
+    async def serve_frontend_catchall(request: Request, full_path: str):
+        """Catch-all route for Vue Router when using subpath"""
+        return await serve_frontend(request)
+else:
+    @app.get("/{full_path:path}", response_class=HTMLResponse)
+    async def serve_frontend_catchall(request: Request, full_path: str):
+        """Catch-all route for Vue Router"""
+        # Skip API routes and static assets
+        if full_path.startswith("api/") or full_path.startswith("assets/"):
+            raise HTTPException(status_code=404)
+        return await serve_frontend(request)
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -6,7 +6,8 @@ A modern teleprompter application that enables real-time teleprompter control be
 
 - **Remote Control**: Control teleprompter from any device with a web browser
 - **Real-time Sync**: WebSocket-based communication for instant updates  
-- **Single Page Application**: Unified Vue.js frontend with configurable backend URL
+- **Server-Side Rendering**: Frontend served by FastAPI with runtime configuration injection
+- **Environment Configuration**: Configure WebSocket URLs and subpaths via environment variables
 - **Responsive Design**: Works on desktop, tablets, and mobile devices
 - **Channel-based**: Multiple independent teleprompter sessions via named channels
 - **Mirror Support**: Horizontal and vertical mirroring for teleprompter setup flexibility
@@ -14,10 +15,17 @@ A modern teleprompter application that enables real-time teleprompter control be
 
 ## Architecture
 
-The application uses a simplified architecture with:
+The application uses a unified architecture with:
 
-- **Backend Service** (`backend/`): FastAPI backend providing WebSocket and REST APIs
-- **Frontend Service** (`frontend/`): Unified Vue.js application with Vue Router for all pages (landing, controller, teleprompter)
+- **Unified Application**: FastAPI backend serves both API endpoints and Vue.js frontend with server-side rendering
+- **Environment Configuration**: Runtime configuration via environment variables
+- **WebSocket Communication**: Real-time messaging between controller and teleprompter modes
+- **Subpath Support**: Can run on custom URL subpaths for reverse proxy setups
+
+## Environment Variables
+
+- `TELEPROMPTER_WS_URL`: WebSocket URL for frontend to backend connection (e.g., `wss://hostname:port/api`)
+- `TELEPROMPTER_UI_SUBPATH`: UI subpath for running behind reverse proxies (e.g., `/teleprompter`)
 
 ## Quick Start
 

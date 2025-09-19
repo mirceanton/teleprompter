@@ -1,40 +1,23 @@
 services:
-  # Backend API Service
-  backend:
+  # Unified Teleprompter Application (Backend + Frontend SSR)
+  teleprompter:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
     ports:
-      - "8001:8001"
+      - "8000:8000"
     environment:
-      - PORT=8001
-    networks:
-      - teleprompter-network
+      # WebSocket URL for frontend to backend connection
+      - TELEPROMPTER_WS_URL=${TELEPROMPTER_WS_URL:-}
+      # UI subpath for running on a subpath
+      - TELEPROMPTER_UI_SUBPATH=${TELEPROMPTER_UI_SUBPATH:-}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8001/api/health')"]
+      test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8000/api/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # Unified Frontend Service
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        - BACKEND_URL=${FRONTEND_BACKEND_URL:-http://localhost:8001}
-    ports:
-      - "3000:80"
-    environment:
-      # Runtime backend URL configuration - can be overridden
-      - BACKEND_URL=${FRONTEND_BACKEND_URL:-http://localhost:8001}
-    networks:
-      - teleprompter-network
-    restart: unless-stopped
-    depends_on:
-      - backend
-
 networks:
-  teleprompter-network:
-    driver: bridge
+  default:
+    name: teleprompter-network
