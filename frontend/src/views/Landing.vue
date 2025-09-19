@@ -79,10 +79,9 @@
             prepend-inner-icon="mdi-rename-box"
             variant="outlined"
             class="mb-4"
-            hint="Give your room a friendly name (optional)"
-            persistent-hint
           />
-          <hr /> <br />
+          <hr />
+          <br />
           <v-text-field
             label="Room ID"
             :model-value="roomPreview.roomId"
