@@ -52,7 +52,7 @@
                         <v-icon size="48" color="secondary" class="mb-2">mdi-login</v-icon>
                         <h4 class="text-h6 mb-2">Join Existing Room</h4>
                         <p class="text-body-2">
-                          Join a room using room ID and secret
+                          Join a room as the teleprompter using the room ID and secret.
                         </p>
                       </v-card-text>
                     </v-card>

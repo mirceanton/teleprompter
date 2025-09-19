@@ -10,6 +10,7 @@ import asyncio
 import logging
 import secrets
 import string
+import random
 from typing import Dict, Set, Optional
 from dataclasses import dataclass, asdict
 from pathlib import Path
@@ -52,6 +53,19 @@ async def shutdown_event():
 
 # Store active connections by channel with Redis Pub/Sub support
 
+# Docker-style room name generation
+ADJECTIVES = [
+    "amazing", "brave", "calm", "daring", "eager", "fancy", "gentle", "happy", "jolly", "kind",
+    "lively", "merry", "nice", "proud", "quiet", "relaxed", "swift", "tender", "upbeat", "vibrant",
+    "wise", "zealous", "bright", "clever", "cool", "epic", "fresh", "grand", "smart", "wild"
+]
+
+ANIMALS = [
+    "ant", "bear", "cat", "dog", "eagle", "fox", "goat", "hawk", "ibis", "jay",
+    "kiwi", "lion", "mouse", "newt", "owl", "puma", "quail", "rabbit", "snake", "tiger",
+    "urchin", "viper", "wolf", "xerus", "yak", "zebra", "shark", "whale", "dolphin", "penguin"
+]
+
 @dataclass
 class RoomParticipant:
     """Represents a participant in a room"""
@@ -72,111 +86,256 @@ class Room:
             self.participants = {}
 
 class RoomManager:
-    """Manages teleprompter rooms and authentication"""
+    """Manages teleprompter rooms and authentication using Redis for horizontal scaling"""
     
-    def __init__(self):
-        self.rooms: Dict[str, Room] = {}
+    def __init__(self, redis_manager):
+        self.redis_manager = redis_manager
+        self.room_key_prefix = "teleprompter:room:"
+        self.participant_key_prefix = "teleprompter:participants:"
+        # Fallback to in-memory storage when Redis is not available
+        self.local_rooms: Dict[str, Room] = {}
+        self.local_participants: Dict[str, Dict[str, dict]] = {}
     
     def generate_room_id(self) -> str:
-        """Generate a unique room ID"""
-        while True:
-            room_id = 'room-' + ''.join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(6))
-            if room_id not in self.rooms:
-                return room_id
+        """Generate a unique room ID using Docker-style naming"""
+        # Generate deterministically to avoid Redis calls in loop
+        adjective = random.choice(ADJECTIVES)
+        animal = random.choice(ANIMALS)
+        return f'room-{adjective}-{animal}'
     
     def generate_secret(self) -> str:
-        """Generate a room secret/join code"""
-        return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+        """Generate a longer room secret/join code to prevent brute-forcing"""
+        # Generate a 16-character secret (much longer than 8 to prevent brute-force)
+        return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(16))
     
-    def create_room(self) -> Room:
+    async def create_room(self) -> Room:
         """Create a new room with generated ID and secret"""
         room_id = self.generate_room_id()
         secret = self.generate_secret()
+        
+        # Check if room already exists
+        if self.redis_manager.is_connected:
+            existing = await self.redis_manager.redis_client.get(f"{self.room_key_prefix}{room_id}")
+            if existing:
+                # If room exists, try again with different name
+                return await self.create_room()
+        else:
+            # Check local storage
+            if room_id in self.local_rooms:
+                return await self.create_room()
+        
         room = Room(room_id=room_id, secret=secret)
-        self.rooms[room_id] = room
+        
+        # Store room in Redis if connected, otherwise use local storage
+        if self.redis_manager.is_connected:
+            room_data = {
+                "room_id": room.room_id,
+                "secret": room.secret,
+                "controller_id": room.controller_id
+            }
+            await self.redis_manager.redis_client.setex(
+                f"{self.room_key_prefix}{room_id}", 
+                3600,  # 1 hour expiration
+                json.dumps(room_data)
+            )
+        else:
+            # Store locally
+            self.local_rooms[room_id] = room
+            self.local_participants[room_id] = {}
+        
         logger.info(f"Created room {room_id} with secret {secret}")
         return room
     
-    def get_room(self, room_id: str) -> Optional[Room]:
-        """Get room by ID"""
-        return self.rooms.get(room_id)
+    async def get_room(self, room_id: str) -> Optional[Room]:
+        """Get room by ID from Redis or local storage"""
+        if self.redis_manager.is_connected:
+            try:
+                room_data = await self.redis_manager.redis_client.get(f"{self.room_key_prefix}{room_id}")
+                if not room_data:
+                    return None
+                    
+                data = json.loads(room_data)
+                room = Room(
+                    room_id=data["room_id"],
+                    secret=data["secret"],
+                    controller_id=data.get("controller_id")
+                )
+                
+                # Load participants from Redis
+                participants_data = await self.redis_manager.redis_client.hgetall(f"{self.participant_key_prefix}{room_id}")
+                room.participants = {}
+                for participant_id, participant_json in participants_data.items():
+                    participant_data = json.loads(participant_json)
+                    # Note: WebSocket objects can't be stored in Redis, they need to be managed locally
+                    # This is for room metadata only
+                    room.participants[participant_id] = participant_data
+                    
+                return room
+            except Exception as e:
+                logger.error(f"Error getting room {room_id}: {e}")
+                return None
+        else:
+            # Use local storage
+            room = self.local_rooms.get(room_id)
+            if room:
+                # Update participants from local storage
+                room.participants = self.local_participants.get(room_id, {})
+            return room
     
-    def authenticate_room(self, room_id: str, secret: str) -> bool:
+    async def authenticate_room(self, room_id: str, secret: str) -> bool:
         """Verify room credentials"""
-        room = self.get_room(room_id)
+        room = await self.get_room(room_id)
         return room is not None and room.secret == secret
     
-    def add_participant(self, room_id: str, websocket: WebSocket, mode: str, participant_id: str) -> bool:
-        """Add participant to room"""
-        room = self.get_room(room_id)
+    async def add_participant(self, room_id: str, websocket: WebSocket, mode: str, participant_id: str) -> bool:
+        """Add participant to room in Redis or local storage"""
+        room = await self.get_room(room_id)
         if not room:
             return False
         
-        participant = RoomParticipant(websocket=websocket, mode=mode, participant_id=participant_id)
-        room.participants[participant_id] = participant
+        # Store participant metadata (without WebSocket)
+        participant_data = {
+            "mode": mode,
+            "participant_id": participant_id,
+            "joined_at": asyncio.get_event_loop().time()
+        }
+        
+        if self.redis_manager.is_connected:
+            await self.redis_manager.redis_client.hset(
+                f"{self.participant_key_prefix}{room_id}",
+                participant_id,
+                json.dumps(participant_data)
+            )
+        else:
+            # Store locally
+            if room_id not in self.local_participants:
+                self.local_participants[room_id] = {}
+            self.local_participants[room_id][participant_id] = participant_data
         
         # Set controller if this is the first controller
         if mode == 'controller' and not room.controller_id:
             room.controller_id = participant_id
+            # Update room storage
+            if self.redis_manager.is_connected:
+                room_data = {
+                    "room_id": room.room_id,
+                    "secret": room.secret,
+                    "controller_id": room.controller_id
+                }
+                await self.redis_manager.redis_client.setex(
+                    f"{self.room_key_prefix}{room_id}", 
+                    3600,  # 1 hour expiration
+                    json.dumps(room_data)
+                )
+            else:
+                # Update local storage
+                self.local_rooms[room_id] = room
         
         logger.info(f"Added {mode} participant {participant_id} to room {room_id}")
         return True
     
-    def remove_participant(self, room_id: str, participant_id: str) -> bool:
-        """Remove participant from room"""
-        room = self.get_room(room_id)
-        if not room or participant_id not in room.participants:
-            return False
+    async def remove_participant(self, room_id: str, participant_id: str) -> bool:
+        """Remove participant from room in Redis or local storage"""        
+        try:
+            removed = False
+            
+            if self.redis_manager.is_connected:
+                # Remove participant from Redis
+                removed = await self.redis_manager.redis_client.hdel(f"{self.participant_key_prefix}{room_id}", participant_id)
+            else:
+                # Remove from local storage
+                if room_id in self.local_participants and participant_id in self.local_participants[room_id]:
+                    del self.local_participants[room_id][participant_id]
+                    removed = True
+            
+            if removed:
+                room = await self.get_room(room_id)
+                if room and room.controller_id == participant_id:
+                    # Clear controller and promote another if available
+                    room.controller_id = None
+                    
+                    if self.redis_manager.is_connected:
+                        participants_data = await self.redis_manager.redis_client.hgetall(f"{self.participant_key_prefix}{room_id}")
+                        # Find another controller to promote
+                        for pid, participant_json in participants_data.items():
+                            participant_data = json.loads(participant_json)
+                            if participant_data["mode"] == "controller":
+                                room.controller_id = pid
+                                break
+                    else:
+                        # Check local participants
+                        participants_data = self.local_participants.get(room_id, {})
+                        for pid, participant_data in participants_data.items():
+                            if participant_data["mode"] == "controller":
+                                room.controller_id = pid
+                                break
+                    
+                    # Update room storage
+                    if self.redis_manager.is_connected:
+                        room_data = {
+                            "room_id": room.room_id,
+                            "secret": room.secret,
+                            "controller_id": room.controller_id
+                        }
+                        await self.redis_manager.redis_client.setex(
+                            f"{self.room_key_prefix}{room_id}", 
+                            3600,
+                            json.dumps(room_data)
+                        )
+                    else:
+                        self.local_rooms[room_id] = room
+                
+                # Check if room is empty and clean up
+                if self.redis_manager.is_connected:
+                    remaining_participants = await self.redis_manager.redis_client.hlen(f"{self.participant_key_prefix}{room_id}")
+                else:
+                    remaining_participants = len(self.local_participants.get(room_id, {}))
+                
+                if remaining_participants == 0:
+                    if self.redis_manager.is_connected:
+                        await self.redis_manager.redis_client.delete(f"{self.room_key_prefix}{room_id}")
+                        await self.redis_manager.redis_client.delete(f"{self.participant_key_prefix}{room_id}")
+                    else:
+                        # Clean up local storage
+                        if room_id in self.local_rooms:
+                            del self.local_rooms[room_id]
+                        if room_id in self.local_participants:
+                            del self.local_participants[room_id]
+                    logger.info(f"Removed empty room {room_id}")
+                else:
+                    logger.info(f"Removed participant {participant_id} from room {room_id}")
+                
+                return True
+        except Exception as e:
+            logger.error(f"Error removing participant {participant_id} from room {room_id}: {e}")
         
-        participant = room.participants.pop(participant_id)
-        
-        # Clear controller if this was the controller
-        if room.controller_id == participant_id:
-            room.controller_id = None
-            # Promote another controller if available
-            for pid, p in room.participants.items():
-                if p.mode == 'controller':
-                    room.controller_id = pid
-                    break
-        
-        # Remove room if empty
-        if not room.participants:
-            del self.rooms[room_id]
-            logger.info(f"Removed empty room {room_id}")
-        else:
-            logger.info(f"Removed participant {participant_id} from room {room_id}")
-        
-        return True
+        return False
     
     def get_participant_by_websocket(self, websocket: WebSocket) -> Optional[tuple[str, str]]:
-        """Find room_id and participant_id by websocket"""
-        for room_id, room in self.rooms.items():
-            for participant_id, participant in room.participants.items():
-                if participant.websocket == websocket:
-                    return room_id, participant_id
+        """Find room_id and participant_id by websocket - this needs to be handled locally"""
+        # This method can't use Redis since WebSocket objects can't be serialized
+        # It should be handled by the ConnectionManager locally
         return None
     
-    def kick_participant(self, room_id: str, participant_id: str, kicker_id: str) -> bool:
+    async def kick_participant(self, room_id: str, participant_id: str, kicker_id: str) -> bool:
         """Kick a participant from the room (only controller can kick)"""
-        room = self.get_room(room_id)
+        room = await self.get_room(room_id)
         if not room or room.controller_id != kicker_id:
             return False
         
-        if participant_id in room.participants and participant_id != kicker_id:
-            participant = room.participants[participant_id]
-            # Close the websocket connection
-            asyncio.create_task(participant.websocket.close())
-            self.remove_participant(room_id, participant_id)
-            return True
+        if participant_id != kicker_id:
+            return await self.remove_participant(room_id, participant_id)
         
         return False
 
-room_manager = RoomManager()
+room_manager = RoomManager(redis_manager)
 
 class ConnectionManager:
     def __init__(self):
         # Local connections for this instance only
         self.active_connections: Dict[str, Set[WebSocket]] = {}
+        # Local mapping of websocket to room and participant info
+        self.websocket_to_participant: Dict[WebSocket, Dict[str, str]] = {}
     
     async def connect(self, websocket: WebSocket, channel: str, already_accepted: bool = False):
         if not already_accepted:
@@ -187,7 +346,25 @@ class ConnectionManager:
         connection_count = len(self.active_connections[channel])
         print(f"Client connected to channel: {channel} (total: {connection_count})")
     
-    def disconnect(self, websocket: WebSocket, channel: str):
+    def add_participant_mapping(self, websocket: WebSocket, room_id: str, participant_id: str, mode: str):
+        """Store local mapping of websocket to participant info"""
+        self.websocket_to_participant[websocket] = {
+            "room_id": room_id,
+            "participant_id": participant_id,
+            "mode": mode
+        }
+    
+    def get_participant_by_websocket(self, websocket: WebSocket) -> Optional[tuple[str, str]]:
+        """Get room_id and participant_id by websocket"""
+        mapping = self.websocket_to_participant.get(websocket)
+        if mapping:
+            return mapping["room_id"], mapping["participant_id"]
+        return None
+    
+    async def disconnect(self, websocket: WebSocket, channel: str):
+        # Remove from local tracking
+        participant_info = self.websocket_to_participant.pop(websocket, None)
+        
         if channel in self.active_connections:
             self.active_connections[channel].discard(websocket)
             connection_count = len(self.active_connections[channel])
@@ -196,6 +373,13 @@ class ConnectionManager:
                 print(f"Client disconnected from channel: {channel} (channel closed)")
             else:
                 print(f"Client disconnected from channel: {channel} (remaining: {connection_count})")
+        
+        # Remove from Redis room if we have participant info
+        if participant_info:
+            await room_manager.remove_participant(
+                participant_info["room_id"], 
+                participant_info["participant_id"]
+            )
     
     def get_channel_info(self, channel: str) -> dict:
         """Get information about local connections in a channel"""
@@ -289,7 +473,7 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
         participant_id = secrets.token_urlsafe(8)
         
         # Verify room credentials
-        if not room_manager.authenticate_room(room_id, secret):
+        if not await room_manager.authenticate_room(room_id, secret):
             await websocket.send_text(json.dumps({
                 "type": "auth_error", 
                 "message": "Invalid room credentials"
@@ -298,7 +482,7 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
             return
         
         # Add participant to room
-        if not room_manager.add_participant(room_id, websocket, mode, participant_id):
+        if not await room_manager.add_participant(room_id, websocket, mode, participant_id):
             await websocket.send_text(json.dumps({
                 "type": "auth_error", 
                 "message": "Failed to join room"
@@ -306,8 +490,11 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
             await websocket.close()
             return
         
+        # Store local websocket mapping
+        manager.add_participant_mapping(websocket, room_id, participant_id, mode)
+        
         # Send authentication success
-        room = room_manager.get_room(room_id)
+        room = await room_manager.get_room(room_id)
         await websocket.send_text(json.dumps({
             "type": "auth_success",
             "room_id": room_id,
@@ -328,9 +515,9 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
             "participants": [
                 {
                     "participant_id": pid,
-                    "mode": p.mode,
+                    "mode": participant_data.get("mode"),
                     "is_controller": pid == room.controller_id
-                } for pid, p in room.participants.items()
+                } for pid, participant_data in room.participants.items()
             ]
         }
         await manager.broadcast_to_all_instances(room_info, room_id)
@@ -383,32 +570,28 @@ async def websocket_endpoint(websocket: WebSocket, channel: str):
                 await manager.broadcast_to_all_instances(message, room_id, exclude=websocket)
             
     except WebSocketDisconnect:
-        # Clean up participant
-        room_participant_info = room_manager.get_participant_by_websocket(websocket)
-        if room_participant_info:
-            room_id, participant_id = room_participant_info
-            room_manager.remove_participant(room_id, participant_id)
-            manager.disconnect(websocket, room_id)
-            
-            # Clean up AI scrolling session if needed
-            ai_scrolling_service.remove_session(room_id)
-            
-            # Broadcast updated room info
-            room = room_manager.get_room(room_id)
-            if room:
-                room_info = {
-                    "type": "room_update",
-                    "room_id": room_id,
-                    "participant_count": len(room.participants),
-                    "participants": [
-                        {
-                            "participant_id": pid,
-                            "mode": p.mode,
-                            "is_controller": pid == room.controller_id
-                        } for pid, p in room.participants.items()
-                    ]
-                }
-                await manager.broadcast_to_all_instances(room_info, room_id)
+        # Clean up participant - this is now handled in manager.disconnect()
+        await manager.disconnect(websocket, room_id)
+        
+        # Clean up AI scrolling session if needed
+        ai_scrolling_service.remove_session(room_id)
+        
+        # Broadcast updated room info
+        room = await room_manager.get_room(room_id)
+        if room:
+            room_info = {
+                "type": "room_update",
+                "room_id": room_id,
+                "participant_count": len(room.participants),
+                "participants": [
+                    {
+                        "participant_id": pid,
+                        "mode": participant_data.get("mode"),
+                        "is_controller": pid == room.controller_id
+                    } for pid, participant_data in room.participants.items()
+                ]
+            }
+            await manager.broadcast_to_all_instances(room_info, room_id)
     except Exception as e:
         print(f"Error in room {channel}: {e}")
         # Clean up participant
@@ -549,7 +732,7 @@ async def handle_audio_chunk(channel: str, message: dict, websocket: WebSocket):
 @app.post("/api/rooms")
 async def create_room():
     """Create a new room"""
-    room = room_manager.create_room()
+    room = await room_manager.create_room()
     return {
         "room_id": room.room_id,
         "secret": room.secret,
@@ -559,7 +742,7 @@ async def create_room():
 @app.get("/api/rooms/{room_id}")
 async def get_room_info(room_id: str):
     """Get room information"""
-    room = room_manager.get_room(room_id)
+    room = await room_manager.get_room(room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
     
@@ -570,9 +753,9 @@ async def get_room_info(room_id: str):
         "participants": [
             {
                 "participant_id": pid,
-                "mode": p.mode,
+                "mode": participant_data.get("mode"),
                 "is_controller": pid == room.controller_id
-            } for pid, p in room.participants.items()
+            } for pid, participant_data in room.participants.items()
         ]
     }
 
@@ -583,8 +766,8 @@ async def verify_room_credentials(room_id: str, credentials: dict):
     if not secret:
         raise HTTPException(status_code=400, detail="Secret required")
     
-    if room_manager.authenticate_room(room_id, secret):
-        room = room_manager.get_room(room_id)
+    if await room_manager.authenticate_room(room_id, secret):
+        room = await room_manager.get_room(room_id)
         return {
             "valid": True,
             "room_id": room_id,

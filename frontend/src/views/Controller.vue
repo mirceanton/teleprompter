@@ -79,7 +79,7 @@
               @click="showRoomInfo = true"
             >
               <v-icon class="mr-2">mdi-information</v-icon>
-              Room Info & Sharing
+              Room Information
             </v-btn>
           </v-card-text>
         </v-card>
@@ -661,7 +661,7 @@
       <v-card>
         <v-card-title>
           <v-icon class="mr-2">mdi-information</v-icon>
-          Room Information & Sharing
+          Room Information
         </v-card-title>
         
         <v-card-text>
@@ -732,22 +732,19 @@
           </v-alert>
           
           <div class="text-center">
-            <div class="mb-3">
-              <v-btn
-                color="primary"
-                variant="outlined"
-                @click="generateQrCode"
-                :loading="generatingQr"
-              >
-                <v-icon class="mr-2">mdi-qrcode</v-icon>
-                Generate QR Code
-              </v-btn>
-            </div>
-            
-            <div v-if="qrCodeUrl" class="qr-code-container">
+            <div class="qr-code-container mb-3">
               <img :src="qrCodeUrl" alt="QR Code for room joining" class="qr-code-image" />
               <p class="text-caption mt-2">Scan to join as teleprompter</p>
             </div>
+            
+            <v-btn
+              color="primary"
+              variant="outlined"
+              @click="copyToClipboard(joinUrl, 'Join URL copied!')"
+            >
+              <v-icon class="mr-2">mdi-content-copy</v-icon>
+              Copy Link
+            </v-btn>
           </div>
         </v-card-text>
         
@@ -791,8 +788,6 @@ export default {
         participants: []
       },
       showRoomInfo: false,
-      qrCodeUrl: '',
-      generatingQr: false,
       
       // Script content
       scriptText: `# Welcome to Remote Teleprompter!
@@ -885,6 +880,13 @@ Happy teleprompting! 🎬`,
     joinUrl() {
       const baseUrl = window.location.origin
       return `${baseUrl}/teleprompter?room=${this.channelName}&secret=${this.roomSecret}`
+    },
+    
+    // Auto-generate QR code URL
+    qrCodeUrl() {
+      if (!this.joinUrl) return ''
+      const qrText = encodeURIComponent(this.joinUrl)
+      return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrText}`
     },
     
     // Audio source options for AI scrolling
@@ -1410,20 +1412,6 @@ Happy teleprompting! 🎬`,
         this.showSnackbar(message, 'success')
       } catch (err) {
         this.showSnackbar('Failed to copy to clipboard', 'error')
-      }
-    },
-    
-    async generateQrCode() {
-      this.generatingQr = true
-      try {
-        // Use QR Server API for QR code generation
-        const qrText = encodeURIComponent(this.joinUrl)
-        this.qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrText}`
-        this.showSnackbar('QR code generated!', 'success')
-      } catch (error) {
-        this.showSnackbar('Failed to generate QR code', 'error')
-      } finally {
-        this.generatingQr = false
       }
     },
     
