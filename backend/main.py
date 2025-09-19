@@ -31,17 +31,14 @@ app.add_middleware(
 # Initialize services on startup
 @app.on_event("startup")
 async def startup_event():
+    await redis_manager.connect()
     await ai_scrolling_service.initialize()
-    # Initialize Redis connection
-    redis_connected = await redis_manager.connect()
-    if redis_connected:
-        # Start the Redis message listener in the background
-        listener_task = asyncio.create_task(redis_manager.start_message_listener())
-        # Store the task to prevent it from being garbage collected
-        app.state.redis_listener_task = listener_task
-        logger.info("Redis Pub/Sub enabled for horizontal scaling")
-    else:
-        logger.warning("Running in local-only mode (Redis unavailable)")
+    # Start the Redis message listener in the background
+    listener_task = asyncio.create_task(redis_manager.start_message_listener())
+
+    # Store the task to prevent it from being garbage collected
+    app.state.redis_listener_task = listener_task
+    logger.info("Redis Pub/Sub enabled for horizontal scaling")
 
 @app.on_event("shutdown")
 async def shutdown_event():

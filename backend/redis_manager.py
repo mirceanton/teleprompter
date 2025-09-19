@@ -64,13 +64,11 @@ class RedisManager:
             return True
             
         except (ConnectionError, TimeoutError) as e:
-            logger.warning(f"Redis connection failed: {e}. Running in local-only mode.")
-            self.is_connected = False
-            return False
+            logger.error(f"Redis connection failed: {e}. The application will exit.")
+            raise
         except Exception as e:
             logger.error(f"Unexpected error connecting to Redis: {e}")
-            self.is_connected = False
-            return False
+            raise
     
     async def disconnect(self):
         """Close Redis connections"""
@@ -94,8 +92,8 @@ class RedisManager:
     
     async def publish_message(self, channel: str, message: dict) -> bool:
         """Publish a message to a Redis channel"""
-        if not self.is_connected:
-            return False
+        if not self.redis_client:
+            raise ConnectionError("Redis client not initialized. Cannot publish message.")
             
         try:
             redis_channel = self.get_channel_name(channel)
