@@ -1285,7 +1285,15 @@ Happy teleprompting! 🎬`,
           // Show notification when a new participant joins
           if (message.participant && message.participant.id !== this.participantId) {
             const role = message.participant.role === 'controller' ? 'Controller' : 'Teleprompter';
+
             this.showSnackbar(`${role} joined the room`, "info");
+
+            if (message.participant.role === 'teleprompter') {
+              if (this.isPlaying) {
+                this.pauseScrolling();
+              }
+              setTimeout(() => { this.syncText(); }, 500);
+            }
           }
           break;
 
