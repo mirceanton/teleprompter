@@ -78,23 +78,19 @@
           <v-divider />
           
           <!-- Room Actions -->
-          <v-card-actions class="pa-4">
+          <v-card-actions>
             <v-btn
               prepend-icon="mdi-information"
-              variant="outlined"
-              block
-              size="large"
-              class="mb-2"
+              variant="text"
               @click="showRoomInfoDialog = true"
             >
               Room Info
             </v-btn>
+            <v-spacer />
             <v-btn
               prepend-icon="mdi-logout"
               color="error"
-              variant="outlined"
-              block
-              size="large"
+              variant="text"
               @click="disconnect"
             >
               Leave Room
@@ -734,28 +730,18 @@
         
         <v-card-text class="pa-6">
           <!-- Editable Room Name -->
-          <div class="mb-4">
-            <v-text-field
-              v-model="editableRoomName"
-              label="Room Name"
-              variant="outlined"
-              @keypress.enter="updateRoomName"
-            >
-              <template v-slot:prepend-inner>
-                <v-icon>mdi-tag</v-icon>
-              </template>
-              <template v-slot:append-inner>
-                <v-btn
-                  icon="mdi-check"
-                  size="small"
-                  variant="text"
-                  color="primary"
-                  @click="updateRoomName"
-                  :disabled="editableRoomName === roomCredentials?.room_name"
-                />
-              </template>
-            </v-text-field>
-          </div>
+          <v-text-field
+            v-model="editableRoomName"
+            label="Room Name"
+            variant="outlined"
+            class="mb-4"
+            @blur="updateRoomName"
+            @keypress.enter="updateRoomName"
+          >
+            <template v-slot:prepend-inner>
+              <v-icon>mdi-tag</v-icon>
+            </template>
+          </v-text-field>
           
           <v-divider class="mb-4" />
           
@@ -763,7 +749,7 @@
           <v-text-field
             :model-value="roomCredentials?.room_id"
             label="Room ID"
-            variant="underlined"
+            variant="outlined"
             readonly
             class="mb-4"
           >
@@ -784,7 +770,7 @@
           <v-text-field
             :model-value="roomCredentials?.room_secret"
             label="Room Secret"
-            variant="underlined"
+            variant="outlined"
             :type="showSecret ? 'text' : 'password'"
             readonly
             class="mb-4"
@@ -836,7 +822,7 @@
           <v-text-field
             :model-value="joinUrl"
             label="Teleprompter Join URL"
-            variant="underlined"
+            variant="outlined"
             readonly
           >
             <template v-slot:prepend-inner>
