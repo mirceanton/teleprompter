@@ -490,6 +490,17 @@ export default {
           this.pauseScrolling();
           break;
 
+        case "participant_kicked":
+          // Handle being kicked from the room
+          if (message.participant_id === this.participantId) {
+            this.showSnackbar("You have been removed from the room", "error");
+            // Redirect to landing page after a brief delay
+            setTimeout(() => {
+              this.$router.push("/");
+            }, 2000);
+          }
+          break;
+
         default:
           console.log("Received message:", message);
       }

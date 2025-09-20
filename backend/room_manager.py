@@ -66,7 +66,7 @@ class RoomManager:
     
     def _generate_room_id(self) -> str:
         """Generate a unique room ID"""
-        return f"room{uuid.uuid4().hex[:8]}"
+        return f"room{uuid.uuid4().hex[:6]}"
     
     def _generate_room_secret(self) -> str:
         """Generate a 64-character room secret"""
@@ -285,6 +285,19 @@ class RoomManager:
         except Exception as e:
             logger.error(f"Error getting participants for room {room_id}: {e}")
             return []
+    
+    async def get_participant(self, room_id: str, participant_id: str) -> Optional[Participant]:
+        """Get a specific participant from a room"""
+        try:
+            room = await self.get_room(room_id)
+            if not room:
+                return None
+            
+            return room.participants.get(participant_id)
+            
+        except Exception as e:
+            logger.error(f"Error getting participant {participant_id} from room {room_id}: {e}")
+            return None
     
     async def is_controller(self, room_id: str, participant_id: str) -> bool:
         """Check if participant is the controller of the room"""

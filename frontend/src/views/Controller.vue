@@ -98,46 +98,10 @@
           </v-card-actions>
         </v-card>
       </v-menu>
-      
-      <v-chip :color="connectionStatus.color" variant="outlined">
-        <v-icon start>{{ connectionStatus.icon }}</v-icon>
-        {{ connectionStatus.text }}
-      </v-chip>
     </v-app-bar>
 
     <v-main>
       <v-container fluid>
-        <!-- Connection Info -->
-        <v-card class="mb-4" elevation="2" v-if="connectionInfo.show">
-          <v-card-text>
-            <v-row align="center">
-              <v-col>
-                <v-icon class="mr-2">mdi-account-group</v-icon>
-                <strong>{{ connectionInfo.count }}</strong> clients connected
-                <v-chip
-                  v-if="connectionInfo.count > 1"
-                  color="success"
-                  size="small"
-                  class="ml-2"
-                >
-                  📱 Multi-teleprompter setup
-                </v-chip>
-              </v-col>
-              <v-col cols="auto">
-                <v-btn
-                  color="error"
-                  variant="outlined"
-                  @click="disconnect"
-                  size="small"
-                >
-                  <v-icon class="mr-2">mdi-logout</v-icon>
-                  Disconnect
-                </v-btn>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
-
         <v-row>
           <!-- Left Side - Navigation Controls and Table of Contents -->
           <v-col cols="12" lg="3">
@@ -765,22 +729,27 @@
           <v-text-field
             v-model="editableRoomName"
             label="Room Name"
-            prepend-icon="mdi-tag"
             variant="outlined"
             class="mb-4"
             @blur="updateRoomName"
             @keypress.enter="updateRoomName"
-          />
+          >
+            <template v-slot:prepend-inner>
+              <v-icon>mdi-tag</v-icon>
+            </template>
+          </v-text-field>
           
           <!-- Room ID (Read-only) -->
           <v-text-field
             :model-value="roomCredentials?.room_id"
             label="Room ID"
-            prepend-icon="mdi-key"
             variant="outlined"
             readonly
             class="mb-4"
           >
+            <template v-slot:prepend-inner>
+              <v-icon>mdi-key</v-icon>
+            </template>
             <template v-slot:append-inner>
               <v-btn
                 icon="mdi-content-copy"
@@ -795,12 +764,14 @@
           <v-text-field
             :model-value="roomCredentials?.room_secret"
             label="Room Secret"
-            prepend-icon="mdi-lock"
             variant="outlined"
             :type="showSecret ? 'text' : 'password'"
             readonly
             class="mb-4"
           >
+            <template v-slot:prepend-inner>
+              <v-icon>mdi-lock</v-icon>
+            </template>
             <template v-slot:append-inner>
               <v-btn
                 :icon="showSecret ? 'mdi-eye-off' : 'mdi-eye'"
@@ -822,11 +793,13 @@
           <v-text-field
             :model-value="joinUrl"
             label="Teleprompter Join URL"
-            prepend-icon="mdi-link"
             variant="outlined"
             readonly
             class="mb-4"
           >
+            <template v-slot:prepend-inner>
+              <v-icon>mdi-link</v-icon>
+            </template>
             <template v-slot:append-inner>
               <v-btn
                 icon="mdi-content-copy"
@@ -837,13 +810,18 @@
             </template>
           </v-text-field>
           
-          <!-- QR Code placeholder -->
+          <!-- QR Code -->
           <div class="text-center mb-4">
             <v-card variant="outlined" class="pa-4">
-              <v-icon size="64" color="grey">mdi-qrcode</v-icon>
+              <div v-if="qrCodeDataUrl">
+                <img :src="qrCodeDataUrl" alt="QR Code" style="max-width: 200px;">
+              </div>
+              <div v-else>
+                <v-icon size="64" color="grey">mdi-qrcode</v-icon>
+              </div>
               <p class="text-body-2 mt-2">QR Code for easy joining</p>
               <p class="text-caption text-grey">
-                (QR code generation to be implemented)
+                Scan with your device to join as teleprompter
               </p>
             </v-card>
           </div>
@@ -879,6 +857,7 @@
 
 <script>
 import { config } from "@/utils/config.js";
+import QRCode from "qrcode";
 import {
   parseMarkdownSections,
   getCurrentSection,
@@ -907,6 +886,7 @@ export default {
       showRoomInfoDialog: false,
       editableRoomName: "",
       showSecret: false,
+      qrCodeDataUrl: null,
 
       // Script content
       scriptText: `# Welcome to Remote Teleprompter!
@@ -1072,6 +1052,20 @@ Happy teleprompting! 🎬`,
 
     if (this.ws) {
       this.ws.close();
+    }
+  },
+
+  watch: {
+    joinUrl: {
+      handler() {
+        this.generateQRCode();
+      },
+      immediate: true
+    },
+    showRoomInfoDialog(newVal) {
+      if (newVal) {
+        this.generateQRCode();
+      }
     }
   },
 
@@ -1286,6 +1280,14 @@ Happy teleprompting! 🎬`,
             text: `AI Error: ${message.error}`,
           };
           this.showSnackbar(`AI Scrolling Error: ${message.error}`, "error");
+          break;
+
+        case "participant_joined":
+          // Show notification when a new participant joins
+          if (message.participant && message.participant.id !== this.participantId) {
+            const role = message.participant.role === 'controller' ? 'Controller' : 'Teleprompter';
+            this.showSnackbar(`${role} joined the room`, "info");
+          }
           break;
 
         default:
@@ -1647,6 +1649,23 @@ Happy teleprompting! 🎬`,
         this.showSnackbar("Room credentials copied to clipboard!", "success");
       } catch (error) {
         this.showSnackbar("Failed to copy credentials", "error");
+      }
+    },
+
+    async generateQRCode() {
+      if (!this.joinUrl) {
+        this.qrCodeDataUrl = null;
+        return;
+      }
+      
+      try {
+        this.qrCodeDataUrl = await QRCode.toDataURL(this.joinUrl, {
+          width: 200,
+          margin: 2,
+        });
+      } catch (error) {
+        console.error('Failed to generate QR code:', error);
+        this.qrCodeDataUrl = null;
       }
     },
 

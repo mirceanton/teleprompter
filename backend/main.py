@@ -22,14 +22,18 @@ async def lifespan(app: FastAPI):
     """
     Handles startup and shutdown events for the FastAPI application.
     """
-    await redis_manager.connect()
-    await ai_scrolling_service.initialize()
-    # Start the Redis message listener in the background
-    listener_task = asyncio.create_task(redis_manager.start_message_listener())
+    try:
+        await redis_manager.connect()
+        await ai_scrolling_service.initialize()
+        # Start the Redis message listener in the background
+        listener_task = asyncio.create_task(redis_manager.start_message_listener())
 
-    # Store the task to prevent it from being garbage collected
-    app.state.redis_listener_task = listener_task
-    logger.info("Redis Pub/Sub enabled for horizontal scaling")
+        # Store the task to prevent it from being garbage collected
+        app.state.redis_listener_task = listener_task
+        logger.info("Redis Pub/Sub enabled for horizontal scaling")
+    except Exception as e:
+        logger.warning(f"Redis not available: {e}. Running without Redis pub/sub.")
+        await ai_scrolling_service.initialize()
     
     yield
     
@@ -308,6 +312,20 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, participant_id:
         ]
     }
     await manager.broadcast_to_all_instances(connection_update, channel)
+    
+    # Send participant joined notification to other participants
+    current_participant = await room_manager.get_participant(room_id, participant_id)
+    if current_participant:
+        participant_joined = {
+            "type": "participant_joined",
+            "room_id": room_id,
+            "participant": {
+                "id": current_participant.id,
+                "role": current_participant.role,
+                "joined_at": current_participant.joined_at
+            }
+        }
+        await manager.broadcast_to_all_instances(participant_joined, channel, exclude=websocket)
     
     try:
         while True:
