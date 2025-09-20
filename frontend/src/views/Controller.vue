@@ -2,36 +2,28 @@
   <v-app>
     <v-app-bar app color="primary" dark>
       <v-toolbar-title>
-        Admin - {{ roomCredentials?.room_name || 'Loading...' }}
+        Admin - {{ roomCredentials?.room_name || "Loading..." }}
       </v-toolbar-title>
       <v-spacer />
-      
+
       <!-- Participant Management Dropdown -->
       <v-menu offset-y>
         <template v-slot:activator="{ props }">
-          <v-btn 
-            icon="mdi-account-group" 
-            v-bind="props"
-            class="mr-2"
-          >
-            <v-badge 
-              :content="participants.length" 
-              color="secondary"
-              overlap
-            >
+          <v-btn icon="mdi-account-group" v-bind="props" class="mr-2">
+            <v-badge :content="participants.length" color="secondary" overlap>
               <v-icon>mdi-account-group</v-icon>
             </v-badge>
           </v-btn>
         </template>
-        
+
         <v-card min-width="300">
           <v-card-title class="text-h6 pa-4">
             <v-icon class="mr-2">mdi-account-group</v-icon>
             Room Participants
           </v-card-title>
-          
+
           <v-divider />
-          
+
           <!-- Participants List -->
           <v-list>
             <v-list-item
@@ -40,28 +32,41 @@
               :class="{ 'bg-primary': participant.id === participantId }"
             >
               <template v-slot:prepend>
-                <v-avatar size="small" :color="participant.role === 'controller' ? 'primary' : 'secondary'">
-                  <v-icon>{{ participant.role === 'controller' ? 'mdi-laptop' : 'mdi-cellphone' }}</v-icon>
+                <v-avatar
+                  size="small"
+                  :color="
+                    participant.role === 'controller' ? 'primary' : 'secondary'
+                  "
+                >
+                  <v-icon>{{
+                    participant.role === "controller"
+                      ? "mdi-laptop"
+                      : "mdi-cellphone"
+                  }}</v-icon>
                 </v-avatar>
               </template>
-              
+
               <v-list-item-title>
-                {{ participant.role === 'controller' ? '💻 Controller' : '📱 Teleprompter' }}
-                <v-chip 
-                  v-if="participant.id === participantId" 
-                  size="x-small" 
-                  color="primary" 
+                {{
+                  participant.role === "controller"
+                    ? "💻 Controller"
+                    : "📱 Teleprompter"
+                }}
+                <v-chip
+                  v-if="participant.id === participantId"
+                  size="x-small"
+                  color="primary"
                   variant="outlined"
                   class="ml-2"
                 >
                   You
                 </v-chip>
               </v-list-item-title>
-              
+
               <v-list-item-subtitle>
                 Joined {{ formatTime(participant.joined_at) }}
               </v-list-item-subtitle>
-              
+
               <template v-slot:append v-if="participant.id !== participantId">
                 <v-btn
                   icon="mdi-account-remove"
@@ -74,32 +79,32 @@
               </template>
             </v-list-item>
           </v-list>
-          
+
           <v-divider />
-          
+
           <!-- Room Actions -->
-            <v-btn
-              prepend-icon="mdi-information"
-              variant="tonal"
-              color="info"
-              size="large"
-              class="ml-4 mr-4 mt-4 mb-2"
-              width="calc(100% - 32px)"
-              @click="showRoomInfoDialog = true"
-            >
-              Room Info
-            </v-btn>
-            <v-btn
-              prepend-icon="mdi-logout"
-              color="error"
-              variant="tonal"
-              size="large"
-              class="ml-4 mr-4 mb-4 mt-2"
-              width="calc(100% - 32px)"
-              @click="disconnect"
-            >
-              Leave Room
-            </v-btn>
+          <v-btn
+            prepend-icon="mdi-information"
+            variant="tonal"
+            color="info"
+            size="large"
+            class="ml-4 mr-4 mt-4 mb-2"
+            width="calc(100% - 32px)"
+            @click="showRoomInfoDialog = true"
+          >
+            Room Info
+          </v-btn>
+          <v-btn
+            prepend-icon="mdi-logout"
+            color="error"
+            variant="tonal"
+            size="large"
+            class="ml-4 mr-4 mb-4 mt-2"
+            width="calc(100% - 32px)"
+            @click="disconnect"
+          >
+            Leave Room
+          </v-btn>
         </v-card>
       </v-menu>
     </v-app-bar>
@@ -731,7 +736,7 @@
             @click="showRoomInfoDialog = false"
           />
         </v-card-title>
-        
+
         <v-card-text class="pa-6">
           <!-- Editable Room Name -->
           <v-text-field
@@ -746,9 +751,9 @@
               <v-icon>mdi-tag</v-icon>
             </template>
           </v-text-field>
-          
+
           <v-divider class="mb-4" />
-          
+
           <!-- Room ID (Read-only) -->
           <v-text-field
             :model-value="roomCredentials?.room_id"
@@ -765,11 +770,13 @@
                 icon="mdi-content-copy"
                 size="small"
                 variant="text"
-                @click="copyToClipboard(roomCredentials?.room_id, 'Room ID copied!')"
+                @click="
+                  copyToClipboard(roomCredentials?.room_id, 'Room ID copied!')
+                "
               />
             </template>
           </v-text-field>
-          
+
           <!-- Room Secret (Read-only) -->
           <v-text-field
             :model-value="roomCredentials?.room_secret"
@@ -794,11 +801,16 @@
                 icon="mdi-content-copy"
                 size="small"
                 variant="text"
-                @click="copyToClipboard(roomCredentials?.room_secret, 'Room secret copied!')"
+                @click="
+                  copyToClipboard(
+                    roomCredentials?.room_secret,
+                    'Room secret copied!'
+                  )
+                "
               />
             </template>
           </v-text-field>
-          
+
           <!-- Copy Credentials Button -->
           <div class="text-center mb-4">
             <v-btn
@@ -809,19 +821,23 @@
               Copy All Credentials
             </v-btn>
           </div>
-          
+
           <v-divider class="mb-4" />
-          
+
           <!-- QR Code -->
           <div class="text-center mb-4">
             <div v-if="qrCodeDataUrl">
-              <img :src="qrCodeDataUrl" alt="QR Code" style="max-width: 200px; border-radius: 8px;">
+              <img
+                :src="qrCodeDataUrl"
+                alt="QR Code"
+                style="max-width: 200px; border-radius: 8px"
+              />
             </div>
             <div v-else>
               <v-icon size="64" color="grey">mdi-qrcode</v-icon>
             </div>
           </div>
-          
+
           <!-- Join URL -->
           <v-text-field
             :model-value="joinUrl"
@@ -969,13 +985,15 @@ Happy teleprompting! 🎬`,
 
   computed: {
     joinUrl() {
-      if (!this.roomCredentials) return '';
+      if (!this.roomCredentials) return "";
       const baseUrl = window.location.origin;
       const credentials = {
         room_id: this.roomCredentials.room_id,
-        room_secret: this.roomCredentials.room_secret
+        room_secret: this.roomCredentials.room_secret,
       };
-      return `${baseUrl}/?join=${encodeURIComponent(JSON.stringify(credentials))}`;
+      return `${baseUrl}/?join=${encodeURIComponent(
+        JSON.stringify(credentials)
+      )}`;
     },
 
     connectionStatus() {
@@ -1038,7 +1056,10 @@ Happy teleprompting! 🎬`,
     if (this.roomCredentials) {
       this.connect();
     } else {
-      this.showSnackbar("No room credentials found. Please create or join a room.", "error");
+      this.showSnackbar(
+        "No room credentials found. Please create or join a room.",
+        "error"
+      );
       this.$router.push("/");
     }
   },
@@ -1059,29 +1080,32 @@ Happy teleprompting! 🎬`,
       handler() {
         this.generateQRCode();
       },
-      immediate: true
+      immediate: true,
     },
     showRoomInfoDialog(newVal) {
       if (newVal) {
         this.generateQRCode();
       }
-    }
+    },
   },
 
   methods: {
     async initializeRoomAuth() {
       try {
         // Get room credentials from session storage
-        const credentialsStr = sessionStorage.getItem('room_credentials');
+        const credentialsStr = sessionStorage.getItem("room_credentials");
         if (!credentialsStr) {
           return false;
         }
 
         this.roomCredentials = JSON.parse(credentialsStr);
-        
+
         // Verify this is a controller role
-        if (this.roomCredentials.role !== 'controller') {
-          this.showSnackbar("Access denied: Not authorized as controller", "error");
+        if (this.roomCredentials.role !== "controller") {
+          this.showSnackbar(
+            "Access denied: Not authorized as controller",
+            "error"
+          );
           return false;
         }
 
@@ -1093,15 +1117,17 @@ Happy teleprompting! 🎬`,
           }
           this.roomCredentials.participant_id = joinData.participant_id;
           // Update session storage
-          sessionStorage.setItem('room_credentials', JSON.stringify(this.roomCredentials));
+          sessionStorage.setItem(
+            "room_credentials",
+            JSON.stringify(this.roomCredentials)
+          );
         }
-        
+
         this.participantId = this.roomCredentials.participant_id;
-        this.editableRoomName = this.roomCredentials.room_name || '';
+        this.editableRoomName = this.roomCredentials.room_name || "";
         return true;
-        
       } catch (error) {
-        console.error('Error initializing room auth:', error);
+        console.error("Error initializing room auth:", error);
         this.showSnackbar("Failed to initialize room authentication", "error");
         return false;
       }
@@ -1110,30 +1136,30 @@ Happy teleprompting! 🎬`,
     async joinRoomAsController() {
       try {
         const response = await fetch(`${config.getApiUrl()}/api/rooms/join`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             room_id: this.roomCredentials.room_id,
             room_secret: this.roomCredentials.room_secret,
-            role: 'controller'
-          })
+            role: "controller",
+          }),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to join room');
+          throw new Error("Failed to join room");
         }
 
         const joinData = await response.json();
         if (!joinData.success) {
-          this.showSnackbar(joinData.message, 'error');
+          this.showSnackbar(joinData.message, "error");
           return null;
         }
 
         return joinData;
       } catch (error) {
-        console.error('Error joining room as controller:', error);
+        console.error("Error joining room as controller:", error);
         this.showSnackbar("Failed to join room as controller", "error");
         return null;
       }
@@ -1169,7 +1195,9 @@ Happy teleprompting! 🎬`,
 
         // Use new WebSocket format with room_id and participant_id
         const wsUrl = config.getWebSocketUrl();
-        this.ws = new WebSocket(`${wsUrl}/api/ws/${this.roomCredentials.room_id}/${this.participantId}`);
+        this.ws = new WebSocket(
+          `${wsUrl}/api/ws/${this.roomCredentials.room_id}/${this.participantId}`
+        );
 
         this.setupWebSocketHandlers();
       } catch (error) {
@@ -1283,16 +1311,24 @@ Happy teleprompting! 🎬`,
 
         case "participant_joined":
           // Show notification when a new participant joins
-          if (message.participant && message.participant.id !== this.participantId) {
-            const role = message.participant.role === 'controller' ? 'Controller' : 'Teleprompter';
+          if (
+            message.participant &&
+            message.participant.id !== this.participantId
+          ) {
+            const role =
+              message.participant.role === "controller"
+                ? "Controller"
+                : "Teleprompter";
 
             this.showSnackbar(`${role} joined the room`, "info");
 
-            if (message.participant.role === 'teleprompter') {
+            if (message.participant.role === "teleprompter") {
               if (this.isPlaying) {
                 this.pauseScrolling();
               }
-              setTimeout(() => { this.syncText(); }, 500);
+              setTimeout(() => {
+                this.syncText();
+              }, 500);
             }
           }
           break;
@@ -1301,7 +1337,10 @@ Happy teleprompting! 🎬`,
           // Update room name when changed by controller
           if (this.roomCredentials) {
             this.roomCredentials.room_name = message.room_name;
-            sessionStorage.setItem('room_credentials', JSON.stringify(this.roomCredentials));
+            sessionStorage.setItem(
+              "room_credentials",
+              JSON.stringify(this.roomCredentials)
+            );
           }
           break;
 
@@ -1631,7 +1670,7 @@ Happy teleprompting! 🎬`,
       if (confirm("Are you sure you want to kick this participant?")) {
         this.sendMessage({
           type: "kick_participant",
-          target_participant_id: participantId
+          target_participant_id: participantId,
         });
         this.showSnackbar("Participant kicked", "info");
       }
@@ -1652,15 +1691,17 @@ Happy teleprompting! 🎬`,
 
     async copyCredentials() {
       if (!this.roomCredentials) return;
-      
+
       const credentials = {
         room_id: this.roomCredentials.room_id,
         room_secret: this.roomCredentials.room_secret,
-        room_name: this.roomCredentials.room_name || this.editableRoomName
+        room_name: this.roomCredentials.room_name || this.editableRoomName,
       };
-      
+
       try {
-        await navigator.clipboard.writeText(JSON.stringify(credentials, null, 2));
+        await navigator.clipboard.writeText(
+          JSON.stringify(credentials, null, 2)
+        );
         this.showSnackbar("Room credentials copied to clipboard!", "success");
       } catch (error) {
         this.showSnackbar("Failed to copy credentials", "error");
@@ -1672,47 +1713,56 @@ Happy teleprompting! 🎬`,
         this.qrCodeDataUrl = null;
         return;
       }
-      
+
       try {
         this.qrCodeDataUrl = await QRCode.toDataURL(this.joinUrl, {
           width: 200,
           margin: 2,
         });
       } catch (error) {
-        console.error('Failed to generate QR code:', error);
+        console.error("Failed to generate QR code:", error);
         this.qrCodeDataUrl = null;
       }
     },
 
     async updateRoomName() {
-      if (this.editableRoomName && this.editableRoomName !== this.roomCredentials?.room_name) {
+      if (
+        this.editableRoomName &&
+        this.editableRoomName !== this.roomCredentials?.room_name
+      ) {
         try {
           const apiUrl = config.getApiUrl();
-          const response = await fetch(`${apiUrl}/api/rooms/${this.roomCredentials.room_id}/name`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              room_id: this.roomCredentials.room_id,
-              room_name: this.editableRoomName,
-              participant_id: this.participantId
-            })
-          });
+          const response = await fetch(
+            `${apiUrl}/api/rooms/${this.roomCredentials.room_id}/name`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                room_id: this.roomCredentials.room_id,
+                room_name: this.editableRoomName,
+                participant_id: this.participantId,
+              }),
+            }
+          );
 
           if (!response.ok) {
-            throw new Error('Failed to update room name');
+            throw new Error("Failed to update room name");
           }
 
           // Update local credentials
           if (this.roomCredentials) {
             this.roomCredentials.room_name = this.editableRoomName;
-            sessionStorage.setItem('room_credentials', JSON.stringify(this.roomCredentials));
+            sessionStorage.setItem(
+              "room_credentials",
+              JSON.stringify(this.roomCredentials)
+            );
           }
 
           this.showSnackbar("Room name updated successfully", "success");
         } catch (error) {
-          console.error('Error updating room name:', error);
+          console.error("Error updating room name:", error);
           this.showSnackbar("Failed to update room name", "error");
         }
       }

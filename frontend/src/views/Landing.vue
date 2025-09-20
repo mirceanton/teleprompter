@@ -8,7 +8,6 @@
       <v-container fluid class="fill-height">
         <v-row justify="center" align="center" class="fill-height">
           <v-col cols="12" md="8" lg="6">
-            
             <!-- Main Action Card -->
             <v-card elevation="8">
               <v-card-title class="text-h5 pa-6">
@@ -18,9 +17,10 @@
 
               <v-card-text class="pa-6">
                 <p class="text-body-1 mb-6">
-                  Choose your action to get started with remote teleprompter control.
+                  Choose your action to get started with remote teleprompter
+                  control.
                 </p>
-                
+
                 <v-row class="mb-4">
                   <!-- Create Room (Controller) -->
                   <v-col cols="12" md="6">
@@ -32,7 +32,9 @@
                       hover
                     >
                       <v-card-text class="text-center pa-6">
-                        <v-icon size="48" color="primary" class="mb-2">mdi-plus-circle</v-icon>
+                        <v-icon size="48" color="primary" class="mb-2"
+                          >mdi-plus-circle</v-icon
+                        >
                         <h4 class="text-h6 mb-2">💻 Create Room</h4>
                         <p class="text-body-2">
                           Create a new room and control teleprompter playback
@@ -51,7 +53,9 @@
                       hover
                     >
                       <v-card-text class="text-center pa-6">
-                        <v-icon size="48" color="primary" class="mb-2">mdi-login</v-icon>
+                        <v-icon size="48" color="primary" class="mb-2"
+                          >mdi-login</v-icon
+                        >
                         <h4 class="text-h6 mb-2">📱 Join Room</h4>
                         <p class="text-body-2">
                           Join an existing room to display teleprompter text
@@ -66,7 +70,7 @@
                   <div v-if="selectedAction === 'create'">
                     <v-divider class="my-4" />
                     <h3 class="text-h6 mb-4">Create New Room</h3>
-                    
+
                     <v-text-field
                       v-model="roomName"
                       label="Room Name (Optional)"
@@ -96,7 +100,7 @@
                   <div v-if="selectedAction === 'join'">
                     <v-divider class="my-4" />
                     <h3 class="text-h6 mb-4">Join Existing Room</h3>
-                    
+
                     <v-text-field
                       v-model="joinRoomId"
                       label="Room ID"
@@ -147,7 +151,6 @@
                     </v-row>
                   </div>
                 </v-expand-transition>
-
               </v-card-text>
             </v-card>
           </v-col>
@@ -172,39 +175,81 @@ export default {
   data() {
     return {
       selectedAction: "",
-      
+
       // Create room data
       roomName: "",
       loading: false,
-      
+
       // Join room data
       joinRoomId: "",
       joinRoomSecret: "",
-      
+
       snackbar: {
         show: false,
         text: "",
         color: "success",
       },
-      
+
       // Room name generation
       adjectives: [
-        "Bright", "Swift", "Calm", "Brave", "Quick", "Gentle", "Sharp", "Bold", 
-        "Clever", "Strong", "Wise", "Kind", "Happy", "Peaceful", "Dynamic", "Elegant",
-        "Graceful", "Lively", "Vibrant", "Steady", "Creative", "Focused", "Reliable"
+        "Bright",
+        "Swift",
+        "Calm",
+        "Brave",
+        "Quick",
+        "Gentle",
+        "Sharp",
+        "Bold",
+        "Clever",
+        "Strong",
+        "Wise",
+        "Kind",
+        "Happy",
+        "Peaceful",
+        "Dynamic",
+        "Elegant",
+        "Graceful",
+        "Lively",
+        "Vibrant",
+        "Steady",
+        "Creative",
+        "Focused",
+        "Reliable",
       ],
       animals: [
-        "Wolf", "Eagle", "Lion", "Bear", "Fox", "Hawk", "Tiger", "Dolphin",
-        "Owl", "Falcon", "Panther", "Shark", "Horse", "Dragon", "Phoenix", "Whale",
-        "Rabbit", "Deer", "Elephant", "Giraffe", "Penguin", "Turtle", "Butterfly"
-      ]
+        "Wolf",
+        "Eagle",
+        "Lion",
+        "Bear",
+        "Fox",
+        "Hawk",
+        "Tiger",
+        "Dolphin",
+        "Owl",
+        "Falcon",
+        "Panther",
+        "Shark",
+        "Horse",
+        "Dragon",
+        "Phoenix",
+        "Whale",
+        "Rabbit",
+        "Deer",
+        "Elephant",
+        "Giraffe",
+        "Penguin",
+        "Turtle",
+        "Butterfly",
+      ],
     };
   },
 
   methods: {
     generateRoomName() {
-      const adjective = this.adjectives[Math.floor(Math.random() * this.adjectives.length)];
-      const animal = this.animals[Math.floor(Math.random() * this.animals.length)];
+      const adjective =
+        this.adjectives[Math.floor(Math.random() * this.adjectives.length)];
+      const animal =
+        this.animals[Math.floor(Math.random() * this.animals.length)];
       return `${adjective} ${animal} Room`;
     },
 
@@ -213,46 +258,48 @@ export default {
       if (!this.roomName) {
         this.roomName = this.generateRoomName();
       }
-      
+
       this.loading = true;
       try {
         const apiUrl = config.getApiUrl();
         const response = await fetch(`${apiUrl}/api/rooms`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            room_name: this.roomName
-          })
+            room_name: this.roomName,
+          }),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to create room');
+          throw new Error("Failed to create room");
         }
 
         const roomData = await response.json();
-        
+
         // Store room credentials in session storage for the controller
-        sessionStorage.setItem('room_credentials', JSON.stringify({
-          room_id: roomData.room_id,
-          room_secret: roomData.room_secret,
-          room_name: roomData.room_name,
-          role: 'controller'
-        }));
+        sessionStorage.setItem(
+          "room_credentials",
+          JSON.stringify({
+            room_id: roomData.room_id,
+            room_secret: roomData.room_secret,
+            room_name: roomData.room_name,
+            role: "controller",
+          })
+        );
 
         // Navigate to controller with room info
         this.$router.push({
           path: "/controller",
-          query: { 
+          query: {
             room: roomData.room_id,
-            role: 'controller'
+            role: "controller",
           },
         });
-
       } catch (error) {
-        console.error('Error creating room:', error);
-        this.showSnackbar('Failed to create room. Please try again.', 'error');
+        console.error("Error creating room:", error);
+        this.showSnackbar("Failed to create room. Please try again.", "error");
       } finally {
         this.loading = false;
       }
@@ -263,49 +310,54 @@ export default {
       try {
         const apiUrl = config.getApiUrl();
         const response = await fetch(`${apiUrl}/api/rooms/join`, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             room_id: this.joinRoomId,
             room_secret: this.joinRoomSecret,
-            role: 'teleprompter'
-          })
+            role: "teleprompter",
+          }),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to join room');
+          throw new Error("Failed to join room");
         }
 
         const joinData = await response.json();
-        
+
         if (!joinData.success) {
-          this.showSnackbar(joinData.message, 'error');
+          this.showSnackbar(joinData.message, "error");
           return;
         }
 
         // Store room credentials in session storage for the teleprompter
-        sessionStorage.setItem('room_credentials', JSON.stringify({
-          room_id: this.joinRoomId,
-          room_secret: this.joinRoomSecret,
-          room_name: joinData.room_name,
-          participant_id: joinData.participant_id,
-          role: 'teleprompter'
-        }));
+        sessionStorage.setItem(
+          "room_credentials",
+          JSON.stringify({
+            room_id: this.joinRoomId,
+            room_secret: this.joinRoomSecret,
+            room_name: joinData.room_name,
+            participant_id: joinData.participant_id,
+            role: "teleprompter",
+          })
+        );
 
         // Navigate to teleprompter with room info
         this.$router.push({
           path: "/teleprompter",
-          query: { 
+          query: {
             room: this.joinRoomId,
-            role: 'teleprompter'
+            role: "teleprompter",
           },
         });
-
       } catch (error) {
-        console.error('Error joining room:', error);
-        this.showSnackbar('Failed to join room. Please check your credentials.', 'error');
+        console.error("Error joining room:", error);
+        this.showSnackbar(
+          "Failed to join room. Please check your credentials.",
+          "error"
+        );
       } finally {
         this.loading = false;
       }
@@ -329,11 +381,17 @@ export default {
           }
 
           // If it looks like a room ID, just paste that
-          if (text.includes('room')) {
+          if (text.includes("room")) {
             this.joinRoomId = text.trim();
-            this.showSnackbar("Room ID pasted! Please enter the room secret.", "info");
+            this.showSnackbar(
+              "Room ID pasted! Please enter the room secret.",
+              "info"
+            );
           } else {
-            this.showSnackbar("Pasted text doesn't look like room credentials.", "warning");
+            this.showSnackbar(
+              "Pasted text doesn't look like room credentials.",
+              "warning"
+            );
           }
         }
       } catch (err) {
