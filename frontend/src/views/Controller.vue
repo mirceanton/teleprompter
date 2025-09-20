@@ -78,24 +78,28 @@
           <v-divider />
           
           <!-- Room Actions -->
-          <v-card-actions>
             <v-btn
               prepend-icon="mdi-information"
-              variant="text"
+              variant="tonal"
+              color="info"
+              size="large"
+              class="ml-4 mr-4 mt-4 mb-2"
+              width="calc(100% - 32px)"
               @click="showRoomInfoDialog = true"
             >
               Room Info
             </v-btn>
-            <v-spacer />
             <v-btn
               prepend-icon="mdi-logout"
               color="error"
-              variant="text"
+              variant="tonal"
+              size="large"
+              class="ml-4 mr-4 mb-4 mt-2"
+              width="calc(100% - 32px)"
               @click="disconnect"
             >
               Leave Room
             </v-btn>
-          </v-card-actions>
         </v-card>
       </v-menu>
     </v-app-bar>
