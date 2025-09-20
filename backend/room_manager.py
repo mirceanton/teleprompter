@@ -50,11 +50,32 @@ class Room:
     last_activity: str
 
 class RoomManager:
-    """Manages rooms and participants in Redis"""
+    """Manages rooms and participants in Redis with in-memory fallback"""
     
     def __init__(self):
         self.room_prefix = "teleprompter:room:"
         self.participant_prefix = "teleprompter:participant:"
+        # In-memory fallback storage when Redis is not available
+        self._memory_rooms: Dict[str, Room] = {}
+        
+    def _is_redis_available(self) -> bool:
+        """Check if Redis is available"""
+        try:
+            return redis_manager.is_connected
+        except:
+            return False
+    
+    async def _save_room(self, room: Room) -> None:
+        """Save room to storage (Redis or in-memory fallback)"""
+        if self._is_redis_available():
+            room_key = self._get_room_key(room.room_id)
+            await redis_manager.redis_client.set(
+                room_key,
+                json.dumps(asdict(room)),
+                ex=24 * 60 * 60
+            )
+        else:
+            self._memory_rooms[room.room_id] = room
         
     def _get_room_key(self, room_id: str) -> str:
         """Get Redis key for room data"""
@@ -107,13 +128,8 @@ class RoomManager:
                 last_activity=now
             )
             
-            # Store room in Redis
-            room_key = self._get_room_key(room_id)
-            await redis_manager.redis_client.set(
-                room_key, 
-                json.dumps(asdict(room)),
-                ex=24 * 60 * 60  # Expire after 24 hours
-            )
+            # Store room in storage
+            await self._save_room(room)
             
             logger.info(f"Created room {room_id} with name '{room_name}'")
             return room_id, room_secret, room_name
@@ -125,20 +141,24 @@ class RoomManager:
     async def get_room(self, room_id: str) -> Optional[Room]:
         """Get room data"""
         try:
-            room_key = self._get_room_key(room_id)
-            room_data = await redis_manager.redis_client.get(room_key)
-            
-            if not room_data:
-                return None
-            
-            room_dict = json.loads(room_data)
-            # Convert participants dict back to Participant objects
-            participants = {}
-            for pid, pdata in room_dict.get("participants", {}).items():
-                participants[pid] = Participant(**pdata)
-            
-            room_dict["participants"] = participants
-            return Room(**room_dict)
+            if self._is_redis_available():
+                room_key = self._get_room_key(room_id)
+                room_data = await redis_manager.redis_client.get(room_key)
+                
+                if not room_data:
+                    return None
+                
+                room_dict = json.loads(room_data)
+                # Convert participants dict back to Participant objects
+                participants = {}
+                for pid, pdata in room_dict.get("participants", {}).items():
+                    participants[pid] = Participant(**pdata)
+                
+                room_dict["participants"] = participants
+                return Room(**room_dict)
+            else:
+                # Use in-memory storage
+                return self._memory_rooms.get(room_id)
             
         except Exception as e:
             logger.error(f"Error getting room {room_id}: {e}")
@@ -197,13 +217,8 @@ class RoomManager:
             if role == "controller":
                 room.controller_id = participant_id
             
-            # Update room in Redis
-            room_key = self._get_room_key(room_id)
-            await redis_manager.redis_client.set(
-                room_key,
-                json.dumps(asdict(room)),
-                ex=24 * 60 * 60
-            )
+            # Update room in storage
+            await self._save_room(room)
             
             logger.info(f"Added {role} participant {participant_id} to room {room_id}")
             return participant_id
