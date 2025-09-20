@@ -87,7 +87,7 @@ class RoomManager:
     
     def _generate_room_id(self) -> str:
         """Generate a unique room ID"""
-        return f"room{uuid.uuid4().hex[:6]}"
+        return f"room-{uuid.uuid4()}"
     
     def _generate_room_secret(self) -> str:
         """Generate a 64-character room secret"""
@@ -325,6 +325,26 @@ class RoomManager:
             
         except Exception as e:
             logger.error(f"Error checking controller status: {e}")
+            return False
+    
+    async def update_room_name(self, room_id: str, new_name: str) -> bool:
+        """Update room name"""
+        try:
+            room = await self.get_room(room_id)
+            if not room:
+                return False
+            
+            room.room_name = new_name
+            room.last_activity = datetime.now(timezone.utc).isoformat()
+            
+            # Save updated room
+            await self._save_room(room)
+            
+            logger.info(f"Updated room name for {room_id} to '{new_name}'")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating room name: {e}")
             return False
 
 # Global room manager instance

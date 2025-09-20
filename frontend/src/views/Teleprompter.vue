@@ -3,7 +3,7 @@
     <!-- Top Control Bar (hidden in fullscreen mode) -->
     <v-app-bar v-if="!isFullscreen" app color="primary" dark density="compact">
       <v-toolbar-title class="text-subtitle-1">
-        Prompter - {{ roomCredentials?.room_name || channelName }}
+        Prompter - {{ roomCredentials?.room_name || 'Loading...' }}
       </v-toolbar-title>
       <v-spacer />
       
@@ -498,6 +498,14 @@ export default {
             setTimeout(() => {
               this.$router.push("/");
             }, 2000);
+          }
+          break;
+
+        case "room_name_updated":
+          // Update room name when changed by controller
+          if (this.roomCredentials) {
+            this.roomCredentials.room_name = message.room_name;
+            sessionStorage.setItem('room_credentials', JSON.stringify(this.roomCredentials));
           }
           break;
 

@@ -77,6 +77,7 @@ class JoinRoomRequest(BaseModel):
 class JoinRoomResponse(BaseModel):
     success: bool
     participant_id: Optional[str] = None
+    room_name: Optional[str] = None
     message: str
 
 class RoomInfoResponse(BaseModel):
@@ -84,6 +85,11 @@ class RoomInfoResponse(BaseModel):
     room_name: str
     participants: list
     controller_id: Optional[str]
+
+class UpdateRoomNameRequest(BaseModel):
+    room_id: str
+    room_name: str
+    participant_id: str
 
 
 
@@ -211,9 +217,14 @@ async def join_room(request: JoinRoomRequest):
                 message="Failed to join room. Room may be full or role unavailable."
             )
         
+        # Get room info for room name
+        room = await room_manager.get_room(request.room_id)
+        room_name = room.room_name if room else None
+        
         return JoinRoomResponse(
             success=True,
             participant_id=participant_id,
+            room_name=room_name,
             message="Successfully joined room"
         )
         
@@ -250,6 +261,35 @@ async def get_room_info(room_id: str):
     except Exception as e:
         logger.error(f"Error getting room info: {e}")
         raise HTTPException(status_code=500, detail="Failed to get room info")
+
+@app.put("/api/rooms/{room_id}/name")
+async def update_room_name(room_id: str, request: UpdateRoomNameRequest):
+    """Update room name (controller only)"""
+    try:
+        # Verify the participant is the controller of this room
+        if not await room_manager.is_controller(room_id, request.participant_id):
+            raise HTTPException(status_code=403, detail="Only the controller can update room name")
+        
+        # Update room name
+        success = await room_manager.update_room_name(room_id, request.room_name)
+        if not success:
+            raise HTTPException(status_code=404, detail="Room not found")
+        
+        # Broadcast room name update to all participants
+        update_message = {
+            "type": "room_name_updated",
+            "room_id": room_id,
+            "room_name": request.room_name
+        }
+        await manager.broadcast_to_all_instances(update_message, room_id)
+        
+        return {"success": True, "message": "Room name updated successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating room name: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update room name")
 
 @app.delete("/api/rooms/{room_id}/participants/{participant_id}")
 async def kick_participant(room_id: str, participant_id: str, kicker_id: str):

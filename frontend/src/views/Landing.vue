@@ -186,11 +186,34 @@ export default {
         text: "",
         color: "success",
       },
+      
+      // Room name generation
+      adjectives: [
+        "Bright", "Swift", "Calm", "Brave", "Quick", "Gentle", "Sharp", "Bold", 
+        "Clever", "Strong", "Wise", "Kind", "Happy", "Peaceful", "Dynamic", "Elegant",
+        "Graceful", "Lively", "Vibrant", "Steady", "Creative", "Focused", "Reliable"
+      ],
+      animals: [
+        "Wolf", "Eagle", "Lion", "Bear", "Fox", "Hawk", "Tiger", "Dolphin",
+        "Owl", "Falcon", "Panther", "Shark", "Horse", "Dragon", "Phoenix", "Whale",
+        "Rabbit", "Deer", "Elephant", "Giraffe", "Penguin", "Turtle", "Butterfly"
+      ]
     };
   },
 
   methods: {
+    generateRoomName() {
+      const adjective = this.adjectives[Math.floor(Math.random() * this.adjectives.length)];
+      const animal = this.animals[Math.floor(Math.random() * this.animals.length)];
+      return `${adjective} ${animal} Room`;
+    },
+
     async createRoom() {
+      // Generate room name if not provided
+      if (!this.roomName) {
+        this.roomName = this.generateRoomName();
+      }
+      
       this.loading = true;
       try {
         const apiUrl = config.getApiUrl();
@@ -200,7 +223,7 @@ export default {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            room_name: this.roomName || null
+            room_name: this.roomName
           })
         });
 
@@ -214,6 +237,7 @@ export default {
         sessionStorage.setItem('room_credentials', JSON.stringify({
           room_id: roomData.room_id,
           room_secret: roomData.room_secret,
+          room_name: roomData.room_name,
           role: 'controller'
         }));
 
@@ -265,6 +289,7 @@ export default {
         sessionStorage.setItem('room_credentials', JSON.stringify({
           room_id: this.joinRoomId,
           room_secret: this.joinRoomSecret,
+          room_name: joinData.room_name,
           participant_id: joinData.participant_id,
           role: 'teleprompter'
         }));

@@ -2,7 +2,7 @@
   <v-app>
     <v-app-bar app color="primary" dark>
       <v-toolbar-title>
-        Admin - {{ roomCredentials?.room_name || channelName }}
+        Admin - {{ roomCredentials?.room_name || 'Loading...' }}
       </v-toolbar-title>
       <v-spacer />
       
@@ -717,14 +717,18 @@
     <!-- Room Info Dialog -->
     <v-dialog v-model="showRoomInfoDialog" max-width="600">
       <v-card>
-        <v-card-title class="text-h5 pa-4">
+        <v-card-title class="text-h5 pa-6 d-flex align-center">
           <v-icon class="mr-2">mdi-information</v-icon>
           Room Information
+          <v-spacer />
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            @click="showRoomInfoDialog = false"
+          />
         </v-card-title>
         
-        <v-divider />
-        
-        <v-card-text class="pa-4">
+        <v-card-text class="pa-6">
           <!-- Editable Room Name -->
           <v-text-field
             v-model="editableRoomName"
@@ -738,6 +742,8 @@
               <v-icon>mdi-tag</v-icon>
             </template>
           </v-text-field>
+          
+          <v-divider class="mb-4" />
           
           <!-- Room ID (Read-only) -->
           <v-text-field
@@ -789,13 +795,35 @@
             </template>
           </v-text-field>
           
+          <!-- Copy Credentials Button -->
+          <div class="text-center mb-4">
+            <v-btn
+              prepend-icon="mdi-content-copy"
+              variant="outlined"
+              @click="copyCredentials"
+            >
+              Copy All Credentials
+            </v-btn>
+          </div>
+          
+          <v-divider class="mb-4" />
+          
+          <!-- QR Code -->
+          <div class="text-center mb-4">
+            <div v-if="qrCodeDataUrl">
+              <img :src="qrCodeDataUrl" alt="QR Code" style="max-width: 200px; border-radius: 8px;">
+            </div>
+            <div v-else>
+              <v-icon size="64" color="grey">mdi-qrcode</v-icon>
+            </div>
+          </div>
+          
           <!-- Join URL -->
           <v-text-field
             :model-value="joinUrl"
             label="Teleprompter Join URL"
             variant="outlined"
             readonly
-            class="mb-4"
           >
             <template v-slot:prepend-inner>
               <v-icon>mdi-link</v-icon>
@@ -809,40 +837,7 @@
               />
             </template>
           </v-text-field>
-          
-          <!-- QR Code -->
-          <div class="text-center mb-4">
-            <v-card variant="outlined" class="pa-4">
-              <div v-if="qrCodeDataUrl">
-                <img :src="qrCodeDataUrl" alt="QR Code" style="max-width: 200px;">
-              </div>
-              <div v-else>
-                <v-icon size="64" color="grey">mdi-qrcode</v-icon>
-              </div>
-              <p class="text-body-2 mt-2">QR Code for easy joining</p>
-              <p class="text-caption text-grey">
-                Scan with your device to join as teleprompter
-              </p>
-            </v-card>
-          </div>
         </v-card-text>
-        
-        <v-card-actions>
-          <v-btn
-            prepend-icon="mdi-content-copy"
-            variant="outlined"
-            @click="copyCredentials"
-          >
-            Copy All Credentials
-          </v-btn>
-          <v-spacer />
-          <v-btn
-            color="primary"
-            @click="showRoomInfoDialog = false"
-          >
-            Close
-          </v-btn>
-        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -1290,6 +1285,14 @@ Happy teleprompting! 🎬`,
           }
           break;
 
+        case "room_name_updated":
+          // Update room name when changed by controller
+          if (this.roomCredentials) {
+            this.roomCredentials.room_name = message.room_name;
+            sessionStorage.setItem('room_credentials', JSON.stringify(this.roomCredentials));
+          }
+          break;
+
         default:
           console.log("Received message:", message);
       }
@@ -1669,15 +1672,37 @@ Happy teleprompting! 🎬`,
       }
     },
 
-    updateRoomName() {
-      // TODO: Implement room name update API call
+    async updateRoomName() {
       if (this.editableRoomName && this.editableRoomName !== this.roomCredentials?.room_name) {
-        // For now, just update locally
-        if (this.roomCredentials) {
-          this.roomCredentials.room_name = this.editableRoomName;
-          sessionStorage.setItem('room_credentials', JSON.stringify(this.roomCredentials));
+        try {
+          const apiUrl = config.getApiUrl();
+          const response = await fetch(`${apiUrl}/api/rooms/${this.roomCredentials.room_id}/name`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              room_id: this.roomCredentials.room_id,
+              room_name: this.editableRoomName,
+              participant_id: this.participantId
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update room name');
+          }
+
+          // Update local credentials
+          if (this.roomCredentials) {
+            this.roomCredentials.room_name = this.editableRoomName;
+            sessionStorage.setItem('room_credentials', JSON.stringify(this.roomCredentials));
+          }
+
+          this.showSnackbar("Room name updated successfully", "success");
+        } catch (error) {
+          console.error('Error updating room name:', error);
+          this.showSnackbar("Failed to update room name", "error");
         }
-        this.showSnackbar("Room name updated locally", "info");
       }
     },
   },
