@@ -65,6 +65,20 @@
 
               <v-list-item-subtitle>
                 Joined {{ formatTime(participant.joined_at) }}
+                <!-- Display settings for teleprompters -->
+                <span v-if="participant.role === 'teleprompter' && participant.display_settings">
+                  <br>
+                  <v-chip size="x-small" variant="outlined" class="mr-1">
+                    Font: {{ participant.display_settings.fontSize }}x
+                  </v-chip>
+                  <v-chip size="x-small" variant="outlined" class="mr-1">
+                    Width: {{ participant.display_settings.textWidth }}%
+                  </v-chip>
+                  <v-chip v-if="participant.display_settings.horizontalMirror || participant.display_settings.verticalMirror" 
+                         size="x-small" variant="outlined" color="warning">
+                    Mirror
+                  </v-chip>
+                </span>
               </v-list-item-subtitle>
 
               <template v-slot:append v-if="participant.id !== participantId">
@@ -1276,6 +1290,18 @@ Happy teleprompting! 🎬`,
         case "font_size":
           // Update font size when teleprompter changes font size
           this.fontSize = message.value;
+          break;
+
+        case "teleprompter_settings_changed":
+          // Handle individual teleprompter settings changes
+          if (message.participant_id && message.settings) {
+            // Update the participant's settings in our participants list
+            const participant = this.participants.find(p => p.id === message.participant_id);
+            if (participant) {
+              participant.display_settings = message.settings;
+            }
+            this.showSnackbar(`Teleprompter ${message.participant_id.slice(-4)} updated their display settings`, "info");
+          }
           break;
 
         case "ai_scrolling_started":

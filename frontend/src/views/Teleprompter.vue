@@ -371,6 +371,9 @@ export default {
 
         // Send mode information
         this.sendMessage({ type: "mode", mode: "teleprompter" });
+        
+        // Request current display settings
+        this.sendMessage({ type: "request_settings" });
       };
 
       this.ws.onmessage = (event) => {
@@ -431,6 +434,21 @@ export default {
         case "mirror":
           this.horizontalMirror = message.horizontal;
           this.verticalMirror = message.vertical;
+          break;
+
+        case "settings_updated":
+          // Acknowledge that settings were saved
+          this.showSnackbar("Settings saved", "success");
+          break;
+
+        case "current_settings":
+          // Apply settings received from server
+          if (message.settings) {
+            this.fontSize = message.settings.fontSize || 2.5;
+            this.textWidth = message.settings.textWidth || 100;
+            this.horizontalMirror = message.settings.horizontalMirror || false;
+            this.verticalMirror = message.settings.verticalMirror || false;
+          }
           break;
 
         case "go_to_section":
@@ -618,31 +636,34 @@ export default {
     // Font size controls
     changeFontSize(delta) {
       this.fontSize = Math.max(0.5, Math.min(5, this.fontSize + delta));
-      // Sync with controller
-      this.sendMessage({
-        type: "font_size",
-        value: this.fontSize,
-      });
+      // Save individual teleprompter settings
+      this.saveIndividualSettings();
     },
 
     // Width controls
     changeWidth(delta) {
       this.textWidth = Math.max(20, Math.min(100, this.textWidth + delta));
-      // Sync with controller
-      this.sendMessage({
-        type: "width",
-        value: this.textWidth,
-      });
+      // Save individual teleprompter settings
+      this.saveIndividualSettings();
     },
 
     // Mirror controls
     toggleMirrorMode() {
       this.horizontalMirror = !this.horizontalMirror;
-      // Sync with controller
+      // Save individual teleprompter settings
+      this.saveIndividualSettings();
+    },
+
+    // Save individual teleprompter settings
+    saveIndividualSettings() {
       this.sendMessage({
-        type: "mirror",
-        horizontal: this.horizontalMirror,
-        vertical: this.verticalMirror,
+        type: "teleprompter_settings",
+        settings: {
+          fontSize: this.fontSize,
+          textWidth: this.textWidth,
+          horizontalMirror: this.horizontalMirror,
+          verticalMirror: this.verticalMirror
+        }
       });
     },
 

@@ -17,6 +17,20 @@ from redis_manager import redis_manager
 from room_manager import room_manager
 
 
+def serialize_participant(participant) -> dict:
+    """Helper function to serialize participant data consistently"""
+    participant_data = {
+        "id": participant.id,
+        "role": participant.role,
+        "joined_at": participant.joined_at,
+        "last_seen": participant.last_seen
+    }
+    # Include display settings for teleprompters
+    if participant.role == "teleprompter" and participant.display_settings:
+        participant_data["display_settings"] = participant.display_settings
+    return participant_data
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -242,12 +256,7 @@ async def get_room_info(room_id: str):
         
         participants = []
         for participant in room.participants.values():
-            participants.append({
-                "id": participant.id,
-                "role": participant.role,
-                "joined_at": participant.joined_at,
-                "last_seen": participant.last_seen
-            })
+            participants.append(serialize_participant(participant))
         
         return RoomInfoResponse(
             room_id=room.room_id,
@@ -341,15 +350,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, participant_id:
         "channel": channel,
         "room_id": room_id,
         "connection_count": connection_info["connection_count"],
-        "participants": [
-            {
-                "id": p.id,
-                "role": p.role,
-                "joined_at": p.joined_at,
-                "last_seen": p.last_seen
-            }
-            for p in participants
-        ]
+        "participants": [serialize_participant(p) for p in participants]
     }
     await manager.broadcast_to_all_instances(connection_update, channel)
     
@@ -394,15 +395,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, participant_id:
                     "channel": channel,
                     "room_id": room_id,
                     "connection_count": manager.get_channel_info(channel)["connection_count"],
-                    "participants": [
-                        {
-                            "id": p.id,
-                            "role": p.role,
-                            "joined_at": p.joined_at,
-                            "last_seen": p.last_seen
-                        }
-                        for p in participants
-                    ]
+                    "participants": [serialize_participant(p) for p in participants]
                 })
                 await websocket.send_text(connection_update_str)
             elif message_type == 'kick_participant':
@@ -430,6 +423,44 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, participant_id:
             elif message_type == 'ai_scrolling_stop':
                 # Stop AI scrolling session
                 await handle_ai_scrolling_stop(channel, message, websocket)
+            elif message_type == 'teleprompter_settings':
+                # Handle individual teleprompter display settings
+                settings = message.get('settings')
+                if settings:
+                    success = await room_manager.update_participant_display_settings(
+                        room_id, participant_id, settings
+                    )
+                    if success:
+                        # Send acknowledgment back to the teleprompter
+                        ack_message = {
+                            "type": "settings_updated",
+                            "participant_id": participant_id,
+                            "settings": settings
+                        }
+                        await websocket.send_text(json.dumps(ack_message))
+                        
+                        # Notify controller about the settings change
+                        controller_notification = {
+                            "type": "teleprompter_settings_changed",
+                            "participant_id": participant_id,
+                            "settings": settings,
+                            "sender_id": participant_id
+                        }
+                        await manager.broadcast_to_all_instances(controller_notification, channel, exclude=websocket)
+            elif message_type == 'request_settings':
+                # Handle request for current teleprompter settings
+                settings = await room_manager.get_participant_display_settings(room_id, participant_id)
+                settings_response = {
+                    "type": "current_settings",
+                    "participant_id": participant_id,
+                    "settings": settings or {
+                        "fontSize": 2.5,
+                        "textWidth": 100,
+                        "horizontalMirror": False,
+                        "verticalMirror": False
+                    }
+                }
+                await websocket.send_text(json.dumps(settings_response))
             else:
                 # Broadcast to all other clients in the same channel across all instances
                 await manager.broadcast_to_all_instances(message, channel, exclude=websocket)
@@ -451,15 +482,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, participant_id:
                 "channel": channel,
                 "room_id": room_id,
                 "connection_count": connection_info["connection_count"],
-                "participants": [
-                    {
-                        "id": p.id,
-                        "role": p.role,
-                        "joined_at": p.joined_at,
-                        "last_seen": p.last_seen
-                    }
-                    for p in participants
-                ]
+                "participants": [serialize_participant(p) for p in participants]
             }
             await manager.broadcast_to_all_instances(connection_update, channel)
         else:
@@ -489,15 +512,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, participant_id:
                 "channel": channel,
                 "room_id": room_id,
                 "connection_count": connection_info["connection_count"],
-                "participants": [
-                    {
-                        "id": p.id,
-                        "role": p.role,
-                        "joined_at": p.joined_at,
-                        "last_seen": p.last_seen
-                    }
-                    for p in participants
-                ]
+                "participants": [serialize_participant(p) for p in participants]
             }
             await manager.broadcast_to_all_instances(connection_update, channel)
         else:
