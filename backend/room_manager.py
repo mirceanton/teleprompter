@@ -37,6 +37,7 @@ class Participant:
     role: str  # "controller" or "teleprompter"
     joined_at: str
     last_seen: str
+    display_settings: Optional[Dict[str, any]] = None  # For teleprompter display preferences
 
 @dataclass
 class Room:
@@ -202,11 +203,22 @@ class RoomManager:
             participant_id = self._generate_participant_id()
             now = datetime.now(timezone.utc).isoformat()
             
+            # Initialize default display settings for teleprompters
+            display_settings = None
+            if role == "teleprompter":
+                display_settings = {
+                    "fontSize": 2.5,
+                    "textWidth": 100,
+                    "horizontalMirror": False,
+                    "verticalMirror": False
+                }
+            
             participant = Participant(
                 id=participant_id,
                 role=role,
                 joined_at=now,
-                last_seen=now
+                last_seen=now,
+                display_settings=display_settings
             )
             
             # Add participant to room
@@ -326,6 +338,49 @@ class RoomManager:
         except Exception as e:
             logger.error(f"Error checking controller status: {e}")
             return False
+    
+    async def update_participant_display_settings(self, room_id: str, participant_id: str, settings: Dict[str, any]) -> bool:
+        """Update display settings for a teleprompter participant"""
+        try:
+            room = await self.get_room(room_id)
+            if not room or participant_id not in room.participants:
+                return False
+            
+            participant = room.participants[participant_id]
+            if participant.role != "teleprompter":
+                return False  # Only teleprompters have display settings
+            
+            # Update settings
+            if participant.display_settings is None:
+                participant.display_settings = {}
+            participant.display_settings.update(settings)
+            
+            # Update last activity
+            participant.last_seen = datetime.now(timezone.utc).isoformat()
+            room.last_activity = participant.last_seen
+            
+            # Save changes
+            await self._save_room(room)
+            
+            logger.info(f"Updated display settings for participant {participant_id} in room {room_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating display settings for participant {participant_id}: {e}")
+            return False
+    
+    async def get_participant_display_settings(self, room_id: str, participant_id: str) -> Optional[Dict[str, any]]:
+        """Get display settings for a teleprompter participant"""
+        try:
+            participant = await self.get_participant(room_id, participant_id)
+            if not participant or participant.role != "teleprompter":
+                return None
+            
+            return participant.display_settings
+            
+        except Exception as e:
+            logger.error(f"Error getting display settings for participant {participant_id}: {e}")
+            return None
     
     async def update_room_name(self, room_id: str, new_name: str) -> bool:
         """Update room name"""
