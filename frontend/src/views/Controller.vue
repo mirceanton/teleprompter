@@ -112,104 +112,8 @@
     <v-main>
       <v-container fluid>
         <v-row>
-          <!-- Left Side - Navigation Controls -->
-          <v-col cols="12" lg="3">
-            <!-- Navigation Controls -->
-            <v-card elevation="4" class="mb-4">
-              <v-card-title class="text-h6">
-                <v-icon class="mr-2">mdi-navigation-variant</v-icon>
-                Navigation Controls
-              </v-card-title>
-
-              <v-card-text>
-                <v-row>
-                  <!-- Scroll back -->
-                  <v-col cols="6">
-                    <v-btn
-                      color="secondary"
-                      @click="scrollBackLines"
-                      block
-                      size="large"
-                    >
-                      <v-icon>mdi-arrow-up</v-icon>
-                    </v-btn>
-                    <div class="text-center text-caption mt-1">Scroll Back</div>
-                  </v-col>
-                  <!-- Scroll forward -->
-                  <v-col cols="6">
-                    <v-btn
-                      color="secondary"
-                      @click="scrollForwardLines"
-                      block
-                      size="large"
-                    >
-                      <v-icon>mdi-arrow-down</v-icon>
-                    </v-btn>
-                    <div class="text-center text-caption mt-1">
-                      Scroll Forward
-                    </div>
-                  </v-col>
-                </v-row>
-
-                <!-- Lines to scroll control -->
-                <v-text-field
-                  v-model.number="scrollLines"
-                  label="Lines to Scroll"
-                  type="number"
-                  :min="1"
-                  :max="20"
-                  variant="outlined"
-                  class="mt-4"
-                  density="compact"
-                >
-                  <template v-slot:prepend-inner>
-                    <v-btn
-                      icon="mdi-minus"
-                      size="x-small"
-                      variant="text"
-                      @click="scrollLines = Math.max(1, scrollLines - 1)"
-                    />
-                  </template>
-                  <template v-slot:append-inner>
-                    <v-btn
-                      icon="mdi-plus"
-                      size="x-small"
-                      variant="text"
-                      @click="scrollLines = Math.min(20, scrollLines + 1)"
-                    />
-                  </template>
-                </v-text-field>
-
-
-                <v-row>
-                  <!-- Go to beginning -->
-                  <v-col cols="6">
-                    <v-btn
-                      color="primary"
-                      @click="goToBeginning"
-                      block
-                      size="large"
-                    >
-                      <v-icon>mdi-skip-previous</v-icon>
-                    </v-btn>
-                    <div class="text-center text-caption mt-1">Go to Start</div>
-                  </v-col>
-                  <!-- Go to end -->
-                  <v-col cols="6">
-                    <v-btn color="primary" @click="goToEnd" block size="large">
-                      <v-icon>mdi-skip-next</v-icon>
-                    </v-btn>
-                    <div class="text-center text-caption mt-1">Go to End</div>
-                  </v-col>
-                </v-row>
-              </v-card-text>
-            </v-card>
-
-
-          </v-col>
-
           <!-- Script Editor -->
-          <v-col cols="12" lg="6">
+          <v-col cols="12" lg="9">
             <v-card elevation="4">
               <v-card-title class="text-h5">
                 <v-icon class="mr-2">mdi-script-text</v-icon>
@@ -230,31 +134,69 @@
             </v-card>
           </v-col>
 
-          <!-- Controls Panel -->
+          <!-- Unified Controls Panel -->
           <v-col cols="12" lg="3">
-            <!-- Playback Controls -->
+            <!-- Unified Playback & Navigation Controls -->
             <v-card elevation="4" class="mb-4">
               <v-card-title class="text-h6">
                 <v-icon class="mr-2">mdi-play-circle</v-icon>
-                Playback Controls
+                Teleprompter Controls
               </v-card-title>
 
               <v-card-text>
-                <v-row>
-                  <!-- Play/Pause Toggle Button (Full Width) -->
-                  <v-col cols="12">
+                <!-- Main Control Row: Back | Play/Pause | Forward -->
+                <v-row class="mb-4" align="center" justify="center">
+                  <!-- Scroll backward button -->
+                  <v-col cols="3">
+                    <v-btn
+                      color="secondary"
+                      @click="handleBackwardClick"
+                      @dblclick="goToBeginning"
+                      size="large"
+                      icon
+                      class="control-button"
+                    >
+                      <v-icon>mdi-skip-backward</v-icon>
+                      <v-tooltip activator="parent" location="bottom">
+                        <div>Single click: Scroll back 5 lines</div>
+                        <div>Double click: Go to top</div>
+                      </v-tooltip>
+                    </v-btn>
+                  </v-col>
+                  
+                  <!-- Large circular Play/Pause button -->
+                  <v-col cols="6" class="text-center">
                     <v-btn
                       :color="isPlaying ? 'warning' : 'success'"
                       @click="togglePlayback"
-                      block
-                      size="large"
+                      size="x-large"
+                      icon
+                      class="play-pause-button"
                     >
-                      <v-icon>{{
+                      <v-icon size="large">{{
                         isPlaying ? "mdi-pause" : "mdi-play"
                       }}</v-icon>
-                      <span class="ml-2">{{
-                        isPlaying ? "Pause" : "Start"
-                      }}</span>
+                      <v-tooltip activator="parent" location="bottom">
+                        {{ isPlaying ? "Pause" : "Start" }}
+                      </v-tooltip>
+                    </v-btn>
+                  </v-col>
+                  
+                  <!-- Scroll forward button -->
+                  <v-col cols="3">
+                    <v-btn
+                      color="secondary"
+                      @click="handleForwardClick"
+                      @dblclick="goToEnd"
+                      size="large"
+                      icon
+                      class="control-button"
+                    >
+                      <v-icon>mdi-skip-forward</v-icon>
+                      <v-tooltip activator="parent" location="bottom">
+                        <div>Single click: Scroll forward 5 lines</div>
+                        <div>Double click: Go to bottom</div>
+                      </v-tooltip>
                     </v-btn>
                   </v-col>
                 </v-row>
@@ -301,12 +243,6 @@
                     />
                   </template>
                 </v-text-field>
-
-                <!-- Sync Text Button -->
-                <v-btn color="primary" @click="syncText" class="mt-3" block>
-                  <v-icon class="mr-2">mdi-sync</v-icon>
-                  🔄 Sync Text
-                </v-btn>
               </v-card-text>
             </v-card>
 
@@ -644,8 +580,11 @@ Happy teleprompting! 🎬`,
 
       // Navigation settings
       isPlaying: false,
-      scrollLines: 5,
       currentScrollPosition: 0, // Track current scroll position in lines
+
+      // Click tracking for double-tap detection
+      lastClickTime: 0,
+      clickTimeout: null,
 
       // Section navigation
 
@@ -982,18 +921,69 @@ Happy teleprompting! 🎬`,
       this.sendMessage({
         type: "scroll_lines",
         direction: "back",
-        lines: this.scrollLines,
+        lines: 5, // Fixed to 5 lines
+        smooth: true, // Add smooth animation flag
       });
-      this.showSnackbar(`Scrolled back ${this.scrollLines} lines`, "info");
+      this.showSnackbar(`Scrolled back 5 lines`, "info");
     },
 
     scrollForwardLines() {
       this.sendMessage({
         type: "scroll_lines",
         direction: "forward",
-        lines: this.scrollLines,
+        lines: 5, // Fixed to 5 lines
+        smooth: true, // Add smooth animation flag
       });
-      this.showSnackbar(`Scrolled forward ${this.scrollLines} lines`, "info");
+      this.showSnackbar(`Scrolled forward 5 lines`, "info");
+    },
+
+    // New click handlers for single/double tap functionality
+    handleBackwardClick() {
+      const currentTime = Date.now();
+      
+      // Clear any existing timeout
+      if (this.clickTimeout) {
+        clearTimeout(this.clickTimeout);
+        this.clickTimeout = null;
+      }
+      
+      // Check if this is a double click (within 300ms of last click)
+      if (currentTime - this.lastClickTime < 300) {
+        // Double click - go to beginning
+        this.goToBeginning();
+        this.lastClickTime = 0; // Reset to prevent triple clicks
+      } else {
+        // Single click - set timeout to execute if not followed by another click
+        this.lastClickTime = currentTime;
+        this.clickTimeout = setTimeout(() => {
+          this.scrollBackLines();
+          this.clickTimeout = null;
+        }, 300);
+      }
+    },
+
+    handleForwardClick() {
+      const currentTime = Date.now();
+      
+      // Clear any existing timeout
+      if (this.clickTimeout) {
+        clearTimeout(this.clickTimeout);
+        this.clickTimeout = null;
+      }
+      
+      // Check if this is a double click (within 300ms of last click)
+      if (currentTime - this.lastClickTime < 300) {
+        // Double click - go to end
+        this.goToEnd();
+        this.lastClickTime = 0; // Reset to prevent triple clicks
+      } else {
+        // Single click - set timeout to execute if not followed by another click
+        this.lastClickTime = currentTime;
+        this.clickTimeout = setTimeout(() => {
+          this.scrollForwardLines();
+          this.clickTimeout = null;
+        }, 300);
+      }
     },
 
 
@@ -1004,7 +994,6 @@ Happy teleprompting! 🎬`,
         type: "text",
         content: this.scriptText,
       });
-      this.showSnackbar("Text synced to teleprompters", "success");
     },
 
     debouncedSyncText() {
@@ -1202,5 +1191,36 @@ Happy teleprompting! 🎬`,
   font-weight: 500;
   font-size: 0.875rem;
   opacity: 0.87;
+}
+
+/* Unified Controls Styling */
+.play-pause-button {
+  width: 80px !important;
+  height: 80px !important;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.3s ease !important;
+}
+
+.play-pause-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+.control-button {
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  transition: transform 0.2s ease !important;
+}
+
+.control-button:hover {
+  transform: scale(1.1);
+}
+
+/* Ensure title stays inline */
+.v-card-title {
+  flex-wrap: nowrap !important;
+  align-items: center !important;
 }
 </style>
