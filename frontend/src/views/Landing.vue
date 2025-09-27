@@ -27,15 +27,16 @@
                       block
                       color="primary"
                       size="x-large"
-                      class="pa-6"
+                      class="pa-8"
+                      style="min-height: 120px;"
                       @click="startControllerMode"
                       :loading="loading"
                       :disabled="loading"
                     >
                       <div class="text-center">
-                        <v-icon size="48" class="mb-2">mdi-laptop</v-icon>
-                        <div class="text-h6">💻 Controller Mode</div>
-                        <div class="text-body-2 mt-1">
+                        <v-icon size="48" class="mb-3">mdi-laptop</v-icon>
+                        <div class="text-h6 mb-2">💻 Controller Mode</div>
+                        <div class="text-body-2">
                           Control teleprompter playback and edit scripts
                         </div>
                       </div>
@@ -48,15 +49,16 @@
                       block
                       color="success"
                       size="x-large"
-                      class="pa-6"
+                      class="pa-8"
+                      style="min-height: 120px;"
                       @click="startTeleprompterMode"
                       :loading="loading"
                       :disabled="loading"
                     >
                       <div class="text-center">
-                        <v-icon size="48" class="mb-2">mdi-monitor</v-icon>
-                        <div class="text-h6">📱 Teleprompter Mode</div>
-                        <div class="text-body-2 mt-1">
+                        <v-icon size="48" class="mb-3">mdi-monitor</v-icon>
+                        <div class="text-h6 mb-2">📱 Teleprompter Mode</div>
+                        <div class="text-body-2">
                           Display teleprompter text for reading
                         </div>
                       </div>
@@ -101,8 +103,8 @@ export default {
       try {
         const apiUrl = config.getApiUrl();
         
-        // Join the single room as controller
-        const response = await fetch(`${apiUrl}/api/rooms/join`, {
+        // Join as controller (simplified API)
+        const response = await fetch(`${apiUrl}/api/join`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -123,14 +125,10 @@ export default {
           return;
         }
 
-        // Store room credentials in session storage for the controller
+        // Store minimal credentials in session storage
         sessionStorage.setItem(
-          "room_credentials",
+          "teleprompter_credentials",
           JSON.stringify({
-            room_id: joinData.room_id,
-            room_secret: joinData.room_secret,
-            room_name: joinData.room_name,
-            participant_id: joinData.participant_id,
             role: "controller",
           })
         );
@@ -139,7 +137,6 @@ export default {
         this.$router.push({
           path: "/controller",
           query: {
-            room: joinData.room_id,
             role: "controller",
           },
         });
@@ -156,8 +153,8 @@ export default {
       try {
         const apiUrl = config.getApiUrl();
         
-        // Join the single room as teleprompter
-        const response = await fetch(`${apiUrl}/api/rooms/join`, {
+        // Join as teleprompter (simplified API)
+        const response = await fetch(`${apiUrl}/api/join`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -178,14 +175,10 @@ export default {
           return;
         }
 
-        // Store room credentials in session storage for the teleprompter
+        // Store minimal credentials in session storage
         sessionStorage.setItem(
-          "room_credentials",
+          "teleprompter_credentials",
           JSON.stringify({
-            room_id: joinData.room_id,
-            room_secret: joinData.room_secret,
-            room_name: joinData.room_name,
-            participant_id: joinData.participant_id,
             role: "teleprompter",
           })
         );
@@ -194,7 +187,6 @@ export default {
         this.$router.push({
           path: "/teleprompter",
           query: {
-            room: joinData.room_id,
             role: "teleprompter",
           },
         });
