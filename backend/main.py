@@ -12,7 +12,7 @@ import logging
 from typing import Dict, Set, Optional
 from pathlib import Path
 from contextlib import asynccontextmanager
-from ai_scrolling import ai_scrolling_service, AIScrollingConfig
+
 from redis_manager import redis_manager
 from room_manager import room_manager
 
@@ -24,7 +24,6 @@ async def lifespan(app: FastAPI):
     """
     try:
         await redis_manager.connect()
-        await ai_scrolling_service.initialize()
         # Start the Redis message listener in the background
         listener_task = asyncio.create_task(redis_manager.start_message_listener())
 
@@ -33,7 +32,6 @@ async def lifespan(app: FastAPI):
         logger.info("Redis Pub/Sub enabled for horizontal scaling")
     except Exception as e:
         logger.warning(f"Redis not available: {e}. Running without Redis pub/sub.")
-        await ai_scrolling_service.initialize()
     
     yield
     
@@ -418,18 +416,6 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, participant_id:
                             "room_id": room_id
                         }
                         await manager.broadcast_to_all_instances(kick_message, channel)
-            elif message_type == 'ai_scrolling_config':
-                # Handle AI scrolling configuration
-                await handle_ai_scrolling_config(channel, message, websocket)
-            elif message_type == 'audio_chunk':
-                # Handle audio chunk for AI scrolling
-                await handle_audio_chunk(channel, message, websocket)
-            elif message_type == 'ai_scrolling_start':
-                # Start AI scrolling session
-                await handle_ai_scrolling_start(channel, message, websocket)
-            elif message_type == 'ai_scrolling_stop':
-                # Stop AI scrolling session
-                await handle_ai_scrolling_stop(channel, message, websocket)
             else:
                 # Broadcast to all other clients in the same channel across all instances
                 await manager.broadcast_to_all_instances(message, channel, exclude=websocket)
@@ -438,8 +424,6 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, participant_id:
         manager.disconnect(websocket, channel)
         # Remove participant from room
         await room_manager.remove_participant(room_id, participant_id)
-        # Clean up AI scrolling session if needed
-        ai_scrolling_service.remove_session(channel)
         
         # Check if room still exists and broadcast updated connection count
         room = await room_manager.get_room(room_id)
@@ -476,8 +460,6 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, participant_id:
         manager.disconnect(websocket, channel)
         # Remove participant from room
         await room_manager.remove_participant(room_id, participant_id)
-        # Clean up AI scrolling session if needed
-        ai_scrolling_service.remove_session(channel)
         
         # Check if room still exists and broadcast updated connection count
         room = await room_manager.get_room(room_id)
@@ -509,113 +491,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, participant_id:
             }
             await manager.broadcast_to_all_instances(room_deleted_message, channel)
 
-# AI Scrolling message handlers
-async def handle_ai_scrolling_config(channel: str, message: dict, websocket: WebSocket):
-    """Handle AI scrolling configuration updates"""
-    try:
-        config = AIScrollingConfig(
-            enabled=message.get("enabled", False),
-            look_ahead_chars=message.get("look_ahead_chars", 100),
-            look_behind_chars=message.get("look_behind_chars", 50),
-            confidence_threshold=message.get("confidence_threshold", 0.7),
-            pause_threshold_seconds=message.get("pause_threshold_seconds", 3.0),
-            scroll_speed_multiplier=message.get("scroll_speed_multiplier", 1.0),
-            audio_source=message.get("audio_source", "controller")
-        )
-        
-        ai_scrolling_service.update_config(channel, config)
-        
-        # Broadcast configuration update to all clients
-        response = {
-            "type": "ai_scrolling_config_updated",
-            "config": {
-                "enabled": config.enabled,
-                "look_ahead_chars": config.look_ahead_chars,
-                "look_behind_chars": config.look_behind_chars,
-                "confidence_threshold": config.confidence_threshold,
-                "pause_threshold_seconds": config.pause_threshold_seconds,
-                "scroll_speed_multiplier": config.scroll_speed_multiplier,
-                "audio_source": config.audio_source
-            }
-        }
-        await manager.broadcast_to_all_instances(response, channel)
-        
-    except Exception as e:
-        logger.error(f"Error handling AI scrolling config: {e}")
-
-async def handle_ai_scrolling_start(channel: str, message: dict, websocket: WebSocket):
-    """Handle AI scrolling session start"""
-    try:
-        script_content = message.get("script_content", "")
-        config_data = message.get("config", {})
-        
-        config = AIScrollingConfig(
-            enabled=True,
-            look_ahead_chars=config_data.get("look_ahead_chars", 100),
-            look_behind_chars=config_data.get("look_behind_chars", 50),
-            confidence_threshold=config_data.get("confidence_threshold", 0.7),
-            pause_threshold_seconds=config_data.get("pause_threshold_seconds", 3.0),
-            scroll_speed_multiplier=config_data.get("scroll_speed_multiplier", 1.0),
-            audio_source=config_data.get("audio_source", "controller")
-        )
-        
-        ai_scrolling_service.create_session(channel, script_content, config)
-        
-        # Notify all clients that AI scrolling has started
-        response = {
-            "type": "ai_scrolling_started",
-            "channel": channel
-        }
-        await manager.broadcast_to_all_instances(response, channel)
-        
-    except Exception as e:
-        logger.error(f"Error starting AI scrolling: {e}")
-        error_response = {
-            "type": "ai_scrolling_error",
-            "error": str(e)
-        }
-        await websocket.send_text(json.dumps(error_response))
-
-async def handle_ai_scrolling_stop(channel: str, message: dict, websocket: WebSocket):
-    """Handle AI scrolling session stop"""
-    try:
-        ai_scrolling_service.remove_session(channel)
-        
-        # Notify all clients that AI scrolling has stopped
-        response = {
-            "type": "ai_scrolling_stopped",
-            "channel": channel
-        }
-        await manager.broadcast_to_all_instances(response, channel)
-        
-    except Exception as e:
-        logger.error(f"Error stopping AI scrolling: {e}")
-
-async def handle_audio_chunk(channel: str, message: dict, websocket: WebSocket):
-    """Handle audio chunk for speech recognition"""
-    try:
-        # Extract audio data (base64 encoded)
-        audio_data_b64 = message.get("audio_data", "")
-        if not audio_data_b64:
-            return
-        
-        import base64
-        audio_data = base64.b64decode(audio_data_b64)
-        
-        # Process audio chunk
-        scroll_command = await ai_scrolling_service.process_audio_chunk(channel, audio_data)
-        
-        if scroll_command:
-            # Send scroll command to all clients
-            await manager.broadcast_to_all_instances(scroll_command, channel)
-        
-        # Check for pause detection
-        pause_command = await ai_scrolling_service.check_pause_detection(channel)
-        if pause_command:
-            await manager.broadcast_to_all_instances(pause_command, channel)
-            
-    except Exception as e:
-        logger.error(f"Error processing audio chunk: {e}")
+# Health and information endpoints
 
 @app.get("/api/channel/{channel}/info")
 async def get_channel_info(channel: str):
@@ -635,35 +511,6 @@ async def health_check():
     health_status.update(redis_health)
     
     return health_status
-
-@app.get("/api/channel/{channel}/ai-scrolling")
-async def get_ai_scrolling_info(channel: str):
-    """Get AI scrolling information for a channel"""
-    session_info = ai_scrolling_service.get_session_info(channel)
-    if session_info:
-        return session_info
-    else:
-        return {"enabled": False, "available": ai_scrolling_service.is_available()}
-
-@app.post("/api/channel/{channel}/ai-scrolling/config")
-async def update_ai_scrolling_config(channel: str, config: dict):
-    """Update AI scrolling configuration for a channel"""
-    try:
-        ai_config = AIScrollingConfig(
-            enabled=config.get("enabled", False),
-            look_ahead_chars=config.get("look_ahead_chars", 100),
-            look_behind_chars=config.get("look_behind_chars", 50),
-            confidence_threshold=config.get("confidence_threshold", 0.7),
-            pause_threshold_seconds=config.get("pause_threshold_seconds", 3.0),
-            scroll_speed_multiplier=config.get("scroll_speed_multiplier", 1.0),
-            audio_source=config.get("audio_source", "controller")
-        )
-        
-        ai_scrolling_service.update_config(channel, ai_config)
-        return {"success": True, "message": "AI scrolling configuration updated"}
-        
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

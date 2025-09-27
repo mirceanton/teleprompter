@@ -449,14 +449,6 @@ export default {
           this.scrollByLines(message.direction, message.lines);
           break;
 
-        case "ai_scroll_to_position":
-          this.scrollToCharacterPosition(message.position);
-          break;
-
-        case "ai_pause_scrolling":
-          this.pauseScrolling();
-          break;
-
         case "participant_kicked":
           // Handle being kicked from the room
           if (message.participant_id === this.participantId) {
