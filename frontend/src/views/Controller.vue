@@ -118,20 +118,6 @@
               <v-card-title class="text-h5">
                 <v-icon class="mr-2">mdi-script-text</v-icon>
                 Script Editor
-                <v-spacer />
-                <v-btn 
-                  color="primary" 
-                  @click="syncText" 
-                  icon
-                  variant="text"
-                  size="small"
-                  class="sync-button"
-                >
-                  <v-icon>mdi-sync</v-icon>
-                  <v-tooltip activator="parent" location="bottom">
-                    Sync Text
-                  </v-tooltip>
-                </v-btn>
               </v-card-title>
 
               <v-card-text>
@@ -1008,7 +994,6 @@ Happy teleprompting! 🎬`,
         type: "text",
         content: this.scriptText,
       });
-      this.showSnackbar("Text synced to teleprompters", "success");
     },
 
     debouncedSyncText() {
@@ -1233,15 +1218,9 @@ Happy teleprompting! 🎬`,
   transform: scale(1.1);
 }
 
-/* Ensure sync button stays inline with title */
+/* Ensure title stays inline */
 .v-card-title {
   flex-wrap: nowrap !important;
   align-items: center !important;
-}
-
-/* Perfect alignment for sync button with title text */
-.sync-button {
-  margin-top: -2px !important; /* Fine-tune vertical alignment */
-  margin-left: 8px !important; /* Add some space from spacer */
 }
 </style>
