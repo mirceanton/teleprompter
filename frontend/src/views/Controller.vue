@@ -1231,4 +1231,10 @@ Happy teleprompting! 🎬`,
 .control-button:hover {
   transform: scale(1.1);
 }
+
+/* Ensure sync button stays inline with title */
+.v-card-title {
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+}
 </style>
