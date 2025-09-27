@@ -124,7 +124,8 @@
                   @click="syncText" 
                   icon
                   variant="text"
-                  size="large"
+                  size="small"
+                  class="sync-button"
                 >
                   <v-icon>mdi-sync</v-icon>
                   <v-tooltip activator="parent" location="bottom">
@@ -1236,5 +1237,11 @@ Happy teleprompting! 🎬`,
 .v-card-title {
   flex-wrap: nowrap !important;
   align-items: center !important;
+}
+
+/* Perfect alignment for sync button with title text */
+.sync-button {
+  margin-top: -2px !important; /* Fine-tune vertical alignment */
+  margin-left: 8px !important; /* Add some space from spacer */
 }
 </style>
