@@ -39,23 +39,6 @@
                         Command Center
                       </div>
                     </div>
-                    
-                    <v-divider class="my-4"></v-divider>
-                    
-                    <div class="mode-features">
-                      <div class="feature-item mb-2">
-                        <v-icon size="16" class="mr-2">mdi-play-circle</v-icon>
-                        <span>Control playback</span>
-                      </div>
-                      <div class="feature-item mb-2">
-                        <v-icon size="16" class="mr-2">mdi-script-text</v-icon>
-                        <span>Edit scripts</span>
-                      </div>
-                      <div class="feature-item">
-                        <v-icon size="16" class="mr-2">mdi-tune</v-icon>
-                        <span>Adjust settings</span>
-                      </div>
-                    </div>
                   </v-card-text>
                   
                   <v-overlay v-if="loading" contained class="loading-overlay">
@@ -82,23 +65,6 @@
                       <h2 class="text-h4 font-weight-bold">Teleprompter</h2>
                       <div class="mode-subtitle text-h6 text-medium-emphasis mt-1">
                         Display Screen
-                      </div>
-                    </div>
-                    
-                    <v-divider class="my-4"></v-divider>
-                    
-                    <div class="mode-features">
-                      <div class="feature-item mb-2">
-                        <v-icon size="16" class="mr-2">mdi-fullscreen</v-icon>
-                        <span>Fullscreen mode</span>
-                      </div>
-                      <div class="feature-item mb-2">
-                        <v-icon size="16" class="mr-2">mdi-mirror</v-icon>
-                        <span>Mirror options</span>
-                      </div>
-                      <div class="feature-item">
-                        <v-icon size="16" class="mr-2">mdi-format-size</v-icon>
-                        <span>Text scaling</span>
                       </div>
                     </div>
                   </v-card-text>
@@ -314,19 +280,6 @@ export default {
 .mode-subtitle {
   opacity: 0.9;
   font-weight: 500;
-}
-
-.mode-features {
-  text-align: left;
-  max-width: 200px;
-  margin: 0 auto;
-}
-
-.feature-item {
-  display: flex;
-  align-items: center;
-  opacity: 0.9;
-  font-size: 0.9rem;
 }
 
 .card-loading {
