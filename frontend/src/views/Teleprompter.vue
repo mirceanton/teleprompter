@@ -444,7 +444,7 @@ export default {
           break;
 
         case "scroll_lines":
-          this.scrollByLines(message.direction, message.lines);
+          this.scrollByLines(message.direction, message.lines, message.smooth);
           break;
 
         case "participant_kicked":
@@ -546,15 +546,45 @@ export default {
       }
     },
 
-    scrollByLines(direction, lines) {
+    scrollByLines(direction, lines, smooth = false) {
       const lineHeight = this.calculateLineHeight();
       const scrollAmount = lines * lineHeight;
+      const targetPosition = direction === "back" 
+        ? this.scrollPosition + scrollAmount
+        : this.scrollPosition - scrollAmount;
 
-      if (direction === "back") {
-        this.scrollPosition += scrollAmount;
+      if (smooth) {
+        // Animate to the target position
+        this.animateToPosition(targetPosition);
       } else {
-        this.scrollPosition -= scrollAmount;
+        // Instant jump to position
+        this.scrollPosition = targetPosition;
       }
+    },
+
+    animateToPosition(targetPosition) {
+      const startPosition = this.scrollPosition;
+      const distance = targetPosition - startPosition;
+      const duration = 500; // 500ms animation
+      const startTime = performance.now();
+
+      const animate = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Use easeInOutCubic for smooth animation
+        const easeProgress = progress < 0.5 
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        
+        this.scrollPosition = startPosition + (distance * easeProgress);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+
+      requestAnimationFrame(animate);
     },
 
     calculateLineHeight() {
