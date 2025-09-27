@@ -68,14 +68,14 @@ class CreateRoomResponse(BaseModel):
     room_name: str
 
 class JoinRoomRequest(BaseModel):
-    room_id: str
-    room_secret: str
-    role: str  # "controller" or "teleprompter"
+    role: str  # "controller" or "teleprompter" - no room_id/secret needed
 
 class JoinRoomResponse(BaseModel):
     success: bool
     participant_id: Optional[str] = None
     room_name: Optional[str] = None
+    room_id: Optional[str] = None
+    room_secret: Optional[str] = None
     message: str
 
 class RoomInfoResponse(BaseModel):
@@ -85,7 +85,6 @@ class RoomInfoResponse(BaseModel):
     controller_id: Optional[str]
 
 class UpdateRoomNameRequest(BaseModel):
-    room_id: str
     room_name: str
     participant_id: str
 
@@ -184,7 +183,7 @@ manager = ConnectionManager()
 # Room Management Endpoints
 @app.post("/api/rooms", response_model=CreateRoomResponse)
 async def create_room(request: CreateRoomRequest):
-    """Create a new room (controller only)"""
+    """Get/create the single room (always returns the same room)"""
     try:
         room_id, room_secret, room_name = await room_manager.create_room(request.room_name)
         return CreateRoomResponse(
@@ -198,31 +197,25 @@ async def create_room(request: CreateRoomRequest):
 
 @app.post("/api/rooms/join", response_model=JoinRoomResponse)
 async def join_room(request: JoinRoomRequest):
-    """Join an existing room with authentication"""
+    """Join the single room (no authentication needed)"""
     try:
-        # Verify room exists and secret is correct
-        if not await room_manager.verify_room_access(request.room_id, request.room_secret):
-            return JoinRoomResponse(
-                success=False,
-                message="Invalid room ID or secret"
-            )
+        # Get the single room
+        room = await room_manager.get_single_room()
         
-        # Add participant to room
-        participant_id = await room_manager.add_participant(request.room_id, request.role)
+        # Add participant to the single room
+        participant_id = await room_manager.add_participant(room.room_id, request.role)
         if not participant_id:
             return JoinRoomResponse(
                 success=False,
-                message="Failed to join room. Room may be full or role unavailable."
+                message="Failed to join room."
             )
-        
-        # Get room info for room name
-        room = await room_manager.get_room(request.room_id)
-        room_name = room.room_name if room else None
         
         return JoinRoomResponse(
             success=True,
             participant_id=participant_id,
-            room_name=room_name,
+            room_name=room.room_name,
+            room_id=room.room_id,
+            room_secret=room.room_secret,
             message="Successfully joined room"
         )
         
@@ -232,11 +225,9 @@ async def join_room(request: JoinRoomRequest):
 
 @app.get("/api/rooms/{room_id}", response_model=RoomInfoResponse)
 async def get_room_info(room_id: str):
-    """Get room information"""
+    """Get room information (always returns the single room)"""
     try:
-        room = await room_manager.get_room(room_id)
-        if not room:
-            raise HTTPException(status_code=404, detail="Room not found")
+        room = await room_manager.get_single_room()
         
         participants = []
         for participant in room.participants.values():
@@ -254,32 +245,29 @@ async def get_room_info(room_id: str):
             controller_id=room.controller_id
         )
         
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error getting room info: {e}")
         raise HTTPException(status_code=500, detail="Failed to get room info")
 
 @app.put("/api/rooms/{room_id}/name")
 async def update_room_name(room_id: str, request: UpdateRoomNameRequest):
-    """Update room name (controller only)"""
+    """Update room name (simplified for single room)"""
     try:
-        # Verify the participant is the controller of this room
-        if not await room_manager.is_controller(room_id, request.participant_id):
-            raise HTTPException(status_code=403, detail="Only the controller can update room name")
+        # Get the single room
+        room = await room_manager.get_single_room()
         
         # Update room name
-        success = await room_manager.update_room_name(room_id, request.room_name)
+        success = await room_manager.update_room_name(room.room_id, request.room_name)
         if not success:
-            raise HTTPException(status_code=404, detail="Room not found")
+            raise HTTPException(status_code=500, detail="Failed to update room name")
         
         # Broadcast room name update to all participants
         update_message = {
             "type": "room_name_updated",
-            "room_id": room_id,
+            "room_id": room.room_id,
             "room_name": request.room_name
         }
-        await manager.broadcast_to_all_instances(update_message, room_id)
+        await manager.broadcast_to_all_instances(update_message, room.room_id)
         
         return {"success": True, "message": "Room name updated successfully"}
         
