@@ -118,6 +118,19 @@
               <v-card-title class="text-h5">
                 <v-icon class="mr-2">mdi-script-text</v-icon>
                 Script Editor
+                <v-spacer />
+                <v-btn 
+                  color="primary" 
+                  @click="syncText" 
+                  icon
+                  variant="text"
+                  size="large"
+                >
+                  <v-icon>mdi-sync</v-icon>
+                  <v-tooltip activator="parent" location="bottom">
+                    Sync Text
+                  </v-tooltip>
+                </v-btn>
               </v-card-title>
 
               <v-card-text>
@@ -157,6 +170,10 @@
                       class="control-button"
                     >
                       <v-icon>mdi-skip-backward</v-icon>
+                      <v-tooltip activator="parent" location="bottom">
+                        <div>Single click: Scroll back 5 lines</div>
+                        <div>Double click: Go to top</div>
+                      </v-tooltip>
                     </v-btn>
                   </v-col>
                   
@@ -172,6 +189,9 @@
                       <v-icon size="large">{{
                         isPlaying ? "mdi-pause" : "mdi-play"
                       }}</v-icon>
+                      <v-tooltip activator="parent" location="bottom">
+                        {{ isPlaying ? "Pause" : "Start" }}
+                      </v-tooltip>
                     </v-btn>
                   </v-col>
                   
@@ -186,26 +206,11 @@
                       class="control-button"
                     >
                       <v-icon>mdi-skip-forward</v-icon>
+                      <v-tooltip activator="parent" location="bottom">
+                        <div>Single click: Scroll forward 5 lines</div>
+                        <div>Double click: Go to bottom</div>
+                      </v-tooltip>
                     </v-btn>
-                  </v-col>
-                </v-row>
-
-                <!-- Control Labels -->
-                <v-row class="control-labels">
-                  <v-col cols="3" class="text-center">
-                    <div class="text-caption">
-                      <div>Single: 5 lines</div>
-                      <div>Double: Top</div>
-                    </div>
-                  </v-col>
-                  <v-col cols="6" class="text-center">
-                    <div class="text-caption">{{ isPlaying ? "Pause" : "Start" }}</div>
-                  </v-col>
-                  <v-col cols="3" class="text-center">
-                    <div class="text-caption">
-                      <div>Single: 5 lines</div>
-                      <div>Double: Bottom</div>
-                    </div>
                   </v-col>
                 </v-row>
 
@@ -251,12 +256,6 @@
                     />
                   </template>
                 </v-text-field>
-
-                <!-- Sync Text Button -->
-                <v-btn color="primary" @click="syncText" class="mt-3" block>
-                  <v-icon class="mr-2">mdi-sync</v-icon>
-                  🔄 Sync Text
-                </v-btn>
               </v-card-text>
             </v-card>
 
@@ -1231,15 +1230,5 @@ Happy teleprompting! 🎬`,
 
 .control-button:hover {
   transform: scale(1.1);
-}
-
-.control-labels {
-  margin-top: -8px;
-}
-
-.control-labels .text-caption {
-  font-size: 0.7rem !important;
-  line-height: 1.2 !important;
-  opacity: 0.7;
 }
 </style>
