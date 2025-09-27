@@ -433,9 +433,7 @@ export default {
           this.verticalMirror = message.vertical;
           break;
 
-        case "go_to_section":
-          this.goToSection(message.sectionLine);
-          break;
+
 
         case "go_to_beginning":
           this.resetScrolling();
@@ -538,21 +536,7 @@ export default {
       this.animationId = requestAnimationFrame(this.scroll);
     },
 
-    // Section navigation methods
-    goToSection(sectionLine) {
-      // Calculate the scroll position based on the section line
-      const lines = this.teleprompterContent.split("\n");
-      const lineHeight = this.calculateLineHeight();
 
-      // Position to show the section heading near the center
-      const containerHeight = this.$refs.teleprompterContainer
-        ? this.$refs.teleprompterContainer.clientHeight
-        : 400;
-      const targetLinePosition = sectionLine * lineHeight;
-      const centerOffset = containerHeight * 0.3; // Show section heading in upper third
-
-      this.scrollPosition = -(targetLinePosition - centerOffset);
-    },
 
     goToEnd() {
       if (this.$refs.teleprompterText) {

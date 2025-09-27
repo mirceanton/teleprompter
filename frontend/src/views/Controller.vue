@@ -112,7 +112,7 @@
     <v-main>
       <v-container fluid>
         <v-row>
-          <!-- Left Side - Navigation Controls and Table of Contents -->
+          <!-- Left Side - Navigation Controls -->
           <v-col cols="12" lg="3">
             <!-- Navigation Controls -->
             <v-card elevation="4" class="mb-4">
@@ -180,40 +180,6 @@
                   </template>
                 </v-text-field>
 
-                <!-- Section Navigation -->
-                <div class="mb-3 mt-4" v-if="sections.length > 0">
-                  <v-label class="mb-2">Section Navigation</v-label>
-                  <v-row>
-                    <v-col cols="6">
-                      <v-btn
-                        color="accent"
-                        @click="goToPreviousSection"
-                        :disabled="!canGoToPreviousSection"
-                        block
-                        size="large"
-                      >
-                        <v-icon>mdi-page-previous</v-icon>
-                      </v-btn>
-                      <div class="text-center text-caption mt-1">
-                        Previous Section
-                      </div>
-                    </v-col>
-                    <v-col cols="6">
-                      <v-btn
-                        color="accent"
-                        @click="goToNextSection"
-                        :disabled="!canGoToNextSection"
-                        block
-                        size="large"
-                      >
-                        <v-icon>mdi-page-next</v-icon>
-                      </v-btn>
-                      <div class="text-center text-caption mt-1">
-                        Next Section
-                      </div>
-                    </v-col>
-                  </v-row>
-                </div>
 
                 <v-row>
                   <!-- Go to beginning -->
@@ -239,41 +205,7 @@
               </v-card-text>
             </v-card>
 
-            <!-- Table of Contents -->
-            <v-card elevation="4">
-              <v-card-title class="text-h6">
-                <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
-                Table of Contents
-              </v-card-title>
 
-              <v-card-text>
-                <div v-if="sections.length > 0" class="toc-list">
-                  <div
-                    v-for="(section, index) in sections"
-                    :key="index"
-                    class="toc-item"
-                    :class="`toc-level-${section.level}`"
-                    @click="goToSection(section)"
-                  >
-                    <v-btn
-                      variant="text"
-                      size="small"
-                      class="justify-start text-left"
-                      block
-                    >
-                      <span class="text-truncate">{{ section.title }}</span>
-                    </v-btn>
-                  </div>
-                </div>
-                <div v-else class="text-center text-disabled">
-                  <v-icon class="mb-2">mdi-format-list-bulleted-square</v-icon>
-                  <div class="text-caption">
-                    No sections could be parsed from the script.<br />
-                    Expected markdown headings (# ## ###).
-                  </div>
-                </div>
-              </v-card-text>
-            </v-card>
           </v-col>
 
           <!-- Script Editor -->
@@ -655,13 +587,6 @@
 <script>
 import { config } from "@/utils/config.js";
 import QRCode from "qrcode";
-import {
-  parseMarkdownSections,
-  getCurrentSection,
-  getNextSection,
-  getPreviousSection,
-  generateTableOfContents,
-} from "@/utils/markdown.js";
 
 export default {
   name: "Controller",
@@ -690,26 +615,23 @@ export default {
 
 This is your teleprompter script. Edit this text on your computer, and it will appear on your phone's screen.
 
-## Instructions
+Use the controls to start, pause, and navigate through your script with smooth scrolling.
 
+Instructions:
 1. Use the same channel name on all devices
 2. Select "Controller Mode" on your computer
 3. Select "Teleprompter Mode" on your phones/tablets
 4. Click "Start" to begin scrolling
 
-## Features
+Features:
+- Play/Pause controls for smooth teleprompter operation
+- Scroll forward/backward by customizable number of lines
+- Jump to beginning or end of script instantly
+- Adjustable text size, width, and scrolling speed
+- Mirror settings for camera setups
 
-The text will scroll smoothly on the teleprompter devices. You can pause, reset, or adjust the speed as needed.
-
-### Section Navigation
-
-You can now navigate between sections using markdown headings! Use the Previous/Next Section buttons or click on items in the Table of Contents.
-
-### Multi-Camera Support
-
+Multi-Camera Support:
 This application supports multiple teleprompter devices connected to the same channel, perfect for multi-camera setups.
-
-## Conclusion
 
 Happy teleprompting! 🎬`,
 
@@ -766,28 +688,6 @@ Happy teleprompting! 🎬`,
         icon: "mdi-wifi-off",
         text: "Disconnected",
       };
-    },
-
-    // Parse markdown sections from script text
-    sections() {
-      return parseMarkdownSections(this.scriptText);
-    },
-
-    // Current section based on scroll position
-    currentSection() {
-      return getCurrentSection(this.sections, this.currentScrollPosition);
-    },
-
-    // Check if can navigate to previous section
-    canGoToPreviousSection() {
-      return (
-        getPreviousSection(this.sections, this.currentScrollPosition) !== null
-      );
-    },
-
-    // Check if can navigate to next section
-    canGoToNextSection() {
-      return getNextSection(this.sections, this.currentScrollPosition) !== null;
     },
   },
 
@@ -1096,37 +996,7 @@ Happy teleprompting! 🎬`,
       this.showSnackbar(`Scrolled forward ${this.scrollLines} lines`, "info");
     },
 
-    // Section navigation controls
-    goToPreviousSection() {
-      const prevSection = getPreviousSection(
-        this.sections,
-        this.currentScrollPosition
-      );
-      if (prevSection) {
-        this.goToSection(prevSection);
-        this.showSnackbar(`Moved to: ${prevSection.title}`, "info");
-      }
-    },
 
-    goToNextSection() {
-      const nextSection = getNextSection(
-        this.sections,
-        this.currentScrollPosition
-      );
-      if (nextSection) {
-        this.goToSection(nextSection);
-        this.showSnackbar(`Moved to: ${nextSection.title}`, "info");
-      }
-    },
-
-    goToSection(section) {
-      this.currentScrollPosition = section.start;
-      this.sendMessage({
-        type: "go_to_section",
-        sectionLine: section.start,
-        sectionTitle: section.title,
-      });
-    },
 
     // Text sync
     syncText() {
@@ -1332,44 +1202,5 @@ Happy teleprompting! 🎬`,
   font-weight: 500;
   font-size: 0.875rem;
   opacity: 0.87;
-}
-
-.toc-list {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.toc-item {
-  margin-bottom: 2px;
-  cursor: pointer;
-}
-
-.toc-level-1 {
-  margin-left: 0;
-}
-
-.toc-level-2 {
-  margin-left: 16px;
-}
-
-.toc-level-3 {
-  margin-left: 32px;
-}
-
-.toc-level-4 {
-  margin-left: 48px;
-}
-
-.toc-level-5 {
-  margin-left: 64px;
-}
-
-.toc-level-6 {
-  margin-left: 80px;
-}
-
-.toc-item:hover {
-  background-color: rgba(var(--v-theme-primary), 0.1);
-  border-radius: 4px;
 }
 </style>
