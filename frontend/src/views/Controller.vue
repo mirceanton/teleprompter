@@ -169,11 +169,11 @@
 
           <!-- Settings Menu -->
           <v-btn
-            icon="mdi-cog"
+            icon="mdi-menu"
             variant="text"
-            @click="showSettingsPanel = !showSettingsPanel"
+            @click="showDrawer = !showDrawer"
           >
-            <v-icon>mdi-cog</v-icon>
+            <v-icon>mdi-menu</v-icon>
             <v-tooltip activator="parent" location="bottom">Settings</v-tooltip>
           </v-btn>
         </div>
@@ -184,30 +184,62 @@
       <v-container fluid class="pa-4">
         <!-- Modern Dashboard Layout -->
         <v-row no-gutters class="fill-height">
-          <!-- Left Panel: Script Management -->
-          <v-col 
-            :cols="showSettingsPanel ? '12' : '12'" 
-            :xl="showSettingsPanel ? '8' : '10'"
-            :lg="showSettingsPanel ? '7' : '9'"
-            :md="showSettingsPanel ? '6' : '8'"
-            class="pr-2"
-          >
+          <!-- Full Width Script Editor -->
+          <v-col cols="12" class="pr-2">
             <!-- Script Editor with Enhanced Features -->
             <v-card elevation="2" class="fill-height script-editor-card">
-              <!-- Enhanced Header with Script Actions -->
+              <!-- Enhanced Header with Playback Controls -->
               <v-card-title class="script-header px-6 py-4">
                 <div class="d-flex align-center justify-space-between w-100">
                   <div class="d-flex align-center">
-                    <v-icon class="mr-3" color="primary" size="24">mdi-script-text-outline</v-icon>
-                    <div>
-                      <div class="text-h6 font-weight-bold">Script Editor</div>
-                      <div class="text-caption text-medium-emphasis">
-                        {{ scriptText.split('\n').length }} lines • {{ scriptText.length }} characters
-                      </div>
+                    <!-- Character/Line count only -->
+                    <div class="text-caption text-medium-emphasis">
+                      {{ scriptText.split('\n').length }} lines • {{ scriptText.length }} characters
                     </div>
                   </div>
                   
+                  <!-- Playback Controls in Header -->
                   <div class="d-flex align-center">
+                    <!-- Playback Control Buttons -->
+                    <v-btn-group variant="outlined" class="mr-3">
+                      <v-btn
+                        color="grey-darken-1"
+                        size="small"
+                        @click="handleBackwardClick"
+                        @dblclick="goToBeginning"
+                      >
+                        <v-icon>mdi-skip-previous</v-icon>
+                        <v-tooltip activator="parent" location="bottom">
+                          <div>Click: Back 5 lines</div>
+                          <div>Double-click: Go to start</div>
+                        </v-tooltip>
+                      </v-btn>
+                      
+                      <v-btn
+                        :color="isPlaying ? 'error' : 'success'"
+                        size="small"
+                        @click="togglePlayback"
+                      >
+                        <v-icon>{{ isPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
+                        <v-tooltip activator="parent" location="bottom">
+                          {{ isPlaying ? 'Pause (Space)' : 'Play (Space)' }}
+                        </v-tooltip>
+                      </v-btn>
+                      
+                      <v-btn
+                        color="grey-darken-1"
+                        size="small"
+                        @click="handleForwardClick"
+                        @dblclick="goToEnd"
+                      >
+                        <v-icon>mdi-skip-next</v-icon>
+                        <v-tooltip activator="parent" location="bottom">
+                          <div>Click: Forward 5 lines</div>
+                          <div>Double-click: Go to end</div>
+                        </v-tooltip>
+                      </v-btn>
+                    </v-btn-group>
+
                     <!-- Script Actions -->
                     <v-btn-group variant="outlined" class="mr-3">
                       <v-btn size="small" @click="undoScript">
@@ -281,315 +313,247 @@
               </v-card-text>
             </v-card>
           </v-col>
-
-          <!-- Right Panel: Control Center -->
-          <v-col 
-            :cols="showSettingsPanel ? '12' : '12'" 
-            :xl="showSettingsPanel ? '4' : '2'"
-            :lg="showSettingsPanel ? '5' : '3'"
-            :md="showSettingsPanel ? '6' : '4'"
-            class="pl-2"
-          >
-            <div class="d-flex flex-column fill-height">
-              <!-- Playback Controls Card -->
-              <v-card elevation="2" class="mb-4 control-panel-card">
-                <v-card-title class="control-header px-4 py-3">
-                  <div class="d-flex align-center">
-                    <v-icon class="mr-2" color="primary">mdi-play-circle-outline</v-icon>
-                    <span class="font-weight-bold">Playback Control</span>
-                  </div>
-                </v-card-title>
-
-                <v-divider />
-
-                <v-card-text class="px-4 py-6">
-                  <!-- Main Control Buttons -->
-                  <div class="d-flex justify-center align-center mb-6">
-                    <!-- Previous/Reset Button -->
-                    <v-btn
-                      color="grey-darken-1"
-                      variant="outlined"
-                      size="large"
-                      icon
-                      class="control-btn mr-4"
-                      @click="handleBackwardClick"
-                      @dblclick="goToBeginning"
-                    >
-                      <v-icon>mdi-skip-previous</v-icon>
-                      <v-tooltip activator="parent" location="bottom">
-                        <div>Click: Back 5 lines</div>
-                        <div>Double-click: Go to start</div>
-                      </v-tooltip>
-                    </v-btn>
-
-                    <!-- Main Play/Pause Button -->
-                    <v-btn
-                      :color="isPlaying ? 'error' : 'success'"
-                      :variant="isPlaying ? 'flat' : 'flat'"
-                      size="x-large"
-                      icon
-                      class="play-pause-btn mx-4"
-                      @click="togglePlayback"
-                    >
-                      <v-icon size="32">{{ isPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
-                      <v-tooltip activator="parent" location="bottom">
-                        {{ isPlaying ? 'Pause (Space)' : 'Play (Space)' }}
-                      </v-tooltip>
-                    </v-btn>
-
-                    <!-- Next/End Button -->
-                    <v-btn
-                      color="grey-darken-1"
-                      variant="outlined"
-                      size="large"
-                      icon
-                      class="control-btn ml-4"
-                      @click="handleForwardClick"
-                      @dblclick="goToEnd"
-                    >
-                      <v-icon>mdi-skip-next</v-icon>
-                      <v-tooltip activator="parent" location="bottom">
-                        <div>Click: Forward 5 lines</div>
-                        <div>Double-click: Go to end</div>
-                      </v-tooltip>
-                    </v-btn>
-                  </div>
-
-                  <!-- Speed Control with Visual Indicator -->
-                  <div class="mb-4">
-                    <div class="d-flex align-center justify-space-between mb-2">
-                      <span class="text-subtitle-2 font-weight-medium">Speed Control</span>
-                      <v-chip size="small" color="primary" variant="outlined">
-                        {{ scrollSpeed.toFixed(1) }}x
-                      </v-chip>
-                    </div>
-                    <v-slider
-                      v-model="scrollSpeed"
-                      :min="0.1"
-                      :max="5.0"
-                      :step="0.1"
-                      track-color="grey-lighten-2"
-                      color="primary"
-                      thumb-label="always"
-                      class="speed-slider"
-                      @input="updateSpeed"
-                    >
-                      <template v-slot:prepend>
-                        <v-btn
-                          icon="mdi-minus"
-                          size="small"
-                          variant="text"
-                          @click="adjustSpeed(-0.1)"
-                        />
-                      </template>
-                      <template v-slot:append>
-                        <v-btn
-                          icon="mdi-plus"
-                          size="small"
-                          variant="text"
-                          @click="adjustSpeed(0.1)"
-                        />
-                      </template>
-                    </v-slider>
-                  </div>
-
-                  <!-- Quick Actions -->
-                  <div class="d-flex justify-space-around">
-                    <v-btn
-                      size="small"
-                      variant="outlined"
-                      color="info"
-                      @click="goToBeginning"
-                    >
-                      <v-icon start>mdi-page-first</v-icon>
-                      Start
-                    </v-btn>
-                    <v-btn
-                      size="small"
-                      variant="outlined"
-                      color="warning"
-                      @click="resetScrolling"
-                    >
-                      <v-icon start>mdi-restart</v-icon>
-                      Reset
-                    </v-btn>
-                    <v-btn
-                      size="small"
-                      variant="outlined"
-                      color="info"
-                      @click="goToEnd"
-                    >
-                      <v-icon start>mdi-page-last</v-icon>
-                      End
-                    </v-btn>
-                  </div>
-                </v-card-text>
-              </v-card>
-
-              <!-- Settings Panel (Collapsible) -->
-              <v-expand-transition>
-                <v-card v-show="showSettingsPanel" elevation="2" class="settings-card">
-                  <v-card-title class="control-header px-4 py-3">
-                    <div class="d-flex align-center justify-space-between w-100">
-                      <div class="d-flex align-center">
-                        <v-icon class="mr-2" color="primary">mdi-tune-vertical</v-icon>
-                        <span class="font-weight-bold">Display Settings</span>
-                      </div>
-                      <v-btn
-                        icon="mdi-close"
-                        size="small"
-                        variant="text"
-                        @click="showSettingsPanel = false"
-                      />
-                    </div>
-                  </v-card-title>
-
-                  <v-divider />
-
-                  <v-card-text class="px-4 py-4">
-                    <!-- Text Formatting Section -->
-                    <div class="mb-4">
-                      <div class="text-subtitle-2 font-weight-medium mb-3">Text Formatting</div>
-                      
-                      <!-- Font Size Control -->
-                      <div class="mb-3">
-                        <div class="d-flex align-center justify-space-between mb-1">
-                          <span class="text-body-2">Font Size</span>
-                          <v-chip size="x-small" color="primary" variant="outlined">
-                            {{ fontSize.toFixed(1) }}em
-                          </v-chip>
-                        </div>
-                        <v-slider
-                          v-model="fontSize"
-                          :min="0.5"
-                          :max="5.0"
-                          :step="0.1"
-                          color="primary"
-                          track-color="grey-lighten-2"
-                          @input="updateFontSize"
-                        >
-                          <template v-slot:prepend>
-                            <v-btn
-                              icon="mdi-format-font-size-decrease"
-                              size="x-small"
-                              variant="text"
-                              @click="adjustFontSize(-0.1)"
-                            />
-                          </template>
-                          <template v-slot:append>
-                            <v-btn
-                              icon="mdi-format-font-size-increase"
-                              size="x-small"
-                              variant="text"
-                              @click="adjustFontSize(0.1)"
-                            />
-                          </template>
-                        </v-slider>
-                      </div>
-
-                      <!-- Text Width Control -->
-                      <div class="mb-3">
-                        <div class="d-flex align-center justify-space-between mb-1">
-                          <span class="text-body-2">Text Width</span>
-                          <v-chip size="x-small" color="primary" variant="outlined">
-                            {{ textWidth }}%
-                          </v-chip>
-                        </div>
-                        <v-slider
-                          v-model="textWidth"
-                          :min="20"
-                          :max="100"
-                          :step="5"
-                          color="primary"
-                          track-color="grey-lighten-2"
-                          @input="updateWidth"
-                        >
-                          <template v-slot:prepend>
-                            <v-btn
-                              icon="mdi-arrow-collapse-horizontal"
-                              size="x-small"
-                              variant="text"
-                              @click="adjustWidth(-5)"
-                            />
-                          </template>
-                          <template v-slot:append>
-                            <v-btn
-                              icon="mdi-arrow-expand-horizontal"
-                              size="x-small"
-                              variant="text"
-                              @click="adjustWidth(5)"
-                            />
-                          </template>
-                        </v-slider>
-                      </div>
-                    </div>
-
-                    <!-- Mirror Settings Section -->
-                    <div class="mb-4">
-                      <div class="text-subtitle-2 font-weight-medium mb-3">Mirror Settings</div>
-                      <div class="d-flex gap-2">
-                        <v-btn
-                          :color="horizontalMirror ? 'primary' : 'grey'"
-                          :variant="horizontalMirror ? 'flat' : 'outlined'"
-                          block
-                          size="small"
-                          @click="toggleHorizontalMirror"
-                          class="flex-1"
-                        >
-                          <v-icon start>mdi-flip-horizontal</v-icon>
-                          Horizontal
-                        </v-btn>
-                        <v-btn
-                          :color="verticalMirror ? 'primary' : 'grey'"
-                          :variant="verticalMirror ? 'flat' : 'outlined'"
-                          block
-                          size="small"
-                          @click="toggleVerticalMirror"
-                          class="flex-1"
-                        >
-                          <v-icon start>mdi-flip-vertical</v-icon>
-                          Vertical
-                        </v-btn>
-                      </div>
-                    </div>
-
-                    <!-- Advanced Settings -->
-                    <div>
-                      <div class="text-subtitle-2 font-weight-medium mb-3">Advanced</div>
-                      <v-row>
-                        <v-col cols="6">
-                          <v-btn
-                            variant="outlined"
-                            size="small"
-                            block
-                            @click="resetAllSettings"
-                          >
-                            <v-icon start>mdi-restore</v-icon>
-                            Reset
-                          </v-btn>
-                        </v-col>
-                        <v-col cols="6">
-                          <v-btn
-                            variant="outlined"
-                            size="small"
-                            block
-                            color="primary"
-                            @click="saveSettings"
-                          >
-                            <v-icon start>mdi-content-save</v-icon>
-                            Save
-                          </v-btn>
-                        </v-col>
-                      </v-row>
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </v-expand-transition>
-            </div>
-          </v-col>
         </v-row>
       </v-container>
     </v-main>
+
+    <!-- Right Drawer for Settings -->
+    <v-navigation-drawer
+      v-model="showDrawer"
+      location="right"
+      temporary
+      width="350"
+      class="settings-drawer"
+      :scrim="true"
+    >
+      <v-card flat class="fill-height">
+        <v-card-title class="px-4 py-3 bg-grey-darken-3 text-white">
+          <div class="d-flex align-center justify-space-between w-100">
+            <div class="d-flex align-center">
+              <v-icon class="mr-2">mdi-tune-vertical</v-icon>
+              <span class="font-weight-bold">Settings</span>
+            </div>
+            <v-btn
+              icon="mdi-close"
+              size="small"
+              variant="text"
+              color="white"
+              @click="showDrawer = false"
+            />
+          </div>
+        </v-card-title>
+
+        <v-divider />
+
+        <v-card-text class="px-4 py-4">
+          <!-- Speed Control Section -->
+          <div class="mb-6">
+            <div class="text-subtitle-2 font-weight-medium mb-3">Playback Speed</div>
+            <div class="d-flex align-center justify-space-between mb-2">
+              <span class="text-body-2">Speed Control</span>
+              <v-chip size="small" color="primary" variant="outlined">
+                {{ scrollSpeed.toFixed(1) }}x
+              </v-chip>
+            </div>
+            <v-slider
+              v-model="scrollSpeed"
+              :min="0.1"
+              :max="5.0"
+              :step="0.1"
+              track-color="grey-lighten-2"
+              color="primary"
+              thumb-label="always"
+              class="speed-slider"
+              @input="updateSpeed"
+            >
+              <template v-slot:prepend>
+                <v-btn
+                  icon="mdi-minus"
+                  size="small"
+                  variant="text"
+                  @click="adjustSpeed(-0.1)"
+                />
+              </template>
+              <template v-slot:append>
+                <v-btn
+                  icon="mdi-plus"
+                  size="small"
+                  variant="text"
+                  @click="adjustSpeed(0.1)"
+                />
+              </template>
+            </v-slider>
+
+            <!-- Quick Actions -->
+            <div class="d-flex justify-space-around mt-4">
+              <v-btn
+                size="small"
+                variant="outlined"
+                color="info"
+                @click="goToBeginning"
+              >
+                <v-icon start>mdi-page-first</v-icon>
+                Start
+              </v-btn>
+              <v-btn
+                size="small"
+                variant="outlined"
+                color="warning"
+                @click="resetScrolling"
+              >
+                <v-icon start>mdi-restart</v-icon>
+                Reset
+              </v-btn>
+              <v-btn
+                size="small"
+                variant="outlined"
+                color="info"
+                @click="goToEnd"
+              >
+                <v-icon start>mdi-page-last</v-icon>
+                End
+              </v-btn>
+            </div>
+          </div>
+
+          <!-- Text Formatting Section -->
+          <div class="mb-6">
+            <div class="text-subtitle-2 font-weight-medium mb-3">Text Formatting</div>
+            
+            <!-- Font Size Control -->
+            <div class="mb-4">
+              <div class="d-flex align-center justify-space-between mb-1">
+                <span class="text-body-2">Font Size</span>
+                <v-chip size="x-small" color="primary" variant="outlined">
+                  {{ fontSize.toFixed(1) }}em
+                </v-chip>
+              </div>
+              <v-slider
+                v-model="fontSize"
+                :min="0.5"
+                :max="5.0"
+                :step="0.1"
+                color="primary"
+                track-color="grey-lighten-2"
+                @input="updateFontSize"
+              >
+                <template v-slot:prepend>
+                  <v-btn
+                    icon="mdi-format-font-size-decrease"
+                    size="x-small"
+                    variant="text"
+                    @click="adjustFontSize(-0.1)"
+                  />
+                </template>
+                <template v-slot:append>
+                  <v-btn
+                    icon="mdi-format-font-size-increase"
+                    size="x-small"
+                    variant="text"
+                    @click="adjustFontSize(0.1)"
+                  />
+                </template>
+              </v-slider>
+            </div>
+
+            <!-- Text Width Control -->
+            <div class="mb-4">
+              <div class="d-flex align-center justify-space-between mb-1">
+                <span class="text-body-2">Text Width</span>
+                <v-chip size="x-small" color="primary" variant="outlined">
+                  {{ textWidth }}%
+                </v-chip>
+              </div>
+              <v-slider
+                v-model="textWidth"
+                :min="20"
+                :max="100"
+                :step="5"
+                color="primary"
+                track-color="grey-lighten-2"
+                @input="updateWidth"
+              >
+                <template v-slot:prepend>
+                  <v-btn
+                    icon="mdi-arrow-collapse-horizontal"
+                    size="x-small"
+                    variant="text"
+                    @click="adjustWidth(-5)"
+                  />
+                </template>
+                <template v-slot:append>
+                  <v-btn
+                    icon="mdi-arrow-expand-horizontal"
+                    size="x-small"
+                    variant="text"
+                    @click="adjustWidth(5)"
+                  />
+                </template>
+              </v-slider>
+            </div>
+          </div>
+
+          <!-- Mirror Settings Section -->
+          <div class="mb-6">
+            <div class="text-subtitle-2 font-weight-medium mb-3">Mirror Settings</div>
+            <div class="d-flex gap-2">
+              <v-btn
+                :color="horizontalMirror ? 'primary' : 'grey'"
+                :variant="horizontalMirror ? 'flat' : 'outlined'"
+                block
+                size="small"
+                @click="toggleHorizontalMirror"
+                class="flex-1"
+              >
+                <v-icon start>mdi-flip-horizontal</v-icon>
+                Horizontal
+              </v-btn>
+              <v-btn
+                :color="verticalMirror ? 'primary' : 'grey'"
+                :variant="verticalMirror ? 'flat' : 'outlined'"
+                block
+                size="small"
+                @click="toggleVerticalMirror"
+                class="flex-1"
+              >
+                <v-icon start>mdi-flip-vertical</v-icon>
+                Vertical
+              </v-btn>
+            </div>
+          </div>
+
+          <!-- Advanced Settings -->
+          <div>
+            <div class="text-subtitle-2 font-weight-medium mb-3">Advanced</div>
+            <v-row>
+              <v-col cols="6">
+                <v-btn
+                  variant="outlined"
+                  size="small"
+                  block
+                  @click="resetAllSettings"
+                >
+                  <v-icon start>mdi-restore</v-icon>
+                  Reset
+                </v-btn>
+              </v-col>
+              <v-col cols="6">
+                <v-btn
+                  variant="outlined"
+                  size="small"
+                  block
+                  color="primary"
+                  @click="saveSettings"
+                >
+                  <v-icon start>mdi-content-save</v-icon>
+                  Save
+                </v-btn>
+              </v-col>
+            </v-row>
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-navigation-drawer>
     <!-- Room Info Dialog -->
     <v-dialog v-model="showRoomInfoDialog" max-width="600">
       <v-card>
@@ -734,7 +698,7 @@ export default {
       qrCodeDataUrl: null,
 
       // UI state for new design
-      showSettingsPanel: false,
+      showDrawer: false,
       lastSyncTime: "Never",
 
       // Script content
@@ -824,6 +788,9 @@ Happy teleprompting! 🎬`,
   async mounted() {
     // Load saved settings
     this.loadSettings();
+    
+    // Initialize drawer as closed
+    this.showDrawer = false;
     
     // Initialize authentication
     const authSuccess = await this.initializeAuth();
@@ -1613,11 +1580,18 @@ Happy teleprompting! 🎬`,
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* Settings Panel */
-.settings-card {
-  border-radius: 12px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+/* Settings Drawer */
+.settings-drawer {
+  z-index: 1000;
+}
+
+.settings-drawer .v-card {
+  background-color: #1e1e1e !important;
+  color: white !important;
+}
+
+.settings-drawer .v-card-text {
+  background-color: #1e1e1e !important;
 }
 
 /* Enhanced Sliders */
