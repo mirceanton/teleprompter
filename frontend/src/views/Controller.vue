@@ -631,18 +631,15 @@ Happy teleprompting! 🎬`,
   },
 
   async mounted() {
-    // Get channel name from URL params
-    this.channelName = this.$route.query.room || "default";
-
-    // Initialize room authentication
-    await this.initializeRoomAuth();
+    // Initialize authentication
+    const authSuccess = await this.initializeAuth();
 
     // Connect to WebSocket
-    if (this.roomCredentials) {
+    if (authSuccess) {
       this.connect();
     } else {
       this.showSnackbar(
-        "No room credentials found. Please create or join a room.",
+        "No credentials found. Please select a mode.",
         "error"
       );
       this.$router.push("/");
@@ -670,18 +667,18 @@ Happy teleprompting! 🎬`,
   },
 
   methods: {
-    async initializeRoomAuth() {
+    async initializeAuth() {
       try {
-        // Get room credentials from session storage
-        const credentialsStr = sessionStorage.getItem("room_credentials");
+        // Get credentials from session storage
+        const credentialsStr = sessionStorage.getItem("teleprompter_credentials");
         if (!credentialsStr) {
           return false;
         }
 
-        this.roomCredentials = JSON.parse(credentialsStr);
+        const credentials = JSON.parse(credentialsStr);
 
         // Verify this is a controller role
-        if (this.roomCredentials.role !== "controller") {
+        if (credentials.role !== "controller") {
           this.showSnackbar(
             "Access denied: Not authorized as controller",
             "error"
@@ -689,26 +686,10 @@ Happy teleprompting! 🎬`,
           return false;
         }
 
-        // If no participant_id, we need to join the room first
-        if (!this.roomCredentials.participant_id) {
-          const joinData = await this.joinRoomAsController();
-          if (!joinData) {
-            return false;
-          }
-          this.roomCredentials.participant_id = joinData.participant_id;
-          // Update session storage
-          sessionStorage.setItem(
-            "room_credentials",
-            JSON.stringify(this.roomCredentials)
-          );
-        }
-
-        this.participantId = this.roomCredentials.participant_id;
-        this.editableRoomName = this.roomCredentials.room_name || "";
         return true;
       } catch (error) {
-        console.error("Error initializing room auth:", error);
-        this.showSnackbar("Failed to initialize room authentication", "error");
+        console.error("Error initializing auth:", error);
+        this.showSnackbar("Failed to initialize authentication", "error");
         return false;
       }
     },
@@ -747,15 +728,9 @@ Happy teleprompting! 🎬`,
 
     connect() {
       try {
-        if (!this.roomCredentials || !this.participantId) {
-          throw new Error("Missing room credentials or participant ID");
-        }
-
-        // Use new WebSocket format with room_id and participant_id
+        // Use simplified WebSocket endpoint
         const wsUrl = config.getWebSocketUrl();
-        this.ws = new WebSocket(
-          `${wsUrl}/api/ws/${this.roomCredentials.room_id}/${this.participantId}`
-        );
+        this.ws = new WebSocket(`${wsUrl}/api/ws`);
 
         this.setupWebSocketHandlers();
       } catch (error) {
@@ -781,11 +756,6 @@ Happy teleprompting! 🎬`,
           this.updateFontSize();
           this.updateWidth();
         }, 500);
-
-        // Request connection info
-        setTimeout(() => {
-          this.sendMessage({ type: "request_connection_info" });
-        }, 1000);
       };
 
       this.ws.onmessage = (event) => {

@@ -57,6 +57,10 @@ class RoomManager:
         self.participant_prefix = "teleprompter:participant:"
         # In-memory fallback storage when Redis is not available
         self._memory_rooms: Dict[str, Room] = {}
+        # Single room constants
+        self.SINGLE_ROOM_ID = "main-room"
+        self.SINGLE_ROOM_SECRET = "teleprompter-2024"
+        self.SINGLE_ROOM_NAME = "Teleprompter Room"
         
     def _is_redis_available(self) -> bool:
         """Check if Redis is available"""
@@ -103,36 +107,39 @@ class RoomManager:
         """Generate a unique participant ID"""
         return f"participant_{uuid.uuid4().hex[:12]}"
     
+    async def ensure_single_room_exists(self) -> Room:
+        """Ensure the single room exists, create if necessary"""
+        try:
+            room = await self.get_room(self.SINGLE_ROOM_ID)
+            if not room:
+                now = datetime.now(timezone.utc).isoformat()
+                room = Room(
+                    room_id=self.SINGLE_ROOM_ID,
+                    room_secret=self.SINGLE_ROOM_SECRET,
+                    room_name=self.SINGLE_ROOM_NAME,
+                    controller_id=None,
+                    participants={},
+                    created_at=now,
+                    last_activity=now
+                )
+                await self._save_room(room)
+                logger.info(f"Created single room {self.SINGLE_ROOM_ID}")
+            return room
+        except Exception as e:
+            logger.error(f"Error ensuring single room exists: {e}")
+            raise
+    
     async def create_room(self, room_name: Optional[str] = None) -> Tuple[str, str, str]:
         """
-        Create a new room.
+        Create/get the single room. Always returns the same room.
         
         Returns:
             Tuple of (room_id, room_secret, room_name)
         """
         try:
-            room_id = self._generate_room_id()
-            room_secret = self._generate_room_secret()
-            if not room_name:
-                room_name = self._generate_room_name()
-            
-            now = datetime.now(timezone.utc).isoformat()
-            
-            room = Room(
-                room_id=room_id,
-                room_secret=room_secret,
-                room_name=room_name,
-                controller_id=None,
-                participants={},
-                created_at=now,
-                last_activity=now
-            )
-            
-            # Store room in storage
-            await self._save_room(room)
-            
-            logger.info(f"Created room {room_id} with name '{room_name}'")
-            return room_id, room_secret, room_name
+            room = await self.ensure_single_room_exists()
+            logger.info(f"Returning single room {room.room_id}")
+            return room.room_id, room.room_secret, room.room_name
             
         except Exception as e:
             logger.error(f"Error creating room: {e}")
@@ -165,40 +172,35 @@ class RoomManager:
             return None
     
     async def verify_room_access(self, room_id: str, room_secret: str) -> bool:
-        """Verify that room exists and secret is correct"""
+        """Verify that room exists and secret is correct - simplified for single room"""
         try:
-            room = await self.get_room(room_id)
-            if not room:
-                return False
-            
-            return room.room_secret == room_secret
+            # Always allow access to the single room
+            await self.ensure_single_room_exists()
+            return True
             
         except Exception as e:
             logger.error(f"Error verifying access to room {room_id}: {e}")
             return False
     
+    async def get_single_room(self) -> Room:
+        """Get the single room, ensuring it exists"""
+        return await self.ensure_single_room_exists()
+    
     async def add_participant(self, room_id: str, role: str) -> Optional[str]:
         """
-        Add a participant to a room.
+        Add a participant to the single room.
         
         Args:
-            room_id: The room ID
+            room_id: The room ID (will use single room regardless)
             role: "controller" or "teleprompter"
             
         Returns:
             participant_id if successful, None otherwise
         """
         try:
-            room = await self.get_room(room_id)
-            if not room:
-                logger.warning(f"Attempt to add participant to non-existent room {room_id}")
-                return None
+            room = await self.ensure_single_room_exists()
             
-            # Check if trying to add controller when one already exists
-            if role == "controller" and room.controller_id:
-                logger.warning(f"Attempt to add controller to room {room_id} that already has one")
-                return None
-            
+            # Allow multiple controllers and teleprompters in single room mode
             participant_id = self._generate_participant_id()
             now = datetime.now(timezone.utc).isoformat()
             
@@ -213,18 +215,18 @@ class RoomManager:
             room.participants[participant_id] = participant
             room.last_activity = now
             
-            # Set controller if this is a controller role
-            if role == "controller":
+            # Set controller if this is a controller role (allow multiple controllers)
+            if role == "controller" and not room.controller_id:
                 room.controller_id = participant_id
             
             # Update room in storage
             await self._save_room(room)
             
-            logger.info(f"Added {role} participant {participant_id} to room {room_id}")
+            logger.info(f"Added {role} participant {participant_id} to single room")
             return participant_id
             
         except Exception as e:
-            logger.error(f"Error adding participant to room {room_id}: {e}")
+            logger.error(f"Error adding participant to single room: {e}")
             return None
     
     async def remove_participant(self, room_id: str, participant_id: str) -> bool:

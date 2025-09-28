@@ -7,152 +7,81 @@
     <v-main>
       <v-container fluid class="fill-height">
         <v-row justify="center" align="center" class="fill-height">
-          <v-col cols="12" md="8" lg="6">
-            <!-- Main Action Card -->
-            <v-card elevation="8">
-              <v-card-title class="text-h5 pa-6">
-                <v-icon class="mr-2">mdi-account-group</v-icon>
-                Welcome to Remote Teleprompter
-              </v-card-title>
+          <v-col cols="12" md="10" lg="8">
+            <!-- Header Section -->
+            <div class="text-center mb-8">
+              <v-icon size="64" color="primary" class="mb-4">mdi-presentation-play</v-icon>
+              <h1 class="text-h3 font-weight-bold mb-3">Remote Teleprompter</h1>
+              <p class="text-h6 text-medium-emphasis">
+                Professional teleprompter solution for seamless content delivery
+              </p>
+            </div>
 
-              <v-card-text class="pa-6">
-                <p class="text-body-1 mb-6">
-                  Choose your action to get started with remote teleprompter
-                  control.
-                </p>
+            <!-- Mode Selection Cards -->
+            <v-row class="mb-4" justify="center">
+              <!-- Controller Mode Card -->
+              <v-col cols="12" sm="6" md="5">
+                <v-card
+                  class="mode-card controller-card"
+                  :class="{ 'card-loading': loading }"
+                  elevation="8"
+                  @click="startControllerMode"
+                  :disabled="loading"
+                >
+                  <v-card-text class="pa-8 text-center">
+                    <div class="mode-icon-container mb-4">
+                      <v-icon size="80" class="mode-icon">mdi-laptop</v-icon>
+                    </div>
+                    
+                    <div class="mode-title mb-3">
+                      <h2 class="text-h4 font-weight-bold">Controller</h2>
+                      <div class="mode-subtitle text-h6 text-medium-emphasis mt-1">
+                        Command Center
+                      </div>
+                    </div>
+                  </v-card-text>
+                  
+                  <v-overlay v-if="loading" contained class="loading-overlay">
+                    <v-progress-circular indeterminate size="32"></v-progress-circular>
+                  </v-overlay>
+                </v-card>
+              </v-col>
 
-                <v-row class="mb-4">
-                  <!-- Create Room (Controller) -->
-                  <v-col cols="12" md="6">
-                    <v-card
-                      class="action-card"
-                      :class="{ selected: selectedAction === 'create' }"
-                      @click="selectedAction = 'create'"
-                      elevation="2"
-                      hover
-                    >
-                      <v-card-text class="text-center pa-6">
-                        <v-icon size="48" color="primary" class="mb-2"
-                          >mdi-plus-circle</v-icon
-                        >
-                        <h4 class="text-h6 mb-2">💻 Create Room</h4>
-                        <p class="text-body-2">
-                          Create a new room and control teleprompter playback
-                        </p>
-                      </v-card-text>
-                    </v-card>
-                  </v-col>
+              <!-- Teleprompter Mode Card -->
+              <v-col cols="12" sm="6" md="5">
+                <v-card
+                  class="mode-card teleprompter-card"
+                  :class="{ 'card-loading': loading }"
+                  elevation="8"
+                  @click="startTeleprompterMode"
+                  :disabled="loading"
+                >
+                  <v-card-text class="pa-8 text-center">
+                    <div class="mode-icon-container mb-4">
+                      <v-icon size="80" class="mode-icon">mdi-monitor</v-icon>
+                    </div>
+                    
+                    <div class="mode-title mb-3">
+                      <h2 class="text-h4 font-weight-bold">Teleprompter</h2>
+                      <div class="mode-subtitle text-h6 text-medium-emphasis mt-1">
+                        Display Screen
+                      </div>
+                    </div>
+                  </v-card-text>
+                  
+                  <v-overlay v-if="loading" contained class="loading-overlay">
+                    <v-progress-circular indeterminate size="32"></v-progress-circular>
+                  </v-overlay>
+                </v-card>
+              </v-col>
+            </v-row>
 
-                  <!-- Join Room (Teleprompter) -->
-                  <v-col cols="12" md="6">
-                    <v-card
-                      class="action-card"
-                      :class="{ selected: selectedAction === 'join' }"
-                      @click="selectedAction = 'join'"
-                      elevation="2"
-                      hover
-                    >
-                      <v-card-text class="text-center pa-6">
-                        <v-icon size="48" color="primary" class="mb-2"
-                          >mdi-login</v-icon
-                        >
-                        <h4 class="text-h6 mb-2">📱 Join Room</h4>
-                        <p class="text-body-2">
-                          Join an existing room to display teleprompter text
-                        </p>
-                      </v-card-text>
-                    </v-card>
-                  </v-col>
-                </v-row>
-
-                <!-- Create Room Form -->
-                <v-expand-transition>
-                  <div v-if="selectedAction === 'create'">
-                    <v-divider class="my-4" />
-                    <h3 class="text-h6 mb-4">Create New Room</h3>
-
-                    <v-text-field
-                      v-model="roomName"
-                      label="Room Name (Optional)"
-                      placeholder="Leave blank for auto-generated name"
-                      prepend-icon="mdi-tag"
-                      variant="outlined"
-                      class="mb-4"
-                      @keypress.enter="createRoom"
-                    />
-
-                    <v-btn
-                      block
-                      color="primary"
-                      size="large"
-                      @click="createRoom"
-                      :loading="loading"
-                      :disabled="loading"
-                    >
-                      <v-icon class="mr-2">mdi-plus</v-icon>
-                      Create Room & Start Controlling
-                    </v-btn>
-                  </div>
-                </v-expand-transition>
-
-                <!-- Join Room Form -->
-                <v-expand-transition>
-                  <div v-if="selectedAction === 'join'">
-                    <v-divider class="my-4" />
-                    <h3 class="text-h6 mb-4">Join Existing Room</h3>
-
-                    <v-text-field
-                      v-model="joinRoomId"
-                      label="Room ID"
-                      placeholder="Enter room ID (e.g., roomabc12345)"
-                      prepend-icon="mdi-key"
-                      variant="outlined"
-                      class="mb-4"
-                      @keypress.enter="joinRoom"
-                    />
-
-                    <v-text-field
-                      v-model="joinRoomSecret"
-                      label="Room Secret"
-                      placeholder="Enter room secret"
-                      prepend-icon="mdi-lock"
-                      variant="outlined"
-                      class="mb-4"
-                      type="password"
-                      @keypress.enter="joinRoom"
-                    />
-
-                    <v-row class="mb-4">
-                      <v-col cols="6">
-                        <v-btn
-                          block
-                          color="secondary"
-                          variant="outlined"
-                          size="large"
-                          @click="pasteCredentials"
-                        >
-                          <v-icon class="mr-2">mdi-content-paste</v-icon>
-                          Paste from Clipboard
-                        </v-btn>
-                      </v-col>
-                      <v-col cols="6">
-                        <v-btn
-                          block
-                          color="primary"
-                          size="large"
-                          @click="joinRoom"
-                          :loading="loading"
-                          :disabled="!joinRoomId || !joinRoomSecret || loading"
-                        >
-                          <v-icon class="mr-2">mdi-login</v-icon>
-                          Join as Teleprompter
-                        </v-btn>
-                      </v-col>
-                    </v-row>
-                  </div>
-                </v-expand-transition>
-              </v-card-text>
-            </v-card>
+            <!-- Instructions -->
+            <div class="text-center mt-8">
+              <p class="text-body-1 text-medium-emphasis">
+                Select your mode to begin using the teleprompter system
+              </p>
+            </div>
           </v-col>
         </v-row>
       </v-container>
@@ -174,155 +103,34 @@ export default {
   name: "Landing",
   data() {
     return {
-      selectedAction: "",
-
-      // Create room data
-      roomName: "",
       loading: false,
-
-      // Join room data
-      joinRoomId: "",
-      joinRoomSecret: "",
-
       snackbar: {
         show: false,
         text: "",
         color: "success",
       },
-
-      // Room name generation
-      adjectives: [
-        "Bright",
-        "Swift",
-        "Calm",
-        "Brave",
-        "Quick",
-        "Gentle",
-        "Sharp",
-        "Bold",
-        "Clever",
-        "Strong",
-        "Wise",
-        "Kind",
-        "Happy",
-        "Peaceful",
-        "Dynamic",
-        "Elegant",
-        "Graceful",
-        "Lively",
-        "Vibrant",
-        "Steady",
-        "Creative",
-        "Focused",
-        "Reliable",
-      ],
-      animals: [
-        "Wolf",
-        "Eagle",
-        "Lion",
-        "Bear",
-        "Fox",
-        "Hawk",
-        "Tiger",
-        "Dolphin",
-        "Owl",
-        "Falcon",
-        "Panther",
-        "Shark",
-        "Horse",
-        "Dragon",
-        "Phoenix",
-        "Whale",
-        "Rabbit",
-        "Deer",
-        "Elephant",
-        "Giraffe",
-        "Penguin",
-        "Turtle",
-        "Butterfly",
-      ],
     };
   },
 
   methods: {
-    generateRoomName() {
-      const adjective =
-        this.adjectives[Math.floor(Math.random() * this.adjectives.length)];
-      const animal =
-        this.animals[Math.floor(Math.random() * this.animals.length)];
-      return `${adjective} ${animal} Room`;
-    },
-
-    async createRoom() {
-      // Generate room name if not provided
-      if (!this.roomName) {
-        this.roomName = this.generateRoomName();
-      }
-
+    async startControllerMode() {
       this.loading = true;
       try {
         const apiUrl = config.getApiUrl();
-        const response = await fetch(`${apiUrl}/api/rooms`, {
+        
+        // Join as controller (simplified API)
+        const response = await fetch(`${apiUrl}/api/join`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            room_name: this.roomName,
+            role: "controller",
           }),
         });
 
         if (!response.ok) {
-          throw new Error("Failed to create room");
-        }
-
-        const roomData = await response.json();
-
-        // Store room credentials in session storage for the controller
-        sessionStorage.setItem(
-          "room_credentials",
-          JSON.stringify({
-            room_id: roomData.room_id,
-            room_secret: roomData.room_secret,
-            room_name: roomData.room_name,
-            role: "controller",
-          })
-        );
-
-        // Navigate to controller with room info
-        this.$router.push({
-          path: "/controller",
-          query: {
-            room: roomData.room_id,
-            role: "controller",
-          },
-        });
-      } catch (error) {
-        console.error("Error creating room:", error);
-        this.showSnackbar("Failed to create room. Please try again.", "error");
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    async joinRoom() {
-      this.loading = true;
-      try {
-        const apiUrl = config.getApiUrl();
-        const response = await fetch(`${apiUrl}/api/rooms/join`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            room_id: this.joinRoomId,
-            room_secret: this.joinRoomSecret,
-            role: "teleprompter",
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to join room");
+          throw new Error("Failed to join as controller");
         }
 
         const joinData = await response.json();
@@ -332,73 +140,76 @@ export default {
           return;
         }
 
-        // Store room credentials in session storage for the teleprompter
+        // Store minimal credentials in session storage
         sessionStorage.setItem(
-          "room_credentials",
+          "teleprompter_credentials",
           JSON.stringify({
-            room_id: this.joinRoomId,
-            room_secret: this.joinRoomSecret,
-            room_name: joinData.room_name,
-            participant_id: joinData.participant_id,
-            role: "teleprompter",
+            role: "controller",
           })
         );
 
-        // Navigate to teleprompter with room info
+        // Navigate to controller
         this.$router.push({
-          path: "/teleprompter",
+          path: "/controller",
           query: {
-            room: this.joinRoomId,
-            role: "teleprompter",
+            role: "controller",
           },
         });
       } catch (error) {
-        console.error("Error joining room:", error);
-        this.showSnackbar(
-          "Failed to join room. Please check your credentials.",
-          "error"
-        );
+        console.error("Error starting controller mode:", error);
+        this.showSnackbar("Failed to start controller mode. Please try again.", "error");
       } finally {
         this.loading = false;
       }
     },
 
-    async pasteCredentials() {
+    async startTeleprompterMode() {
+      this.loading = true;
       try {
-        const text = await navigator.clipboard.readText();
-        if (text.trim()) {
-          // Try to parse as JSON for full credentials
-          try {
-            const credentials = JSON.parse(text);
-            if (credentials.room_id && credentials.room_secret) {
-              this.joinRoomId = credentials.room_id;
-              this.joinRoomSecret = credentials.room_secret;
-              this.showSnackbar("Room credentials pasted!", "success");
-              return;
-            }
-          } catch (e) {
-            // Not JSON, try to parse as simple room ID
-          }
+        const apiUrl = config.getApiUrl();
+        
+        // Join as teleprompter (simplified API)
+        const response = await fetch(`${apiUrl}/api/join`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            role: "teleprompter",
+          }),
+        });
 
-          // If it looks like a room ID, just paste that
-          if (text.includes("room")) {
-            this.joinRoomId = text.trim();
-            this.showSnackbar(
-              "Room ID pasted! Please enter the room secret.",
-              "info"
-            );
-          } else {
-            this.showSnackbar(
-              "Pasted text doesn't look like room credentials.",
-              "warning"
-            );
-          }
+        if (!response.ok) {
+          throw new Error("Failed to join as teleprompter");
         }
-      } catch (err) {
-        this.showSnackbar(
-          "Could not access clipboard. Please paste manually.",
-          "warning"
+
+        const joinData = await response.json();
+
+        if (!joinData.success) {
+          this.showSnackbar(joinData.message, "error");
+          return;
+        }
+
+        // Store minimal credentials in session storage
+        sessionStorage.setItem(
+          "teleprompter_credentials",
+          JSON.stringify({
+            role: "teleprompter",
+          })
         );
+
+        // Navigate to teleprompter
+        this.$router.push({
+          path: "/teleprompter",
+          query: {
+            role: "teleprompter",
+          },
+        });
+      } catch (error) {
+        console.error("Error starting teleprompter mode:", error);
+        this.showSnackbar("Failed to start teleprompter mode. Please try again.", "error");
+      } finally {
+        this.loading = false;
       }
     },
 
@@ -412,22 +223,113 @@ export default {
 </script>
 
 <style scoped>
-.action-card {
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
+.fill-height {
+  min-height: calc(100vh - 64px);
 }
 
-.action-card:hover {
+.mode-card {
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border-radius: 16px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.mode-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+.mode-card:active {
   transform: translateY(-2px);
 }
 
-.action-card.selected {
-  border-color: rgb(var(--v-theme-primary));
-  background-color: rgba(var(--v-theme-primary), 0.1);
+.controller-card {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  color: white;
 }
 
-.fill-height {
-  min-height: calc(100vh - 64px);
+.controller-card:hover {
+  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+}
+
+.teleprompter-card {
+  background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+  color: white;
+}
+
+.teleprompter-card:hover {
+  background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+}
+
+.mode-icon-container {
+  position: relative;
+}
+
+.mode-icon {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  padding: 16px;
+  backdrop-filter: blur(10px);
+}
+
+.mode-title h2 {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.mode-subtitle {
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.card-loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.loading-overlay {
+  background: rgba(0, 0, 0, 0.2) !important;
+  backdrop-filter: blur(2px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .mode-card {
+    margin-bottom: 16px;
+  }
+  
+  .mode-icon {
+    padding: 12px;
+  }
+  
+  .mode-title h2 {
+    font-size: 1.5rem !important;
+  }
+}
+
+/* Dark theme support */
+.v-theme--dark .mode-card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Animation for card entrance */
+.mode-card {
+  animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stagger animation for second card */
+.v-col:nth-child(2) .mode-card {
+  animation-delay: 0.1s;
 }
 </style>
