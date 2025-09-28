@@ -1,142 +1,343 @@
 <template>
-  <v-app theme="dark">
-    <!-- Floating Playback Controls -->
-    <div class="floating-controls">
-      <div class="controls-container">
-        <v-btn-group variant="flat" class="elevation-8">
-          <v-btn
-            color="grey-darken-2"
-            size="large"
-            @click="handleBackwardClick"
-            @dblclick="goToBeginning"
-          >
-            <v-icon>mdi-skip-previous</v-icon>
-            <v-tooltip activator="parent" location="bottom">
-              <div>Click: Back 5 lines</div>
-              <div>Double-click: Go to start</div>
-            </v-tooltip>
-          </v-btn>
-          
-          <v-btn
-            :color="isPlaying ? 'error' : 'success'"
-            size="x-large"
-            @click="togglePlayback"
-          >
-            <v-icon size="large">{{ isPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
-            <v-tooltip activator="parent" location="bottom">
-              {{ isPlaying ? 'Pause (Space)' : 'Play (Space)' }}
-            </v-tooltip>
-          </v-btn>
-          
-          <v-btn
-            color="grey-darken-2"
-            size="large"
-            @click="handleForwardClick"
-            @dblclick="goToEnd"
-          >
-            <v-icon>mdi-skip-next</v-icon>
-            <v-tooltip activator="parent" location="bottom">
-              <div>Click: Forward 5 lines</div>
-              <div>Double-click: Go to end</div>
-            </v-tooltip>
-          </v-btn>
-        </v-btn-group>
-
-        <!-- Settings Button -->
-        <v-btn
-          icon="mdi-menu"
-          variant="flat"
-          color="grey-darken-2"
-          size="large"
-          class="ml-4 elevation-8"
-          @click="showDrawer = !showDrawer"
-        >
-          <v-icon>mdi-menu</v-icon>
-          <v-tooltip activator="parent" location="bottom">Settings & Controls</v-tooltip>
-        </v-btn>
-      </div>
-    </div>
-
-    <v-main class="dark-main">
-      <v-container fluid class="pa-0">
-        <!-- Full Width Script Editor with Mac Width Constraints -->
-        <div class="script-container">
-          <v-card 
-            elevation="0" 
-            class="script-editor-card"
-            color="grey-darken-4"
-            :style="scriptEditorStyle"
-          >
-            <v-card-text class="pa-8">
-              <v-textarea
-                v-model="scriptText"
-                placeholder="Start typing your script here, or paste existing content..."
-                variant="plain"
-                class="script-textarea"
-                auto-grow
-                :rows="25"
-                @input="debouncedSyncText"
-                @keydown="handleKeyboardShortcuts"
-              />
-
-              <!-- Live Preview Indicator -->
-              <div v-if="isPlaying" class="live-preview-indicator">
-                <div class="preview-line" :style="{ top: `${currentScrollPosition * 1.8}em` }"></div>
-              </div>
-            </v-card-text>
-
-            <!-- Script Status Bar -->
-            <div class="script-status-bar px-8 py-3">
-              <div class="d-flex align-center justify-space-between">
-                <div class="d-flex align-center">
-                  <v-chip size="small" color="success" variant="flat" class="mr-3">
-                    <v-icon start size="small">mdi-check-circle</v-icon>
-                    Synced
-                  </v-chip>
-                  <span class="text-caption text-medium-emphasis">
-                    {{ scriptText.split('\n').length }} lines • {{ scriptText.length }} characters
-                  </span>
-                </div>
-                <div class="d-flex align-center">
-                  <span class="text-caption text-medium-emphasis mr-4">
-                    Last updated: {{ lastSyncTime }}
-                  </span>
-                  <span class="text-caption text-medium-emphasis">
-                    Position: Line {{ Math.round(currentScrollPosition) + 1 }}
-                  </span>
-                </div>
-              </div>
+  <v-app>
+    <!-- Modern Header with Status Information -->
+    <v-app-bar app elevation="0" class="modern-header" height="72">
+      <v-container fluid class="d-flex align-center">
+        <div class="d-flex align-center">
+          <v-avatar color="primary" size="40" class="mr-3">
+            <v-icon color="white">mdi-television-play</v-icon>
+          </v-avatar>
+          <div>
+            <div class="text-h6 font-weight-bold">Teleprompter Control</div>
+            <div class="text-caption text-medium-emphasis">
+              Room: {{ roomCredentials?.room_name || "Connecting..." }}
             </div>
-          </v-card>
+          </div>
+        </div>
+
+        <v-spacer />
+
+        <!-- Status Indicators -->
+        <div class="d-flex align-center mr-4">
+          <v-chip
+            :color="isPlaying ? 'success' : 'grey'"
+            variant="flat"
+            class="mr-2"
+            size="small"
+          >
+            <v-icon start :icon="isPlaying ? 'mdi-play' : 'mdi-pause'"></v-icon>
+            {{ isPlaying ? 'Live' : 'Paused' }}
+          </v-chip>
+          
+          <v-chip
+            :color="participants.length > 1 ? 'info' : 'warning'"
+            variant="flat"
+            class="mr-2"
+            size="small"
+          >
+            <v-icon start icon="mdi-devices"></v-icon>
+            {{ participants.length }} Device{{ participants.length !== 1 ? 's' : '' }}
+          </v-chip>
+
+          <v-chip
+            color="primary"
+            variant="flat"
+            size="small"
+          >
+            <v-icon start icon="mdi-eye"></v-icon>
+            Position: {{ Math.round(currentScrollPosition) }}
+          </v-chip>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex align-center">
+          <!-- Quick Actions -->
+          <v-btn
+            icon="mdi-content-save"
+            variant="text"
+            class="mr-1"
+            @click="saveScript"
+          >
+            <v-icon>mdi-content-save</v-icon>
+            <v-tooltip activator="parent" location="bottom">Save Script</v-tooltip>
+          </v-btn>
+
+          <v-btn
+            icon="mdi-share-variant"
+            variant="text"
+            class="mr-1"
+            @click="showRoomInfoDialog = true"
+          >
+            <v-icon>mdi-share-variant</v-icon>
+            <v-tooltip activator="parent" location="bottom">Share Room</v-tooltip>
+          </v-btn>
+
+          <!-- Participants Menu -->
+          <v-menu offset-y>
+            <template v-slot:activator="{ props }">
+              <v-btn v-bind="props" variant="text" class="mr-2">
+                <v-badge :content="participants.length" color="secondary" overlap>
+                  <v-icon>mdi-account-group</v-icon>
+                </v-badge>
+                <v-tooltip activator="parent" location="bottom">Manage Participants</v-tooltip>
+              </v-btn>
+            </template>
+
+            <v-card min-width="320" elevation="8">
+              <v-card-title class="text-h6 pa-4 bg-primary text-white">
+                <v-icon class="mr-2">mdi-account-group</v-icon>
+                Room Participants
+              </v-card-title>
+
+              <v-divider />
+
+              <!-- Participants List -->
+              <v-list class="pa-0">
+                <v-list-item
+                  v-for="participant in participants"
+                  :key="participant.id"
+                  :class="{ 'bg-blue-grey-lighten-5': participant.id === participantId }"
+                  class="px-4"
+                >
+                  <template v-slot:prepend>
+                    <v-avatar
+                      size="36"
+                      :color="participant.role === 'controller' ? 'primary' : 'success'"
+                    >
+                      <v-icon color="white">{{
+                        participant.role === "controller" ? "mdi-laptop" : "mdi-cellphone"
+                      }}</v-icon>
+                    </v-avatar>
+                  </template>
+
+                  <v-list-item-title class="font-weight-medium">
+                    {{ participant.role === "controller" ? "💻 Controller" : "📱 Teleprompter" }}
+                    <v-chip
+                      v-if="participant.id === participantId"
+                      size="x-small"
+                      color="primary"
+                      variant="outlined"
+                      class="ml-2"
+                    >
+                      You
+                    </v-chip>
+                  </v-list-item-title>
+
+                  <v-list-item-subtitle>
+                    Connected {{ formatTime(participant.joined_at) }}
+                  </v-list-item-subtitle>
+
+                  <template v-slot:append v-if="participant.id !== participantId">
+                    <v-btn
+                      icon="mdi-account-remove"
+                      size="small"
+                      color="error"
+                      variant="text"
+                      @click="kickParticipant(participant.id)"
+                    >
+                    </v-btn>
+                  </template>
+                </v-list-item>
+              </v-list>
+
+              <v-divider />
+
+              <!-- Room Actions -->
+              <div class="pa-4">
+                <v-btn
+                  prepend-icon="mdi-information"
+                  variant="outlined"
+                  color="info"
+                  block
+                  class="mb-2"
+                  @click="showRoomInfoDialog = true"
+                >
+                  Room Information
+                </v-btn>
+                <v-btn
+                  prepend-icon="mdi-logout"
+                  color="error"
+                  variant="outlined"
+                  block
+                  @click="disconnect"
+                >
+                  Leave Room
+                </v-btn>
+              </div>
+            </v-card>
+          </v-menu>
+
+          <!-- Settings Menu -->
+          <v-btn
+            icon="mdi-menu"
+            variant="text"
+            @click="showDrawer = !showDrawer"
+          >
+            <v-icon>mdi-menu</v-icon>
+            <v-tooltip activator="parent" location="bottom">Settings</v-tooltip>
+          </v-btn>
         </div>
       </v-container>
+    </v-app-bar>
+
+    <v-main class="modern-main">
+      <v-container fluid class="pa-4">
+        <!-- Modern Dashboard Layout -->
+        <v-row no-gutters class="fill-height">
+          <!-- Full Width Script Editor -->
+          <v-col cols="12" class="pr-2">
+            <!-- Script Editor with Enhanced Features -->
+            <v-card elevation="2" class="fill-height script-editor-card">
+              <!-- Enhanced Header with Playback Controls -->
+              <v-card-title class="script-header px-6 py-4">
+                <div class="d-flex align-center justify-space-between w-100">
+                  <div class="d-flex align-center">
+                    <!-- Character/Line count only -->
+                    <div class="text-caption text-medium-emphasis">
+                      {{ scriptText.split('\n').length }} lines • {{ scriptText.length }} characters
+                    </div>
+                  </div>
+                  
+                  <!-- Playback Controls in Header -->
+                  <div class="d-flex align-center">
+                    <!-- Playback Control Buttons -->
+                    <v-btn-group variant="outlined" class="mr-3">
+                      <v-btn
+                        color="grey-darken-1"
+                        size="small"
+                        @click="handleBackwardClick"
+                        @dblclick="goToBeginning"
+                      >
+                        <v-icon>mdi-skip-previous</v-icon>
+                        <v-tooltip activator="parent" location="bottom">
+                          <div>Click: Back 5 lines</div>
+                          <div>Double-click: Go to start</div>
+                        </v-tooltip>
+                      </v-btn>
+                      
+                      <v-btn
+                        :color="isPlaying ? 'error' : 'success'"
+                        size="small"
+                        @click="togglePlayback"
+                      >
+                        <v-icon>{{ isPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
+                        <v-tooltip activator="parent" location="bottom">
+                          {{ isPlaying ? 'Pause (Space)' : 'Play (Space)' }}
+                        </v-tooltip>
+                      </v-btn>
+                      
+                      <v-btn
+                        color="grey-darken-1"
+                        size="small"
+                        @click="handleForwardClick"
+                        @dblclick="goToEnd"
+                      >
+                        <v-icon>mdi-skip-next</v-icon>
+                        <v-tooltip activator="parent" location="bottom">
+                          <div>Click: Forward 5 lines</div>
+                          <div>Double-click: Go to end</div>
+                        </v-tooltip>
+                      </v-btn>
+                    </v-btn-group>
+
+                    <!-- Script Actions -->
+                    <v-btn-group variant="outlined" class="mr-3">
+                      <v-btn size="small" @click="undoScript">
+                        <v-icon>mdi-undo</v-icon>
+                        <v-tooltip activator="parent" location="bottom">Undo (Ctrl+Z)</v-tooltip>
+                      </v-btn>
+                      <v-btn size="small" @click="redoScript">
+                        <v-icon>mdi-redo</v-icon>
+                        <v-tooltip activator="parent" location="bottom">Redo (Ctrl+Y)</v-tooltip>
+                      </v-btn>
+                      <v-btn size="small" @click="clearScript">
+                        <v-icon>mdi-delete-outline</v-icon>
+                        <v-tooltip activator="parent" location="bottom">Clear Script</v-tooltip>
+                      </v-btn>
+                    </v-btn-group>
+
+                    <v-btn-group variant="outlined">
+                      <v-btn size="small" @click="importScript">
+                        <v-icon>mdi-file-import</v-icon>
+                        <v-tooltip activator="parent" location="bottom">Import File</v-tooltip>
+                      </v-btn>
+                      <v-btn size="small" @click="exportScript">
+                        <v-icon>mdi-download</v-icon>
+                        <v-tooltip activator="parent" location="bottom">Export Script</v-tooltip>
+                      </v-btn>
+                    </v-btn-group>
+                  </div>
+                </div>
+              </v-card-title>
+
+              <v-divider />
+
+              <!-- Script Editor Content -->
+              <v-card-text class="pa-0 fill-height d-flex flex-column">
+                <div class="script-editor-container flex-grow-1">
+                  <v-textarea
+                    v-model="scriptText"
+                    placeholder="Start typing your script here, or paste existing content..."
+                    variant="plain"
+                    class="script-textarea"
+                    hide-details
+                    auto-grow
+                    rows="25"
+                    @input="debouncedSyncText"
+                    @keydown="handleKeyboardShortcuts"
+                  />
+                  
+                  <!-- Live Preview Indicator -->
+                  <div v-if="isPlaying" class="live-preview-indicator">
+                    <div class="preview-line" :style="{ top: `${currentScrollPosition * 1.6}em` }"></div>
+                  </div>
+                </div>
+
+                <!-- Script Status Bar -->
+                <div class="script-status-bar px-4 py-2 bg-grey-lighten-4">
+                  <div class="d-flex align-center justify-space-between">
+                    <div class="d-flex align-center">
+                      <v-chip size="x-small" color="success" variant="flat" class="mr-2">
+                        <v-icon start size="small">mdi-check-circle</v-icon>
+                        Synced
+                      </v-chip>
+                      <span class="text-caption text-medium-emphasis">
+                        Last updated: {{ lastSyncTime }}
+                      </span>
+                    </div>
+                    <div class="text-caption text-medium-emphasis">
+                      Position: Line {{ Math.round(currentScrollPosition) + 1 }}
+                    </div>
+                  </div>
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-container>
     </v-main>
-    <!-- Enhanced Right Drawer with All Controls and Participants -->
+
+    <!-- Right Drawer for Settings -->
     <v-navigation-drawer
       v-model="showDrawer"
       location="right"
       temporary
-      width="380"
-      class="dark-drawer"
+      width="350"
+      class="settings-drawer"
       :scrim="true"
     >
-      <v-card flat class="fill-height" color="grey-darken-4">
-        <!-- Drawer Header -->
-        <v-card-title class="px-6 py-4 bg-grey-darken-3">
+      <v-card flat class="fill-height">
+        <v-card-title class="px-4 py-3 bg-grey-darken-3 text-white">
           <div class="d-flex align-center justify-space-between w-100">
             <div class="d-flex align-center">
-              <v-icon class="mr-3" color="primary">mdi-tune-vertical</v-icon>
-              <div>
-                <div class="text-h6 font-weight-bold">Control Panel</div>
-                <div class="text-caption text-medium-emphasis">
-                  Room: {{ roomCredentials?.room_name || "Connecting..." }}
-                </div>
-              </div>
+              <v-icon class="mr-2">mdi-tune-vertical</v-icon>
+              <span class="font-weight-bold">Settings</span>
             </div>
             <v-btn
               icon="mdi-close"
               size="small"
               variant="text"
+              color="white"
               @click="showDrawer = false"
             />
           </div>
@@ -144,122 +345,9 @@
 
         <v-divider />
 
-        <v-card-text class="pa-0">
-          <!-- Status Section -->
-          <div class="px-6 py-4 border-b">
-            <div class="text-subtitle-2 font-weight-medium mb-3">Status</div>
-            <div class="d-flex flex-wrap gap-2">
-              <v-chip
-                :color="isPlaying ? 'success' : 'warning'"
-                variant="flat"
-                size="small"
-              >
-                <v-icon start :icon="isPlaying ? 'mdi-play' : 'mdi-pause'"></v-icon>
-                {{ isPlaying ? 'Live' : 'Paused' }}
-              </v-chip>
-              
-              <v-chip
-                :color="participants.length > 1 ? 'info' : 'warning'"
-                variant="flat"
-                size="small"
-              >
-                <v-icon start icon="mdi-devices"></v-icon>
-                {{ participants.length }} Device{{ participants.length !== 1 ? 's' : '' }}
-              </v-chip>
-
-              <v-chip
-                color="primary"
-                variant="flat"
-                size="small"
-              >
-                <v-icon start icon="mdi-eye"></v-icon>
-                Position: {{ Math.round(currentScrollPosition) }}
-              </v-chip>
-            </div>
-          </div>
-
-          <!-- Participants List Section -->
-          <div class="px-6 py-4 border-b">
-            <div class="text-subtitle-2 font-weight-medium mb-3">
-              <v-icon class="mr-2">mdi-account-group</v-icon>
-              Participants ({{ participants.length }})
-            </div>
-            
-            <v-list class="pa-0" density="compact">
-              <v-list-item
-                v-for="participant in participants"
-                :key="participant.id"
-                :class="{ 'bg-primary': participant.id === participantId }"
-                class="px-0"
-              >
-                <template v-slot:prepend>
-                  <v-avatar
-                    size="32"
-                    :color="participant.role === 'controller' ? 'primary' : 'success'"
-                  >
-                    <v-icon size="small" color="white">{{
-                      participant.role === "controller" ? "mdi-laptop" : "mdi-cellphone"
-                    }}</v-icon>
-                  </v-avatar>
-                </template>
-
-                <v-list-item-title class="text-body-2">
-                  {{ participant.role === "controller" ? "💻 Controller" : "📱 Teleprompter" }}
-                  <v-chip
-                    v-if="participant.id === participantId"
-                    size="x-small"
-                    color="primary"
-                    variant="outlined"
-                    class="ml-2"
-                  >
-                    You
-                  </v-chip>
-                </v-list-item-title>
-
-                <v-list-item-subtitle class="text-caption">
-                  Connected {{ formatTime(participant.joined_at) }}
-                </v-list-item-subtitle>
-
-                <template v-slot:append v-if="participant.id !== participantId">
-                  <v-btn
-                    icon="mdi-account-remove"
-                    size="x-small"
-                    color="error"
-                    variant="text"
-                    @click="kickParticipant(participant.id)"
-                  />
-                </template>
-              </v-list-item>
-            </v-list>
-
-            <!-- Room Actions -->
-            <div class="mt-4">
-              <v-btn
-                prepend-icon="mdi-information"
-                variant="outlined"
-                color="info"
-                size="small"
-                block
-                class="mb-2"
-                @click="showRoomInfoDialog = true"
-              >
-                Room Information
-              </v-btn>
-              <v-btn
-                prepend-icon="mdi-logout"
-                color="error"
-                variant="outlined"
-                size="small"
-                block
-                @click="disconnect"
-              >
-                Leave Room
-              </v-btn>
-            </div>
-          </div>
-
-          <!-- Playback Speed Section -->
-          <div class="px-6 py-4 border-b">
+        <v-card-text class="px-4 py-4">
+          <!-- Speed Control Section -->
+          <div class="mb-6">
             <div class="text-subtitle-2 font-weight-medium mb-3">Playback Speed</div>
             <div class="d-flex align-center justify-space-between mb-2">
               <span class="text-body-2">Speed Control</span>
@@ -272,9 +360,10 @@
               :min="0.1"
               :max="5.0"
               :step="0.1"
-              track-color="grey-darken-1"
+              track-color="grey-lighten-2"
               color="primary"
               thumb-label="always"
+              class="speed-slider"
               @input="updateSpeed"
             >
               <template v-slot:prepend>
@@ -328,7 +417,7 @@
           </div>
 
           <!-- Text Formatting Section -->
-          <div class="px-6 py-4 border-b">
+          <div class="mb-6">
             <div class="text-subtitle-2 font-weight-medium mb-3">Text Formatting</div>
             
             <!-- Font Size Control -->
@@ -345,7 +434,7 @@
                 :max="5.0"
                 :step="0.1"
                 color="primary"
-                track-color="grey-darken-1"
+                track-color="grey-lighten-2"
                 @input="updateFontSize"
               >
                 <template v-slot:prepend>
@@ -381,7 +470,7 @@
                 :max="100"
                 :step="5"
                 color="primary"
-                track-color="grey-darken-1"
+                track-color="grey-lighten-2"
                 @input="updateWidth"
               >
                 <template v-slot:prepend>
@@ -405,11 +494,11 @@
           </div>
 
           <!-- Mirror Settings Section -->
-          <div class="px-6 py-4 border-b">
+          <div class="mb-6">
             <div class="text-subtitle-2 font-weight-medium mb-3">Mirror Settings</div>
             <div class="d-flex gap-2">
               <v-btn
-                :color="horizontalMirror ? 'primary' : 'grey-darken-2'"
+                :color="horizontalMirror ? 'primary' : 'grey'"
                 :variant="horizontalMirror ? 'flat' : 'outlined'"
                 block
                 size="small"
@@ -420,7 +509,7 @@
                 Horizontal
               </v-btn>
               <v-btn
-                :color="verticalMirror ? 'primary' : 'grey-darken-2'"
+                :color="verticalMirror ? 'primary' : 'grey'"
                 :variant="verticalMirror ? 'flat' : 'outlined'"
                 block
                 size="small"
@@ -433,35 +522,8 @@
             </div>
           </div>
 
-          <!-- Script Actions Section -->
-          <div class="px-6 py-4 border-b">
-            <div class="text-subtitle-2 font-weight-medium mb-3">Script Actions</div>
-            <div class="d-flex flex-wrap gap-2">
-              <v-btn size="small" variant="outlined" @click="undoScript">
-                <v-icon start>mdi-undo</v-icon>
-                Undo
-              </v-btn>
-              <v-btn size="small" variant="outlined" @click="redoScript">
-                <v-icon start>mdi-redo</v-icon>
-                Redo
-              </v-btn>
-              <v-btn size="small" variant="outlined" @click="clearScript">
-                <v-icon start>mdi-delete-outline</v-icon>
-                Clear
-              </v-btn>
-              <v-btn size="small" variant="outlined" @click="importScript">
-                <v-icon start>mdi-file-import</v-icon>
-                Import
-              </v-btn>
-              <v-btn size="small" variant="outlined" @click="exportScript">
-                <v-icon start>mdi-download</v-icon>
-                Export
-              </v-btn>
-            </div>
-          </div>
-
           <!-- Advanced Settings -->
-          <div class="px-6 py-4">
+          <div>
             <div class="text-subtitle-2 font-weight-medium mb-3">Advanced</div>
             <v-row>
               <v-col cols="6">
@@ -695,15 +757,6 @@ Happy teleprompting! 🎬`,
   },
 
   computed: {
-    scriptEditorStyle() {
-      // Mac width constraints for wider displays
-      return {
-        maxWidth: '1200px',
-        margin: '0 auto',
-        width: '100%'
-      };
-    },
-
     joinUrl() {
       if (!this.roomCredentials) return "";
       const baseUrl = window.location.origin;
