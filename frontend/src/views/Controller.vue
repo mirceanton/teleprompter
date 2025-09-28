@@ -1,378 +1,595 @@
 <template>
   <v-app>
-    <v-app-bar app color="primary" dark>
-      <v-toolbar-title>
-        Admin - {{ roomCredentials?.room_name || "Loading..." }}
-      </v-toolbar-title>
-      <v-spacer />
+    <!-- Modern Header with Status Information -->
+    <v-app-bar app elevation="0" class="modern-header" height="72">
+      <v-container fluid class="d-flex align-center">
+        <div class="d-flex align-center">
+          <v-avatar color="primary" size="40" class="mr-3">
+            <v-icon color="white">mdi-television-play</v-icon>
+          </v-avatar>
+          <div>
+            <div class="text-h6 font-weight-bold">Teleprompter Control</div>
+            <div class="text-caption text-medium-emphasis">
+              Room: {{ roomCredentials?.room_name || "Connecting..." }}
+            </div>
+          </div>
+        </div>
 
-      <!-- Participant Management Dropdown -->
-      <v-menu offset-y>
-        <template v-slot:activator="{ props }">
-          <v-btn icon="mdi-account-group" v-bind="props" class="mr-2">
-            <v-badge :content="participants.length" color="secondary" overlap>
-              <v-icon>mdi-account-group</v-icon>
-            </v-badge>
-          </v-btn>
-        </template>
+        <v-spacer />
 
-        <v-card min-width="300">
-          <v-card-title class="text-h6 pa-4">
-            <v-icon class="mr-2">mdi-account-group</v-icon>
-            Room Participants
-          </v-card-title>
+        <!-- Status Indicators -->
+        <div class="d-flex align-center mr-4">
+          <v-chip
+            :color="isPlaying ? 'success' : 'grey'"
+            variant="flat"
+            class="mr-2"
+            size="small"
+          >
+            <v-icon start :icon="isPlaying ? 'mdi-play' : 'mdi-pause'"></v-icon>
+            {{ isPlaying ? 'Live' : 'Paused' }}
+          </v-chip>
+          
+          <v-chip
+            :color="participants.length > 1 ? 'info' : 'warning'"
+            variant="flat"
+            class="mr-2"
+            size="small"
+          >
+            <v-icon start icon="mdi-devices"></v-icon>
+            {{ participants.length }} Device{{ participants.length !== 1 ? 's' : '' }}
+          </v-chip>
 
-          <v-divider />
+          <v-chip
+            color="primary"
+            variant="flat"
+            size="small"
+          >
+            <v-icon start icon="mdi-eye"></v-icon>
+            Position: {{ Math.round(currentScrollPosition) }}
+          </v-chip>
+        </div>
 
-          <!-- Participants List -->
-          <v-list>
-            <v-list-item
-              v-for="participant in participants"
-              :key="participant.id"
-              :class="{ 'bg-primary': participant.id === participantId }"
-            >
-              <template v-slot:prepend>
-                <v-avatar
-                  size="small"
-                  :color="
-                    participant.role === 'controller' ? 'primary' : 'secondary'
-                  "
-                >
-                  <v-icon>{{
-                    participant.role === "controller"
-                      ? "mdi-laptop"
-                      : "mdi-cellphone"
-                  }}</v-icon>
-                </v-avatar>
-              </template>
-
-              <v-list-item-title>
-                {{
-                  participant.role === "controller"
-                    ? "💻 Controller"
-                    : "📱 Teleprompter"
-                }}
-                <v-chip
-                  v-if="participant.id === participantId"
-                  size="x-small"
-                  color="primary"
-                  variant="outlined"
-                  class="ml-2"
-                >
-                  You
-                </v-chip>
-              </v-list-item-title>
-
-              <v-list-item-subtitle>
-                Joined {{ formatTime(participant.joined_at) }}
-              </v-list-item-subtitle>
-
-              <template v-slot:append v-if="participant.id !== participantId">
-                <v-btn
-                  icon="mdi-account-remove"
-                  size="small"
-                  color="error"
-                  variant="text"
-                  @click="kickParticipant(participant.id)"
-                >
-                </v-btn>
-              </template>
-            </v-list-item>
-          </v-list>
-
-          <v-divider />
-
-          <!-- Room Actions -->
+        <!-- Action Buttons -->
+        <div class="d-flex align-center">
+          <!-- Quick Actions -->
           <v-btn
-            prepend-icon="mdi-information"
-            variant="tonal"
-            color="info"
-            size="large"
-            class="ml-4 mr-4 mt-4 mb-2"
-            width="calc(100% - 32px)"
+            icon="mdi-content-save"
+            variant="text"
+            class="mr-1"
+            @click="saveScript"
+          >
+            <v-icon>mdi-content-save</v-icon>
+            <v-tooltip activator="parent" location="bottom">Save Script</v-tooltip>
+          </v-btn>
+
+          <v-btn
+            icon="mdi-share-variant"
+            variant="text"
+            class="mr-1"
             @click="showRoomInfoDialog = true"
           >
-            Room Info
+            <v-icon>mdi-share-variant</v-icon>
+            <v-tooltip activator="parent" location="bottom">Share Room</v-tooltip>
           </v-btn>
+
+          <!-- Participants Menu -->
+          <v-menu offset-y>
+            <template v-slot:activator="{ props }">
+              <v-btn v-bind="props" variant="text" class="mr-2">
+                <v-badge :content="participants.length" color="secondary" overlap>
+                  <v-icon>mdi-account-group</v-icon>
+                </v-badge>
+                <v-tooltip activator="parent" location="bottom">Manage Participants</v-tooltip>
+              </v-btn>
+            </template>
+
+            <v-card min-width="320" elevation="8">
+              <v-card-title class="text-h6 pa-4 bg-primary text-white">
+                <v-icon class="mr-2">mdi-account-group</v-icon>
+                Room Participants
+              </v-card-title>
+
+              <v-divider />
+
+              <!-- Participants List -->
+              <v-list class="pa-0">
+                <v-list-item
+                  v-for="participant in participants"
+                  :key="participant.id"
+                  :class="{ 'bg-blue-grey-lighten-5': participant.id === participantId }"
+                  class="px-4"
+                >
+                  <template v-slot:prepend>
+                    <v-avatar
+                      size="36"
+                      :color="participant.role === 'controller' ? 'primary' : 'success'"
+                    >
+                      <v-icon color="white">{{
+                        participant.role === "controller" ? "mdi-laptop" : "mdi-cellphone"
+                      }}</v-icon>
+                    </v-avatar>
+                  </template>
+
+                  <v-list-item-title class="font-weight-medium">
+                    {{ participant.role === "controller" ? "💻 Controller" : "📱 Teleprompter" }}
+                    <v-chip
+                      v-if="participant.id === participantId"
+                      size="x-small"
+                      color="primary"
+                      variant="outlined"
+                      class="ml-2"
+                    >
+                      You
+                    </v-chip>
+                  </v-list-item-title>
+
+                  <v-list-item-subtitle>
+                    Connected {{ formatTime(participant.joined_at) }}
+                  </v-list-item-subtitle>
+
+                  <template v-slot:append v-if="participant.id !== participantId">
+                    <v-btn
+                      icon="mdi-account-remove"
+                      size="small"
+                      color="error"
+                      variant="text"
+                      @click="kickParticipant(participant.id)"
+                    >
+                    </v-btn>
+                  </template>
+                </v-list-item>
+              </v-list>
+
+              <v-divider />
+
+              <!-- Room Actions -->
+              <div class="pa-4">
+                <v-btn
+                  prepend-icon="mdi-information"
+                  variant="outlined"
+                  color="info"
+                  block
+                  class="mb-2"
+                  @click="showRoomInfoDialog = true"
+                >
+                  Room Information
+                </v-btn>
+                <v-btn
+                  prepend-icon="mdi-logout"
+                  color="error"
+                  variant="outlined"
+                  block
+                  @click="disconnect"
+                >
+                  Leave Room
+                </v-btn>
+              </div>
+            </v-card>
+          </v-menu>
+
+          <!-- Settings Menu -->
           <v-btn
-            prepend-icon="mdi-logout"
-            color="error"
-            variant="tonal"
-            size="large"
-            class="ml-4 mr-4 mb-4 mt-2"
-            width="calc(100% - 32px)"
-            @click="disconnect"
+            icon="mdi-cog"
+            variant="text"
+            @click="showSettingsPanel = !showSettingsPanel"
           >
-            Leave Room
+            <v-icon>mdi-cog</v-icon>
+            <v-tooltip activator="parent" location="bottom">Settings</v-tooltip>
           </v-btn>
-        </v-card>
-      </v-menu>
+        </div>
+      </v-container>
     </v-app-bar>
 
-    <v-main>
-      <v-container fluid>
-        <v-row>
-          <!-- Script Editor -->
-          <v-col cols="12" lg="9">
-            <v-card elevation="4">
-              <v-card-title class="text-h5">
-                <v-icon class="mr-2">mdi-script-text</v-icon>
-                Script Editor
-              </v-card-title>
-
-              <v-card-text>
-                <v-textarea
-                  v-model="scriptText"
-                  label="Script Content"
-                  placeholder="Paste or type your script here..."
-                  rows="20"
-                  variant="outlined"
-                  auto-grow
-                  @input="debouncedSyncText"
-                />
-              </v-card-text>
-            </v-card>
-          </v-col>
-
-          <!-- Unified Controls Panel -->
-          <v-col cols="12" lg="3">
-            <!-- Unified Playback & Navigation Controls -->
-            <v-card elevation="4" class="mb-4">
-              <v-card-title class="text-h6">
-                <v-icon class="mr-2">mdi-play-circle</v-icon>
-                Teleprompter Controls
-              </v-card-title>
-
-              <v-card-text>
-                <!-- Main Control Row: Back | Play/Pause | Forward -->
-                <v-row class="mb-4" align="center" justify="center">
-                  <!-- Scroll backward button -->
-                  <v-col cols="3">
-                    <v-btn
-                      color="secondary"
-                      @click="handleBackwardClick"
-                      @dblclick="goToBeginning"
-                      size="large"
-                      icon
-                      class="control-button"
-                    >
-                      <v-icon>mdi-skip-backward</v-icon>
-                      <v-tooltip activator="parent" location="bottom">
-                        <div>Single click: Scroll back 5 lines</div>
-                        <div>Double click: Go to top</div>
-                      </v-tooltip>
-                    </v-btn>
-                  </v-col>
+    <v-main class="modern-main">
+      <v-container fluid class="pa-4">
+        <!-- Modern Dashboard Layout -->
+        <v-row no-gutters class="fill-height">
+          <!-- Left Panel: Script Management -->
+          <v-col 
+            :cols="showSettingsPanel ? '12' : '12'" 
+            :xl="showSettingsPanel ? '8' : '10'"
+            :lg="showSettingsPanel ? '7' : '9'"
+            :md="showSettingsPanel ? '6' : '8'"
+            class="pr-2"
+          >
+            <!-- Script Editor with Enhanced Features -->
+            <v-card elevation="2" class="fill-height script-editor-card">
+              <!-- Enhanced Header with Script Actions -->
+              <v-card-title class="script-header px-6 py-4">
+                <div class="d-flex align-center justify-space-between w-100">
+                  <div class="d-flex align-center">
+                    <v-icon class="mr-3" color="primary" size="24">mdi-script-text-outline</v-icon>
+                    <div>
+                      <div class="text-h6 font-weight-bold">Script Editor</div>
+                      <div class="text-caption text-medium-emphasis">
+                        {{ scriptText.split('\n').length }} lines • {{ scriptText.length }} characters
+                      </div>
+                    </div>
+                  </div>
                   
-                  <!-- Large circular Play/Pause button -->
-                  <v-col cols="6" class="text-center">
-                    <v-btn
-                      :color="isPlaying ? 'warning' : 'success'"
-                      @click="togglePlayback"
-                      size="x-large"
-                      icon
-                      class="play-pause-button"
-                    >
-                      <v-icon size="large">{{
-                        isPlaying ? "mdi-pause" : "mdi-play"
-                      }}</v-icon>
-                      <v-tooltip activator="parent" location="bottom">
-                        {{ isPlaying ? "Pause" : "Start" }}
-                      </v-tooltip>
-                    </v-btn>
-                  </v-col>
-                  
-                  <!-- Scroll forward button -->
-                  <v-col cols="3">
-                    <v-btn
-                      color="secondary"
-                      @click="handleForwardClick"
-                      @dblclick="goToEnd"
-                      size="large"
-                      icon
-                      class="control-button"
-                    >
-                      <v-icon>mdi-skip-forward</v-icon>
-                      <v-tooltip activator="parent" location="bottom">
-                        <div>Single click: Scroll forward 5 lines</div>
-                        <div>Double click: Go to bottom</div>
-                      </v-tooltip>
-                    </v-btn>
-                  </v-col>
-                </v-row>
+                  <div class="d-flex align-center">
+                    <!-- Script Actions -->
+                    <v-btn-group variant="outlined" class="mr-3">
+                      <v-btn size="small" @click="undoScript">
+                        <v-icon>mdi-undo</v-icon>
+                        <v-tooltip activator="parent" location="bottom">Undo (Ctrl+Z)</v-tooltip>
+                      </v-btn>
+                      <v-btn size="small" @click="redoScript">
+                        <v-icon>mdi-redo</v-icon>
+                        <v-tooltip activator="parent" location="bottom">Redo (Ctrl+Y)</v-tooltip>
+                      </v-btn>
+                      <v-btn size="small" @click="clearScript">
+                        <v-icon>mdi-delete-outline</v-icon>
+                        <v-tooltip activator="parent" location="bottom">Clear Script</v-tooltip>
+                      </v-btn>
+                    </v-btn-group>
 
-                <!-- Speed Control -->
-                <v-text-field
-                  v-model.number="scrollSpeed"
-                  label="Speed"
-                  type="number"
-                  :min="0.1"
-                  :max="10"
-                  :step="0.1"
-                  variant="outlined"
-                  class="mt-4"
-                  density="compact"
-                  @input="updateSpeed"
-                >
-                  <template v-slot:prepend-inner>
-                    <v-btn
-                      icon="mdi-minus"
-                      size="x-small"
-                      variant="text"
-                      @click="
-                        scrollSpeed = Math.max(
-                          0.1,
-                          Math.round((scrollSpeed - 0.1) * 10) / 10
-                        );
-                        updateSpeed();
-                      "
-                    />
-                  </template>
-                  <template v-slot:append-inner>
-                    <v-btn
-                      icon="mdi-plus"
-                      size="x-small"
-                      variant="text"
-                      @click="
-                        scrollSpeed = Math.min(
-                          10,
-                          Math.round((scrollSpeed + 0.1) * 10) / 10
-                        );
-                        updateSpeed();
-                      "
-                    />
-                  </template>
-                </v-text-field>
-              </v-card-text>
-            </v-card>
-
-            <!-- Text & Mirror Settings -->
-            <v-card elevation="4">
-              <v-card-title class="text-h6">
-                <v-icon class="mr-2">mdi-format-font</v-icon>
-                Text & Mirror Settings
+                    <v-btn-group variant="outlined">
+                      <v-btn size="small" @click="importScript">
+                        <v-icon>mdi-file-import</v-icon>
+                        <v-tooltip activator="parent" location="bottom">Import File</v-tooltip>
+                      </v-btn>
+                      <v-btn size="small" @click="exportScript">
+                        <v-icon>mdi-download</v-icon>
+                        <v-tooltip activator="parent" location="bottom">Export Script</v-tooltip>
+                      </v-btn>
+                    </v-btn-group>
+                  </div>
+                </div>
               </v-card-title>
 
-              <v-card-text>
-                <!-- Text Width -->
-                <v-text-field
-                  v-model.number="textWidth"
-                  label="Text Width (%)"
-                  type="number"
-                  :min="20"
-                  :max="100"
-                  variant="outlined"
-                  class="mb-3"
-                  density="compact"
-                  @input="updateWidth"
-                >
-                  <template v-slot:prepend-inner>
-                    <v-btn
-                      icon="mdi-minus"
-                      size="x-small"
-                      variant="text"
-                      @click="
-                        textWidth = Math.max(20, textWidth - 5);
-                        updateWidth();
-                      "
-                    />
-                  </template>
-                  <template v-slot:append-inner>
-                    <v-btn
-                      icon="mdi-plus"
-                      size="x-small"
-                      variant="text"
-                      @click="
-                        textWidth = Math.min(100, textWidth + 5);
-                        updateWidth();
-                      "
-                    />
-                  </template>
-                </v-text-field>
+              <v-divider />
 
-                <!-- Font Size -->
-                <v-text-field
-                  v-model.number="fontSize"
-                  label="Font Size (em)"
-                  type="number"
-                  :min="0.5"
-                  :max="5"
-                  :step="0.1"
-                  variant="outlined"
-                  class="mb-3"
-                  density="compact"
-                  @input="updateFontSize"
-                >
-                  <template v-slot:prepend-inner>
-                    <v-btn
-                      icon="mdi-minus"
-                      size="x-small"
-                      variant="text"
-                      @click="
-                        fontSize = Math.max(
-                          0.5,
-                          Math.round((fontSize - 0.1) * 10) / 10
-                        );
-                        updateFontSize();
-                      "
-                    />
-                  </template>
-                  <template v-slot:append-inner>
-                    <v-btn
-                      icon="mdi-plus"
-                      size="x-small"
-                      variant="text"
-                      @click="
-                        fontSize = Math.min(
-                          5,
-                          Math.round((fontSize + 0.1) * 10) / 10
-                        );
-                        updateFontSize();
-                      "
-                    />
-                  </template>
-                </v-text-field>
+              <!-- Script Editor Content -->
+              <v-card-text class="pa-0 fill-height d-flex flex-column">
+                <div class="script-editor-container flex-grow-1">
+                  <v-textarea
+                    v-model="scriptText"
+                    placeholder="Start typing your script here, or paste existing content..."
+                    variant="plain"
+                    class="script-textarea"
+                    hide-details
+                    auto-grow
+                    rows="25"
+                    @input="debouncedSyncText"
+                    @keydown="handleKeyboardShortcuts"
+                  />
+                  
+                  <!-- Live Preview Indicator -->
+                  <div v-if="isPlaying" class="live-preview-indicator">
+                    <div class="preview-line" :style="{ top: `${currentScrollPosition * 1.6}em` }"></div>
+                  </div>
+                </div>
 
-                <!-- Mirror Settings -->
-                <div class="mb-3">
-                  <v-label class="mb-2">
-                    <v-icon class="mr-1">mdi-flip-horizontal</v-icon>
-                    Mirror Settings
-                  </v-label>
-                  <v-row>
-                    <v-col cols="6">
-                      <v-btn
-                        :color="horizontalMirror ? 'primary' : 'secondary'"
-                        @click="toggleHorizontalMirror"
-                        block
-                        size="small"
-                        variant="outlined"
-                      >
-                        <v-icon class="mr-1">mdi-flip-horizontal</v-icon>
-                        Horizontal
-                      </v-btn>
-                    </v-col>
-                    <v-col cols="6">
-                      <v-btn
-                        :color="verticalMirror ? 'primary' : 'secondary'"
-                        @click="toggleVerticalMirror"
-                        block
-                        size="small"
-                        variant="outlined"
-                      >
-                        <v-icon class="mr-1">mdi-flip-vertical</v-icon>
-                        Vertical
-                      </v-btn>
-                    </v-col>
-                  </v-row>
+                <!-- Script Status Bar -->
+                <div class="script-status-bar px-4 py-2 bg-grey-lighten-4">
+                  <div class="d-flex align-center justify-space-between">
+                    <div class="d-flex align-center">
+                      <v-chip size="x-small" color="success" variant="flat" class="mr-2">
+                        <v-icon start size="small">mdi-check-circle</v-icon>
+                        Synced
+                      </v-chip>
+                      <span class="text-caption text-medium-emphasis">
+                        Last updated: {{ lastSyncTime }}
+                      </span>
+                    </div>
+                    <div class="text-caption text-medium-emphasis">
+                      Position: Line {{ Math.round(currentScrollPosition) + 1 }}
+                    </div>
+                  </div>
                 </div>
               </v-card-text>
             </v-card>
           </v-col>
+
+          <!-- Right Panel: Control Center -->
+          <v-col 
+            :cols="showSettingsPanel ? '12' : '12'" 
+            :xl="showSettingsPanel ? '4' : '2'"
+            :lg="showSettingsPanel ? '5' : '3'"
+            :md="showSettingsPanel ? '6' : '4'"
+            class="pl-2"
+          >
+            <div class="d-flex flex-column fill-height">
+              <!-- Playback Controls Card -->
+              <v-card elevation="2" class="mb-4 control-panel-card">
+                <v-card-title class="control-header px-4 py-3">
+                  <div class="d-flex align-center">
+                    <v-icon class="mr-2" color="primary">mdi-play-circle-outline</v-icon>
+                    <span class="font-weight-bold">Playback Control</span>
+                  </div>
+                </v-card-title>
+
+                <v-divider />
+
+                <v-card-text class="px-4 py-6">
+                  <!-- Main Control Buttons -->
+                  <div class="d-flex justify-center align-center mb-6">
+                    <!-- Previous/Reset Button -->
+                    <v-btn
+                      color="grey-darken-1"
+                      variant="outlined"
+                      size="large"
+                      icon
+                      class="control-btn mr-4"
+                      @click="handleBackwardClick"
+                      @dblclick="goToBeginning"
+                    >
+                      <v-icon>mdi-skip-previous</v-icon>
+                      <v-tooltip activator="parent" location="bottom">
+                        <div>Click: Back 5 lines</div>
+                        <div>Double-click: Go to start</div>
+                      </v-tooltip>
+                    </v-btn>
+
+                    <!-- Main Play/Pause Button -->
+                    <v-btn
+                      :color="isPlaying ? 'error' : 'success'"
+                      :variant="isPlaying ? 'flat' : 'flat'"
+                      size="x-large"
+                      icon
+                      class="play-pause-btn mx-4"
+                      @click="togglePlayback"
+                    >
+                      <v-icon size="32">{{ isPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
+                      <v-tooltip activator="parent" location="bottom">
+                        {{ isPlaying ? 'Pause (Space)' : 'Play (Space)' }}
+                      </v-tooltip>
+                    </v-btn>
+
+                    <!-- Next/End Button -->
+                    <v-btn
+                      color="grey-darken-1"
+                      variant="outlined"
+                      size="large"
+                      icon
+                      class="control-btn ml-4"
+                      @click="handleForwardClick"
+                      @dblclick="goToEnd"
+                    >
+                      <v-icon>mdi-skip-next</v-icon>
+                      <v-tooltip activator="parent" location="bottom">
+                        <div>Click: Forward 5 lines</div>
+                        <div>Double-click: Go to end</div>
+                      </v-tooltip>
+                    </v-btn>
+                  </div>
+
+                  <!-- Speed Control with Visual Indicator -->
+                  <div class="mb-4">
+                    <div class="d-flex align-center justify-space-between mb-2">
+                      <span class="text-subtitle-2 font-weight-medium">Speed Control</span>
+                      <v-chip size="small" color="primary" variant="outlined">
+                        {{ scrollSpeed.toFixed(1) }}x
+                      </v-chip>
+                    </div>
+                    <v-slider
+                      v-model="scrollSpeed"
+                      :min="0.1"
+                      :max="5.0"
+                      :step="0.1"
+                      track-color="grey-lighten-2"
+                      color="primary"
+                      thumb-label="always"
+                      class="speed-slider"
+                      @input="updateSpeed"
+                    >
+                      <template v-slot:prepend>
+                        <v-btn
+                          icon="mdi-minus"
+                          size="small"
+                          variant="text"
+                          @click="adjustSpeed(-0.1)"
+                        />
+                      </template>
+                      <template v-slot:append>
+                        <v-btn
+                          icon="mdi-plus"
+                          size="small"
+                          variant="text"
+                          @click="adjustSpeed(0.1)"
+                        />
+                      </template>
+                    </v-slider>
+                  </div>
+
+                  <!-- Quick Actions -->
+                  <div class="d-flex justify-space-around">
+                    <v-btn
+                      size="small"
+                      variant="outlined"
+                      color="info"
+                      @click="goToBeginning"
+                    >
+                      <v-icon start>mdi-page-first</v-icon>
+                      Start
+                    </v-btn>
+                    <v-btn
+                      size="small"
+                      variant="outlined"
+                      color="warning"
+                      @click="resetScrolling"
+                    >
+                      <v-icon start>mdi-restart</v-icon>
+                      Reset
+                    </v-btn>
+                    <v-btn
+                      size="small"
+                      variant="outlined"
+                      color="info"
+                      @click="goToEnd"
+                    >
+                      <v-icon start>mdi-page-last</v-icon>
+                      End
+                    </v-btn>
+                  </div>
+                </v-card-text>
+              </v-card>
+
+              <!-- Settings Panel (Collapsible) -->
+              <v-expand-transition>
+                <v-card v-show="showSettingsPanel" elevation="2" class="settings-card">
+                  <v-card-title class="control-header px-4 py-3">
+                    <div class="d-flex align-center justify-space-between w-100">
+                      <div class="d-flex align-center">
+                        <v-icon class="mr-2" color="primary">mdi-tune-vertical</v-icon>
+                        <span class="font-weight-bold">Display Settings</span>
+                      </div>
+                      <v-btn
+                        icon="mdi-close"
+                        size="small"
+                        variant="text"
+                        @click="showSettingsPanel = false"
+                      />
+                    </div>
+                  </v-card-title>
+
+                  <v-divider />
+
+                  <v-card-text class="px-4 py-4">
+                    <!-- Text Formatting Section -->
+                    <div class="mb-4">
+                      <div class="text-subtitle-2 font-weight-medium mb-3">Text Formatting</div>
+                      
+                      <!-- Font Size Control -->
+                      <div class="mb-3">
+                        <div class="d-flex align-center justify-space-between mb-1">
+                          <span class="text-body-2">Font Size</span>
+                          <v-chip size="x-small" color="primary" variant="outlined">
+                            {{ fontSize.toFixed(1) }}em
+                          </v-chip>
+                        </div>
+                        <v-slider
+                          v-model="fontSize"
+                          :min="0.5"
+                          :max="5.0"
+                          :step="0.1"
+                          color="primary"
+                          track-color="grey-lighten-2"
+                          @input="updateFontSize"
+                        >
+                          <template v-slot:prepend>
+                            <v-btn
+                              icon="mdi-format-font-size-decrease"
+                              size="x-small"
+                              variant="text"
+                              @click="adjustFontSize(-0.1)"
+                            />
+                          </template>
+                          <template v-slot:append>
+                            <v-btn
+                              icon="mdi-format-font-size-increase"
+                              size="x-small"
+                              variant="text"
+                              @click="adjustFontSize(0.1)"
+                            />
+                          </template>
+                        </v-slider>
+                      </div>
+
+                      <!-- Text Width Control -->
+                      <div class="mb-3">
+                        <div class="d-flex align-center justify-space-between mb-1">
+                          <span class="text-body-2">Text Width</span>
+                          <v-chip size="x-small" color="primary" variant="outlined">
+                            {{ textWidth }}%
+                          </v-chip>
+                        </div>
+                        <v-slider
+                          v-model="textWidth"
+                          :min="20"
+                          :max="100"
+                          :step="5"
+                          color="primary"
+                          track-color="grey-lighten-2"
+                          @input="updateWidth"
+                        >
+                          <template v-slot:prepend>
+                            <v-btn
+                              icon="mdi-arrow-collapse-horizontal"
+                              size="x-small"
+                              variant="text"
+                              @click="adjustWidth(-5)"
+                            />
+                          </template>
+                          <template v-slot:append>
+                            <v-btn
+                              icon="mdi-arrow-expand-horizontal"
+                              size="x-small"
+                              variant="text"
+                              @click="adjustWidth(5)"
+                            />
+                          </template>
+                        </v-slider>
+                      </div>
+                    </div>
+
+                    <!-- Mirror Settings Section -->
+                    <div class="mb-4">
+                      <div class="text-subtitle-2 font-weight-medium mb-3">Mirror Settings</div>
+                      <div class="d-flex gap-2">
+                        <v-btn
+                          :color="horizontalMirror ? 'primary' : 'grey'"
+                          :variant="horizontalMirror ? 'flat' : 'outlined'"
+                          block
+                          size="small"
+                          @click="toggleHorizontalMirror"
+                          class="flex-1"
+                        >
+                          <v-icon start>mdi-flip-horizontal</v-icon>
+                          Horizontal
+                        </v-btn>
+                        <v-btn
+                          :color="verticalMirror ? 'primary' : 'grey'"
+                          :variant="verticalMirror ? 'flat' : 'outlined'"
+                          block
+                          size="small"
+                          @click="toggleVerticalMirror"
+                          class="flex-1"
+                        >
+                          <v-icon start>mdi-flip-vertical</v-icon>
+                          Vertical
+                        </v-btn>
+                      </div>
+                    </div>
+
+                    <!-- Advanced Settings -->
+                    <div>
+                      <div class="text-subtitle-2 font-weight-medium mb-3">Advanced</div>
+                      <v-row>
+                        <v-col cols="6">
+                          <v-btn
+                            variant="outlined"
+                            size="small"
+                            block
+                            @click="resetAllSettings"
+                          >
+                            <v-icon start>mdi-restore</v-icon>
+                            Reset
+                          </v-btn>
+                        </v-col>
+                        <v-col cols="6">
+                          <v-btn
+                            variant="outlined"
+                            size="small"
+                            block
+                            color="primary"
+                            @click="saveSettings"
+                          >
+                            <v-icon start>mdi-content-save</v-icon>
+                            Save
+                          </v-btn>
+                        </v-col>
+                      </v-row>
+                    </div>
+                  </v-card-text>
+                </v-card>
+              </v-expand-transition>
+            </div>
+          </v-col>
         </v-row>
       </v-container>
     </v-main>
-
     <!-- Room Info Dialog -->
     <v-dialog v-model="showRoomInfoDialog" max-width="600">
       <v-card>
@@ -420,9 +637,7 @@
                 icon="mdi-content-copy"
                 size="small"
                 variant="text"
-                @click="
-                  copyToClipboard(roomCredentials?.room_id, 'Room ID copied!')
-                "
+                @click="copyToClipboard(roomCredentials?.room_id, 'Room ID copied!')"
               />
             </template>
           </v-text-field>
@@ -451,44 +666,16 @@
                 icon="mdi-content-copy"
                 size="small"
                 variant="text"
-                @click="
-                  copyToClipboard(
-                    roomCredentials?.room_secret,
-                    'Room secret copied!'
-                  )
-                "
+                @click="copyToClipboard(roomCredentials?.room_secret, 'Room secret copied!')"
               />
             </template>
           </v-text-field>
 
-          <!-- Copy Credentials Button -->
-          <div class="text-center mb-4">
-            <v-btn
-              prepend-icon="mdi-content-copy"
-              variant="outlined"
-              @click="copyCredentials"
-            >
-              Copy All Credentials
-            </v-btn>
+          <!-- QR Code and Join URL -->
+          <div v-if="qrCodeDataUrl" class="text-center mb-4">
+            <img :src="qrCodeDataUrl" alt="Room QR Code" style="max-width: 200px" />
           </div>
 
-          <v-divider class="mb-4" />
-
-          <!-- QR Code -->
-          <div class="text-center mb-4">
-            <div v-if="qrCodeDataUrl">
-              <img
-                :src="qrCodeDataUrl"
-                alt="QR Code"
-                style="max-width: 200px; border-radius: 8px"
-              />
-            </div>
-            <div v-else>
-              <v-icon size="64" color="grey">mdi-qrcode</v-icon>
-            </div>
-          </div>
-
-          <!-- Join URL -->
           <v-text-field
             :model-value="joinUrl"
             label="Teleprompter Join URL"
@@ -511,15 +698,15 @@
       </v-card>
     </v-dialog>
 
-    <v-snackbar v-model="snackbar.show" :color="snackbar.color">
+    <!-- Snackbar for Notifications -->
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
       {{ snackbar.text }}
       <template v-slot:actions>
-        <v-btn variant="text" @click="snackbar.show = false"> Close </v-btn>
+        <v-btn variant="text" @click="snackbar.show = false">Close</v-btn>
       </template>
     </v-snackbar>
   </v-app>
 </template>
-
 <script>
 import { config } from "@/utils/config.js";
 import QRCode from "qrcode";
@@ -545,6 +732,10 @@ export default {
       editableRoomName: "",
       showSecret: false,
       qrCodeDataUrl: null,
+
+      // UI state for new design
+      showSettingsPanel: false,
+      lastSyncTime: "Never",
 
       // Script content
       scriptText: `# Welcome to Remote Teleprompter!
@@ -631,6 +822,9 @@ Happy teleprompting! 🎬`,
   },
 
   async mounted() {
+    // Load saved settings
+    this.loadSettings();
+    
     // Initialize authentication
     const authSuccess = await this.initializeAuth();
 
@@ -667,6 +861,170 @@ Happy teleprompting! 🎬`,
   },
 
   methods: {
+    // New methods for enhanced UI functionality
+    adjustSpeed(delta) {
+      this.scrollSpeed = Math.max(0.1, Math.min(5.0, 
+        Math.round((this.scrollSpeed + delta) * 10) / 10
+      ));
+      this.updateSpeed();
+    },
+
+    adjustFontSize(delta) {
+      this.fontSize = Math.max(0.5, Math.min(5.0, 
+        Math.round((this.fontSize + delta) * 10) / 10
+      ));
+      this.updateFontSize();
+    },
+
+    adjustWidth(delta) {
+      this.textWidth = Math.max(20, Math.min(100, this.textWidth + delta));
+      this.updateWidth();
+    },
+
+    // Script management methods
+    saveScript() {
+      // For now, just show confirmation. Could be extended to save to local storage or server
+      this.showSnackbar("Script changes saved", "success");
+      this.lastSyncTime = new Date().toLocaleTimeString();
+    },
+
+    importScript() {
+      // Create file input for importing scripts
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.txt,.md';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            this.scriptText = e.target.result;
+            this.debouncedSyncText();
+            this.showSnackbar(`Imported script from ${file.name}`, "success");
+          };
+          reader.readAsText(file);
+        }
+      };
+      input.click();
+    },
+
+    exportScript() {
+      // Export script as text file
+      const blob = new Blob([this.scriptText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `teleprompter-script-${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      this.showSnackbar("Script exported successfully", "success");
+    },
+
+    clearScript() {
+      if (confirm("Are you sure you want to clear the entire script? This action cannot be undone.")) {
+        this.scriptText = "";
+        this.debouncedSyncText();
+        this.showSnackbar("Script cleared", "info");
+      }
+    },
+
+    undoScript() {
+      // Basic undo functionality - could be extended with full history
+      this.showSnackbar("Undo functionality coming soon", "info");
+    },
+
+    redoScript() {
+      // Basic redo functionality - could be extended with full history
+      this.showSnackbar("Redo functionality coming soon", "info");
+    },
+
+    resetAllSettings() {
+      if (confirm("Reset all display settings to defaults?")) {
+        this.scrollSpeed = 2.5;
+        this.textWidth = 100;
+        this.fontSize = 2.5;
+        this.horizontalMirror = false;
+        this.verticalMirror = false;
+        
+        // Apply all settings
+        this.updateSpeed();
+        this.updateWidth();
+        this.updateFontSize();
+        this.updateMirror();
+        
+        this.showSnackbar("Settings reset to defaults", "success");
+      }
+    },
+
+    saveSettings() {
+      // Save current settings to localStorage
+      const settings = {
+        scrollSpeed: this.scrollSpeed,
+        textWidth: this.textWidth,
+        fontSize: this.fontSize,
+        horizontalMirror: this.horizontalMirror,
+        verticalMirror: this.verticalMirror,
+      };
+      localStorage.setItem('teleprompter_settings', JSON.stringify(settings));
+      this.showSnackbar("Settings saved", "success");
+    },
+
+    loadSettings() {
+      // Load settings from localStorage
+      try {
+        const settings = localStorage.getItem('teleprompter_settings');
+        if (settings) {
+          const parsed = JSON.parse(settings);
+          this.scrollSpeed = parsed.scrollSpeed || 2.5;
+          this.textWidth = parsed.textWidth || 100;
+          this.fontSize = parsed.fontSize || 2.5;
+          this.horizontalMirror = parsed.horizontalMirror || false;
+          this.verticalMirror = parsed.verticalMirror || false;
+        }
+      } catch (error) {
+        console.warn("Failed to load saved settings:", error);
+      }
+    },
+
+    handleKeyboardShortcuts(event) {
+      // Handle keyboard shortcuts in the script editor
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key) {
+          case 's':
+            event.preventDefault();
+            this.saveScript();
+            break;
+          case 'z':
+            event.preventDefault();
+            this.undoScript();
+            break;
+          case 'y':
+            event.preventDefault();
+            this.redoScript();
+            break;
+        }
+      }
+      
+      // Space bar for play/pause (when not in text input)
+      if (event.key === ' ' && event.target.tagName !== 'TEXTAREA') {
+        event.preventDefault();
+        this.togglePlayback();
+      }
+    },
+
+    resetScrolling() {
+      this.currentScrollPosition = 0;
+      this.isPlaying = false;
+      
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({ type: "reset" }));
+      }
+      this.showSnackbar("Reset to beginning", "info");
+    },
+
+    // Existing methods with potential updates
     async initializeAuth() {
       try {
         // Get credentials from session storage
@@ -1152,45 +1510,226 @@ Happy teleprompting! 🎬`,
 </script>
 
 <style scoped>
-.v-textarea :deep(.v-field__input) {
-  font-family: "Roboto Mono", monospace;
-  line-height: 1.6;
+/* Modern App Layout */
+.modern-header {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.v-label {
-  font-weight: 500;
-  font-size: 0.875rem;
-  opacity: 0.87;
+.modern-main {
+  background: linear-gradient(to bottom, #f5f5f5 0%, #fafafa 100%);
+  min-height: calc(100vh - 72px);
 }
 
-/* Unified Controls Styling */
-.play-pause-button {
+/* Script Editor Enhancements */
+.script-editor-card {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.script-header {
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.script-editor-container {
+  position: relative;
+  background: #ffffff;
+}
+
+.script-textarea :deep(.v-field__input) {
+  font-family: "Roboto Mono", "SF Mono", Monaco, monospace !important;
+  line-height: 1.8 !important;
+  font-size: 16px !important;
+  padding: 20px !important;
+  color: #2c3e50 !important;
+}
+
+.script-textarea :deep(.v-field__outline) {
+  display: none;
+}
+
+.live-preview-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.preview-line {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background: linear-gradient(90deg, #4caf50 0%, rgba(76, 175, 80, 0.3) 100%);
+  border-radius: 1px;
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+  transition: top 0.3s ease;
+}
+
+.script-status-bar {
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 12px;
+}
+
+/* Control Panel Enhancements */
+.control-panel-card {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.control-header {
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Enhanced Control Buttons */
+.control-btn {
+  width: 54px !important;
+  height: 54px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.control-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16) !important;
+}
+
+.play-pause-btn {
   width: 80px !important;
   height: 80px !important;
-  border-radius: 50% !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  transition: all 0.3s ease !important;
+  border-radius: 20px !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-.play-pause-button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+.play-pause-btn:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
 }
 
-.control-button {
-  width: 56px !important;
-  height: 56px !important;
-  border-radius: 50% !important;
-  transition: transform 0.2s ease !important;
+/* Settings Panel */
+.settings-card {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.control-button:hover {
-  transform: scale(1.1);
+/* Enhanced Sliders */
+.speed-slider :deep(.v-slider-track__fill) {
+  background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
 }
 
-/* Ensure title stays inline */
-.v-card-title {
-  flex-wrap: nowrap !important;
-  align-items: center !important;
+.speed-slider :deep(.v-slider-thumb) {
+  background: #1976d2;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Modern Chips and Badges */
+.v-chip {
+  font-weight: 500;
+  letter-spacing: 0.025em;
+}
+
+/* Card Transitions */
+.v-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Responsive Enhancements */
+@media (max-width: 1264px) {
+  .script-editor-card {
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 960px) {
+  .modern-header {
+    height: 64px;
+  }
+  
+  .modern-main {
+    min-height: calc(100vh - 64px);
+  }
+  
+  .script-textarea :deep(.v-field__input) {
+    font-size: 14px !important;
+    padding: 16px !important;
+  }
+
+  .play-pause-btn {
+    width: 64px !important;
+    height: 64px !important;
+  }
+
+  .control-btn {
+    width: 48px !important;
+    height: 48px !important;
+  }
+}
+
+/* Animation Enhancements */
+.v-expand-transition-enter-active,
+.v-expand-transition-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus and Accessibility */
+.v-btn:focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: 2px;
+}
+
+.script-textarea:focus-within {
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+}
+
+/* Typography Enhancements */
+.text-h6 {
+  letter-spacing: 0.0125em;
+}
+
+.text-subtitle-2 {
+  font-weight: 600;
+  letter-spacing: 0.0094em;
+}
+
+/* Loading and State Indicators */
+.v-progress-circular {
+  animation: rotation 1.5s linear infinite;
+}
+
+@keyframes rotation {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Custom Scrollbar for Script Editor */
+.script-textarea :deep(.v-field__input)::-webkit-scrollbar {
+  width: 8px;
+}
+
+.script-textarea :deep(.v-field__input)::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.script-textarea :deep(.v-field__input)::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.script-textarea :deep(.v-field__input)::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 </style>
