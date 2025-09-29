@@ -145,50 +145,53 @@
                   </v-btn>
                 </div>
 
-                <!-- Speed Control -->
-                <div class="control-group mb-4">
-                  <div class="d-flex align-center justify-space-between mb-2">
-                    <span class="text-body-2">Playback Speed</span>
-                    <div class="d-flex align-center">
-                      <v-btn
-                        icon="mdi-minus"
-                        size="small"
-                        variant="text"
-                        @click="adjustSpeed(-0.1)"
-                      />
-                      <div class="speed-display mx-2 px-3 py-1 bg-grey-darken-2 rounded">
-                        {{ scrollSpeed.toFixed(1) }}x
+                <!-- Speed Controls Row -->
+                <div class="d-flex gap-3 mb-4">
+                  <!-- Playback Speed -->
+                  <div class="control-group flex-grow-1">
+                    <div class="d-flex align-center justify-space-between mb-2">
+                      <span class="text-body-2">Playback Speed</span>
+                      <div class="d-flex align-center">
+                        <v-btn
+                          icon="mdi-minus"
+                          size="small"
+                          variant="text"
+                          @click="adjustSpeed(-0.1)"
+                        />
+                        <div class="speed-display mx-2 px-3 py-1 bg-grey-darken-2 rounded">
+                          {{ scrollSpeed.toFixed(1) }}x
+                        </div>
+                        <v-btn
+                          icon="mdi-plus"
+                          size="small"
+                          variant="text"
+                          @click="adjustSpeed(0.1)"
+                        />
                       </div>
-                      <v-btn
-                        icon="mdi-plus"
-                        size="small"
-                        variant="text"
-                        @click="adjustSpeed(0.1)"
-                      />
                     </div>
                   </div>
-                </div>
 
-                <!-- Lines to Scroll -->
-                <div class="control-group mb-4">
-                  <div class="d-flex align-center justify-space-between mb-2">
-                    <span class="text-body-2">Lines to scroll</span>
-                    <div class="d-flex align-center">
-                      <v-btn
-                        icon="mdi-minus"
-                        size="small"
-                        variant="text"
-                        @click="adjustLinesPerStep(-1)"
-                      />
-                      <div class="lines-display mx-2 px-3 py-1 bg-grey-darken-2 rounded">
-                        {{ linesPerStep }}
+                  <!-- Lines to Scroll -->
+                  <div class="control-group flex-grow-1">
+                    <div class="d-flex align-center justify-space-between mb-2">
+                      <span class="text-body-2">Lines to scroll</span>
+                      <div class="d-flex align-center">
+                        <v-btn
+                          icon="mdi-minus"
+                          size="small"
+                          variant="text"
+                          @click="adjustLinesPerStep(-1)"
+                        />
+                        <div class="lines-display mx-2 px-3 py-1 bg-grey-darken-2 rounded">
+                          {{ linesPerStep }}
+                        </div>
+                        <v-btn
+                          icon="mdi-plus"
+                          size="small"
+                          variant="text"
+                          @click="adjustLinesPerStep(1)"
+                        />
                       </div>
-                      <v-btn
-                        icon="mdi-plus"
-                        size="small"
-                        variant="text"
-                        @click="adjustLinesPerStep(1)"
-                      />
                     </div>
                   </div>
                 </div>
@@ -198,50 +201,53 @@
               <div class="control-section mb-8">
                 <h3 class="text-h6 font-weight-bold mb-6">Text Settings</h3>
                 
-                <!-- Text Width -->
-                <div class="control-group mb-4">
-                  <div class="d-flex align-center justify-space-between mb-2">
-                    <span class="text-body-2">Text Width</span>
-                    <div class="d-flex align-center">
-                      <v-btn
-                        icon="mdi-minus"
-                        size="small"
-                        variant="text"
-                        @click="adjustWidth(-5)"
-                      />
-                      <div class="value-display mx-2 px-3 py-1 bg-grey-darken-2 rounded">
-                        {{ textWidth }}%
+                <!-- Text Formatting Row -->
+                <div class="d-flex gap-3 mb-4">
+                  <!-- Text Width -->
+                  <div class="control-group flex-grow-1">
+                    <div class="d-flex align-center justify-space-between mb-2">
+                      <span class="text-body-2">Text Width</span>
+                      <div class="d-flex align-center">
+                        <v-btn
+                          icon="mdi-minus"
+                          size="small"
+                          variant="text"
+                          @click="adjustWidth(-5)"
+                        />
+                        <div class="value-display mx-2 px-3 py-1 bg-grey-darken-2 rounded">
+                          {{ textWidth }}%
+                        </div>
+                        <v-btn
+                          icon="mdi-plus"
+                          size="small"
+                          variant="text"
+                          @click="adjustWidth(5)"
+                        />
                       </div>
-                      <v-btn
-                        icon="mdi-plus"
-                        size="small"
-                        variant="text"
-                        @click="adjustWidth(5)"
-                      />
                     </div>
                   </div>
-                </div>
 
-                <!-- Font Size -->
-                <div class="control-group mb-4">
-                  <div class="d-flex align-center justify-space-between mb-2">
-                    <span class="text-body-2">Font Size (em)</span>
-                    <div class="d-flex align-center">
-                      <v-btn
-                        icon="mdi-minus"
-                        size="small"
-                        variant="text"
-                        @click="adjustFontSize(-0.1)"
-                      />
-                      <div class="value-display mx-2 px-3 py-1 bg-grey-darken-2 rounded">
-                        {{ fontSize.toFixed(1) }}
+                  <!-- Font Size -->
+                  <div class="control-group flex-grow-1">
+                    <div class="d-flex align-center justify-space-between mb-2">
+                      <span class="text-body-2">Font Size (em)</span>
+                      <div class="d-flex align-center">
+                        <v-btn
+                          icon="mdi-minus"
+                          size="small"
+                          variant="text"
+                          @click="adjustFontSize(-0.1)"
+                        />
+                        <div class="value-display mx-2 px-3 py-1 bg-grey-darken-2 rounded">
+                          {{ fontSize.toFixed(1) }}
+                        </div>
+                        <v-btn
+                          icon="mdi-plus"
+                          size="small"
+                          variant="text"
+                          @click="adjustFontSize(0.1)"
+                        />
                       </div>
-                      <v-btn
-                        icon="mdi-plus"
-                        size="small"
-                        variant="text"
-                        @click="adjustFontSize(0.1)"
-                      />
                     </div>
                   </div>
                 </div>
