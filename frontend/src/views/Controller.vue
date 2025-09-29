@@ -21,14 +21,14 @@
               <!-- Script Editor Header -->
               <div class="d-flex align-center justify-space-between mb-6">
                 <h2 class="text-h6 font-weight-bold">Script Editor</h2>
-                <div class="d-flex align-center gap-2">
+                <div class="d-flex align-center gap-3">
                   <v-btn
                     variant="outlined"
                     size="small"
                     prepend-icon="mdi-undo"
                     @click="undoScript"
                   >
-                    Undo btn
+                    Undo
                   </v-btn>
                   <v-btn
                     variant="outlined"
@@ -36,28 +36,20 @@
                     prepend-icon="mdi-redo"
                     @click="redoScript"
                   >
-                    Redo btn
-                  </v-btn>
-                  <v-btn
-                    variant="outlined"
-                    size="small"
-                    prepend-icon="mdi-sync"
-                    @click="syncScript"
-                  >
-                    Sync btn
+                    Redo
                   </v-btn>
                 </div>
               </div>
 
               <!-- Script Editor Textarea -->
-              <div class="script-editor-container">
+              <div class="script-editor-container flex-grow-1">
                 <v-textarea
                   v-model="scriptText"
                   variant="outlined"
                   class="script-textarea"
                   hide-details
-                  auto-grow
                   :rows="25"
+                  style="height: 500px; overflow-y: auto;"
                   @input="debouncedSyncText"
                   @keydown="handleKeyboardShortcuts"
                 />
@@ -75,9 +67,14 @@
                       Last update: {{ lastSyncTime }}
                     </span>
                   </div>
-                  <div class="text-caption text-medium-emphasis">
-                    {{ scriptText.split('\n').length }} words, {{ scriptText.length }} characters
-                  </div>
+                  <v-btn
+                    variant="outlined"
+                    size="small"
+                    prepend-icon="mdi-sync"
+                    @click="syncScript"
+                  >
+                    Sync now
+                  </v-btn>
                 </div>
               </div>
             </div>
@@ -94,19 +91,18 @@
                 <div class="d-flex justify-center align-center mb-6">
                   <v-btn
                     icon
-                    size="60"
+                    size="48"
                     color="teal"
                     variant="flat"
                     class="control-btn mr-4"
-                    @click="handleBackwardClick"
-                    @dblclick="goToBeginning"
+                    @click="goToBeginning"
                   >
-                    <v-icon size="24">mdi-skip-backward</v-icon>
+                    <v-icon size="20">mdi-skip-backward</v-icon>
                   </v-btn>
                   
                   <v-btn
                     icon
-                    size="60"
+                    size="64"
                     color="teal"
                     variant="flat"
                     class="control-btn mr-4"
@@ -117,18 +113,18 @@
                   
                   <v-btn
                     icon
-                    size="80"
+                    size="100"
                     :color="isPlaying ? 'error' : 'success'"
                     variant="flat"
                     class="play-btn mr-4"
                     @click="togglePlayback"
                   >
-                    <v-icon size="32">{{ isPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
+                    <v-icon size="40">{{ isPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
                   </v-btn>
                   
                   <v-btn
                     icon
-                    size="60"
+                    size="64"
                     color="teal"
                     variant="flat"
                     class="control-btn mr-4"
@@ -139,14 +135,13 @@
                   
                   <v-btn
                     icon
-                    size="60"
+                    size="48"
                     color="teal"
                     variant="flat"
                     class="control-btn"
-                    @click="handleForwardClick"
-                    @dblclick="goToEnd"
+                    @click="goToEnd"
                   >
-                    <v-icon size="24">mdi-skip-forward</v-icon>
+                    <v-icon size="20">mdi-skip-forward</v-icon>
                   </v-btn>
                 </div>
 
@@ -259,8 +254,8 @@
                   <v-btn
                     :color="verticalMirror ? 'teal' : 'grey-darken-2'"
                     :variant="verticalMirror ? 'flat' : 'outlined'"
-                    block
                     size="small"
+                    class="flex-grow-1"
                     @click="toggleVerticalMirror"
                   >
                     Vertical
@@ -268,8 +263,8 @@
                   <v-btn
                     :color="horizontalMirror ? 'teal' : 'grey-darken-2'"
                     :variant="horizontalMirror ? 'flat' : 'outlined'"
-                    block
                     size="small"
+                    class="flex-grow-1"
                     @click="toggleHorizontalMirror"
                   >
                     Horizontal
@@ -282,14 +277,16 @@
                 <h3 class="text-h6 font-weight-bold mb-6">Room Participants</h3>
                 <div class="participants-container bg-grey-darken-3 rounded pa-4" style="min-height: 120px;">
                   <div v-if="participants.length === 0" class="text-center text-medium-emphasis">
-                    <div class="text-caption">LIST HERE</div>
+                    <v-icon size="48" class="mb-2 text-grey-darken-1">mdi-account-group</v-icon>
+                    <div class="text-body-2">No participants connected</div>
+                    <div class="text-caption">Waiting for devices to join...</div>
                   </div>
                   <v-list v-else class="pa-0" density="compact">
                     <v-list-item
                       v-for="participant in participants"
                       :key="participant.id"
-                      :class="{ 'bg-primary': participant.id === participantId }"
-                      class="px-0 mb-2"
+                      :class="{ 'bg-teal-darken-4': participant.id === participantId }"
+                      class="px-0 mb-2 rounded"
                     >
                       <template v-slot:prepend>
                         <v-avatar
@@ -307,13 +304,17 @@
                         <v-chip
                           v-if="participant.id === participantId"
                           size="x-small"
-                          color="primary"
-                          variant="outlined"
+                          color="teal"
+                          variant="flat"
                           class="ml-2"
                         >
                           You
                         </v-chip>
                       </v-list-item-title>
+
+                      <v-list-item-subtitle class="text-caption">
+                        {{ formatTime(participant.joined_at) }}
+                      </v-list-item-subtitle>
 
                       <template v-slot:append v-if="participant.id !== participantId">
                         <v-btn
