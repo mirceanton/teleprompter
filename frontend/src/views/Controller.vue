@@ -1,515 +1,384 @@
 <template>
-  <v-app>
-    <v-app-bar app color="primary" dark>
-      <v-toolbar-title>
-        Admin - {{ roomCredentials?.room_name || "Loading..." }}
-      </v-toolbar-title>
-      <v-spacer />
-
-      <!-- Participant Management Dropdown -->
-      <v-menu offset-y>
-        <template v-slot:activator="{ props }">
-          <v-btn icon="mdi-account-group" v-bind="props" class="mr-2">
-            <v-badge :content="participants.length" color="secondary" overlap>
-              <v-icon>mdi-account-group</v-icon>
-            </v-badge>
-          </v-btn>
-        </template>
-
-        <v-card min-width="300">
-          <v-card-title class="text-h6 pa-4">
-            <v-icon class="mr-2">mdi-account-group</v-icon>
-            Room Participants
-          </v-card-title>
-
-          <v-divider />
-
-          <!-- Participants List -->
-          <v-list>
-            <v-list-item
-              v-for="participant in participants"
-              :key="participant.id"
-              :class="{ 'bg-primary': participant.id === participantId }"
-            >
-              <template v-slot:prepend>
-                <v-avatar
-                  size="small"
-                  :color="
-                    participant.role === 'controller' ? 'primary' : 'secondary'
-                  "
-                >
-                  <v-icon>{{
-                    participant.role === "controller"
-                      ? "mdi-laptop"
-                      : "mdi-cellphone"
-                  }}</v-icon>
-                </v-avatar>
-              </template>
-
-              <v-list-item-title>
-                {{
-                  participant.role === "controller"
-                    ? "💻 Controller"
-                    : "📱 Teleprompter"
-                }}
-                <v-chip
-                  v-if="participant.id === participantId"
-                  size="x-small"
-                  color="primary"
-                  variant="outlined"
-                  class="ml-2"
-                >
-                  You
-                </v-chip>
-              </v-list-item-title>
-
-              <v-list-item-subtitle>
-                Joined {{ formatTime(participant.joined_at) }}
-              </v-list-item-subtitle>
-
-              <template v-slot:append v-if="participant.id !== participantId">
-                <v-btn
-                  icon="mdi-account-remove"
-                  size="small"
-                  color="error"
-                  variant="text"
-                  @click="kickParticipant(participant.id)"
-                >
-                </v-btn>
-              </template>
-            </v-list-item>
-          </v-list>
-
-          <v-divider />
-
-          <!-- Room Actions -->
-          <v-btn
-            prepend-icon="mdi-information"
-            variant="tonal"
-            color="info"
-            size="large"
-            class="ml-4 mr-4 mt-4 mb-2"
-            width="calc(100% - 32px)"
-            @click="showRoomInfoDialog = true"
+  <v-app theme="dark">
+    <v-app-bar app elevation="16" height="64" color="grey-darken-4">
+      <v-container fluid class="d-flex align-center">
+        <div class="d-flex align-center">
+          <v-icon color="teal" size="32" class="mr-3"
+            >mdi-presentation-play</v-icon
           >
-            Room Info
-          </v-btn>
-          <v-btn
-            prepend-icon="mdi-logout"
-            color="error"
-            variant="tonal"
-            size="large"
-            class="ml-4 mr-4 mb-4 mt-2"
-            width="calc(100% - 32px)"
-            @click="disconnect"
-          >
-            Leave Room
-          </v-btn>
-        </v-card>
-      </v-menu>
+          <div class="text-h5 font-weight-bold">Teleprompter</div>
+        </div>
+        <v-spacer></v-spacer>
+        <v-btn prepend-icon="mdi-logout" @click="exitTeleprompter">
+          Leave Room
+        </v-btn>
+      </v-container>
     </v-app-bar>
 
     <v-main>
-      <v-container fluid>
-        <v-row>
-          <!-- Script Editor -->
-          <v-col cols="12" lg="9">
-            <v-card elevation="4">
-              <v-card-title class="text-h5">
-                <v-icon class="mr-2">mdi-script-text</v-icon>
-                Script Editor
-              </v-card-title>
+      <v-container fluid class="pa-0 fill-height">
+        <v-row no-gutters class="fill-height">
+          <!-- Left Side - Script Editor -->
+          <v-col cols="12" lg="8" xl="9" class="d-flex flex-column">
+            <div class="script-editor-section pa-6 d-flex flex-column">
+              <!-- Script Editor Header -->
+              <div class="d-flex align-center justify-space-between mb-4">
+                <h2 class="text-h6 font-weight-bold">Script Editor</h2>
+                <div class="d-flex align-center gap-3">
+                  <v-btn
+                    class="mr-2"
+                    variant="outlined"
+                    size="small"
+                    prepend-icon="mdi-undo"
+                    @click="undoScript"
+                  >
+                    Undo
+                  </v-btn>
+                  <v-btn
+                    class="ml-2"
+                    variant="outlined"
+                    size="small"
+                    prepend-icon="mdi-redo"
+                    @click="redoScript"
+                  >
+                    Redo
+                  </v-btn>
+                </div>
+              </div>
 
-              <v-card-text>
+              <!-- Script Editor Textarea -->
+              <div class="script-editor-container flex-grow-1 mb-2">
                 <v-textarea
                   v-model="scriptText"
-                  label="Script Content"
-                  placeholder="Paste or type your script here..."
-                  rows="20"
                   variant="outlined"
-                  auto-grow
+                  class="script-textarea fill-height"
+                  hide-details
                   @input="debouncedSyncText"
+                  @keydown="handleKeyboardShortcuts"
                 />
-              </v-card-text>
-            </v-card>
+              </div>
+
+              <!-- Script Status Footer -->
+              <div class="script-status-footer pl-4 pr-4 pt-2 pb-2 bg-grey-darken-4">
+                <div class="d-flex align-center justify-space-between">
+                  <div class="d-flex align-center gap-4">
+                    <span class="text-caption text-medium-emphasis">
+                      {{ characterCount }} characters · {{ wordCount }} words
+                    </span>
+                  </div>
+                  <v-spacer></v-spacer>
+                  <span class="text-caption text-medium-emphasis mr-8">
+                    Last update: {{ lastSyncTime }}
+                  </span>
+                  <v-btn
+                    variant="outlined"
+                    size="small"
+                    prepend-icon="mdi-sync"
+                    @click="syncScript"
+                  >
+                    Sync now
+                  </v-btn>
+                </div>
+              </div>
+            </div>
           </v-col>
 
-          <!-- Unified Controls Panel -->
-          <v-col cols="12" lg="3">
-            <!-- Unified Playback & Navigation Controls -->
-            <v-card elevation="4" class="mb-4">
-              <v-card-title class="text-h6">
-                <v-icon class="mr-2">mdi-play-circle</v-icon>
-                Teleprompter Controls
-              </v-card-title>
+          <!-- Right Sidebar - Controls -->
+          <v-col cols="12" lg="4" xl="3" class="sidebar">
+            <div class="controls-sidebar pa-6">
+              <!-- Playback Controls Section -->
+              <div class="control-section mb-8">
+                <h3 class="text-h6 font-weight-bold mb-6">Playback Controls</h3>
 
-              <v-card-text>
-                <!-- Main Control Row: Back | Play/Pause | Forward -->
-                <v-row class="mb-4" align="center" justify="center">
-                  <!-- Scroll backward button -->
-                  <v-col cols="3">
-                    <v-btn
-                      color="secondary"
-                      @click="handleBackwardClick"
-                      @dblclick="goToBeginning"
-                      size="large"
-                      icon
-                      class="control-button"
-                    >
-                      <v-icon>mdi-skip-backward</v-icon>
-                      <v-tooltip activator="parent" location="bottom">
-                        <div>Single click: Scroll back 5 lines</div>
-                        <div>Double click: Go to top</div>
-                      </v-tooltip>
-                    </v-btn>
-                  </v-col>
-                  
-                  <!-- Large circular Play/Pause button -->
-                  <v-col cols="6" class="text-center">
-                    <v-btn
-                      :color="isPlaying ? 'warning' : 'success'"
-                      @click="togglePlayback"
-                      size="x-large"
-                      icon
-                      class="play-pause-button"
-                    >
-                      <v-icon size="large">{{
-                        isPlaying ? "mdi-pause" : "mdi-play"
-                      }}</v-icon>
-                      <v-tooltip activator="parent" location="bottom">
-                        {{ isPlaying ? "Pause" : "Start" }}
-                      </v-tooltip>
-                    </v-btn>
-                  </v-col>
-                  
-                  <!-- Scroll forward button -->
-                  <v-col cols="3">
-                    <v-btn
-                      color="secondary"
-                      @click="handleForwardClick"
-                      @dblclick="goToEnd"
-                      size="large"
-                      icon
-                      class="control-button"
-                    >
-                      <v-icon>mdi-skip-forward</v-icon>
-                      <v-tooltip activator="parent" location="bottom">
-                        <div>Single click: Scroll forward 5 lines</div>
-                        <div>Double click: Go to bottom</div>
-                      </v-tooltip>
-                    </v-btn>
-                  </v-col>
-                </v-row>
+                <!-- Large Circular Playback Buttons -->
+                <div class="d-flex justify-center align-center mb-6">
+                  <v-btn
+                    icon
+                    size="48"
+                    color="teal"
+                    variant="flat"
+                    class="control-btn mr-4"
+                    @click="goToBeginning"
+                  >
+                    <v-icon size="20">mdi-skip-backward</v-icon>
+                  </v-btn>
 
-                <!-- Speed Control -->
-                <v-text-field
-                  v-model.number="scrollSpeed"
-                  label="Speed"
-                  type="number"
-                  :min="0.1"
-                  :max="10"
-                  :step="0.1"
-                  variant="outlined"
-                  class="mt-4"
-                  density="compact"
-                  @input="updateSpeed"
-                >
-                  <template v-slot:prepend-inner>
-                    <v-btn
-                      icon="mdi-minus"
-                      size="x-small"
-                      variant="text"
-                      @click="
-                        scrollSpeed = Math.max(
-                          0.1,
-                          Math.round((scrollSpeed - 0.1) * 10) / 10
-                        );
-                        updateSpeed();
-                      "
-                    />
-                  </template>
-                  <template v-slot:append-inner>
-                    <v-btn
-                      icon="mdi-plus"
-                      size="x-small"
-                      variant="text"
-                      @click="
-                        scrollSpeed = Math.min(
-                          10,
-                          Math.round((scrollSpeed + 0.1) * 10) / 10
-                        );
-                        updateSpeed();
-                      "
-                    />
-                  </template>
-                </v-text-field>
-              </v-card-text>
-            </v-card>
+                  <v-btn
+                    icon
+                    size="64"
+                    color="teal"
+                    variant="flat"
+                    class="control-btn mr-4"
+                    @click="handleBackwardClick"
+                  >
+                    <v-icon size="24">mdi-step-backward</v-icon>
+                  </v-btn>
 
-            <!-- Text & Mirror Settings -->
-            <v-card elevation="4">
-              <v-card-title class="text-h6">
-                <v-icon class="mr-2">mdi-format-font</v-icon>
-                Text & Mirror Settings
-              </v-card-title>
+                  <v-btn
+                    icon
+                    size="100"
+                    :color="isPlaying ? 'error' : 'success'"
+                    variant="flat"
+                    class="play-btn mr-4"
+                    @click="togglePlayback"
+                  >
+                    <v-icon size="40">{{
+                      isPlaying ? "mdi-pause" : "mdi-play"
+                    }}</v-icon>
+                  </v-btn>
 
-              <v-card-text>
-                <!-- Text Width -->
-                <v-text-field
-                  v-model.number="textWidth"
-                  label="Text Width (%)"
-                  type="number"
-                  :min="20"
-                  :max="100"
-                  variant="outlined"
-                  class="mb-3"
-                  density="compact"
-                  @input="updateWidth"
-                >
-                  <template v-slot:prepend-inner>
-                    <v-btn
-                      icon="mdi-minus"
-                      size="x-small"
-                      variant="text"
-                      @click="
-                        textWidth = Math.max(20, textWidth - 5);
-                        updateWidth();
-                      "
-                    />
-                  </template>
-                  <template v-slot:append-inner>
-                    <v-btn
-                      icon="mdi-plus"
-                      size="x-small"
-                      variant="text"
-                      @click="
-                        textWidth = Math.min(100, textWidth + 5);
-                        updateWidth();
-                      "
-                    />
-                  </template>
-                </v-text-field>
+                  <v-btn
+                    icon
+                    size="64"
+                    color="teal"
+                    variant="flat"
+                    class="control-btn mr-4"
+                    @click="handleForwardClick"
+                  >
+                    <v-icon size="24">mdi-step-forward</v-icon>
+                  </v-btn>
 
-                <!-- Font Size -->
-                <v-text-field
-                  v-model.number="fontSize"
-                  label="Font Size (em)"
-                  type="number"
-                  :min="0.5"
-                  :max="5"
-                  :step="0.1"
-                  variant="outlined"
-                  class="mb-3"
-                  density="compact"
-                  @input="updateFontSize"
-                >
-                  <template v-slot:prepend-inner>
-                    <v-btn
-                      icon="mdi-minus"
-                      size="x-small"
-                      variant="text"
-                      @click="
-                        fontSize = Math.max(
-                          0.5,
-                          Math.round((fontSize - 0.1) * 10) / 10
-                        );
-                        updateFontSize();
-                      "
-                    />
-                  </template>
-                  <template v-slot:append-inner>
-                    <v-btn
-                      icon="mdi-plus"
-                      size="x-small"
-                      variant="text"
-                      @click="
-                        fontSize = Math.min(
-                          5,
-                          Math.round((fontSize + 0.1) * 10) / 10
-                        );
-                        updateFontSize();
-                      "
-                    />
-                  </template>
-                </v-text-field>
-
-                <!-- Mirror Settings -->
-                <div class="mb-3">
-                  <v-label class="mb-2">
-                    <v-icon class="mr-1">mdi-flip-horizontal</v-icon>
-                    Mirror Settings
-                  </v-label>
-                  <v-row>
-                    <v-col cols="6">
-                      <v-btn
-                        :color="horizontalMirror ? 'primary' : 'secondary'"
-                        @click="toggleHorizontalMirror"
-                        block
-                        size="small"
-                        variant="outlined"
-                      >
-                        <v-icon class="mr-1">mdi-flip-horizontal</v-icon>
-                        Horizontal
-                      </v-btn>
-                    </v-col>
-                    <v-col cols="6">
-                      <v-btn
-                        :color="verticalMirror ? 'primary' : 'secondary'"
-                        @click="toggleVerticalMirror"
-                        block
-                        size="small"
-                        variant="outlined"
-                      >
-                        <v-icon class="mr-1">mdi-flip-vertical</v-icon>
-                        Vertical
-                      </v-btn>
-                    </v-col>
-                  </v-row>
+                  <v-btn
+                    icon
+                    size="48"
+                    color="teal"
+                    variant="flat"
+                    class="control-btn"
+                    @click="goToEnd"
+                  >
+                    <v-icon size="20">mdi-skip-forward</v-icon>
+                  </v-btn>
                 </div>
-              </v-card-text>
-            </v-card>
+
+                <!-- Speed Controls Row -->
+                <div class="d-flex gap-3 mb-4">
+                  <!-- Playback Speed -->
+                  <div class="control-group flex-grow-1">
+                    <label
+                      class="text-caption text-medium-emphasis mb-1 d-block"
+                      >Playback Speed</label
+                    >
+                    <div class="d-flex align-center gap-2">
+                      <v-btn
+                        icon="mdi-minus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustSpeed(-0.1)"
+                      />
+                      <v-text-field
+                        :model-value="scrollSpeed.toFixed(1) + 'x'"
+                        readonly
+                        variant="solo-filled"
+                        hide-details
+                        density="compact"
+                        class="text-center"
+                      />
+                      <v-btn
+                        icon="mdi-plus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustSpeed(0.1)"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Lines to Scroll -->
+                  <div class="control-group flex-grow-1">
+                    <label
+                      class="text-caption text-medium-emphasis mb-1 d-block"
+                      >Lines to scroll</label
+                    >
+                    <div class="d-flex align-center gap-2">
+                      <v-btn
+                        icon="mdi-minus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustLinesPerStep(-1)"
+                      />
+                      <v-text-field
+                        :model-value="linesPerStep"
+                        readonly
+                        variant="solo-filled"
+                        hide-details
+                        density="compact"
+                        class="text-center"
+                      />
+                      <v-btn
+                        icon="mdi-plus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustLinesPerStep(1)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Text Settings Section -->
+              <div class="control-section mb-8">
+                <h3 class="text-h6 font-weight-bold mb-6">Text Settings</h3>
+
+                <!-- Text Formatting Row -->
+                <div class="d-flex gap-3 mb-4">
+                  <!-- Text Width -->
+                  <div class="control-group flex-grow-1">
+                    <label
+                      class="text-caption text-medium-emphasis mb-1 d-block"
+                      >Text Width</label
+                    >
+                    <div class="d-flex align-center gap-2">
+                      <v-btn
+                        icon="mdi-minus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustWidth(-5)"
+                      />
+                      <v-text-field
+                        :model-value="textWidth + '%'"
+                        readonly
+                        variant="solo-filled"
+                        hide-details
+                        density="compact"
+                        class="text-center"
+                      />
+                      <v-btn
+                        icon="mdi-plus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustWidth(5)"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Font Size -->
+                  <div class="control-group flex-grow-1">
+                    <label
+                      class="text-caption text-medium-emphasis mb-1 d-block"
+                      >Font Size</label
+                    >
+                    <div class="d-flex align-center gap-2">
+                      <v-btn
+                        icon="mdi-minus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustFontSize(-0.1)"
+                      />
+                      <v-text-field
+                        :model-value="fontSize.toFixed(1) + 'em'"
+                        readonly
+                        variant="solo-filled"
+                        hide-details
+                        density="compact"
+                        class="text-center"
+                      />
+                      <v-btn
+                        icon="mdi-plus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustFontSize(0.1)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mirroring Section -->
+              <div class="control-section mb-8">
+                <h3 class="text-h6 font-weight-bold mb-6">Mirroring</h3>
+                <div class="d-flex gap-2">
+                  <v-btn
+                    :color="verticalMirror ? 'teal' : 'grey-darken-2'"
+                    :variant="verticalMirror ? 'flat' : 'outlined'"
+                    size="small"
+                    class="flex-grow-1 mr-2 ml-2"
+                    @click="toggleVerticalMirror"
+                  >
+                    Vertical
+                  </v-btn>
+                  <v-btn
+                    :color="horizontalMirror ? 'teal' : 'grey-darken-2'"
+                    :variant="horizontalMirror ? 'flat' : 'outlined'"
+                    size="small"
+                    class="flex-grow-1 mr-2 ml-2"
+                    @click="toggleHorizontalMirror"
+                  >
+                    Horizontal
+                  </v-btn>
+                </div>
+              </div>
+
+              <!-- Room Participants Section -->
+              <div class="control-section">
+                <h3 class="text-h6 font-weight-bold mb-6">Room Participants</h3>
+                <div class="participants-container">
+                  <div
+                    v-if="participants.length === 0"
+                    class="text-center text-medium-emphasis pa-6"
+                  >
+                    <v-icon size="48" class="mb-3 text-grey-darken-1"
+                      >mdi-account-group</v-icon
+                    >
+                    <div class="text-body-2 mb-1">
+                      No participants connected
+                    </div>
+                    <div class="text-caption">
+                      Waiting for devices to join...
+                    </div>
+                  </div>
+
+                  <div v-else class="participants-list">
+                    <div
+                      v-for="participant in participants"
+                      :key="participant.id"
+                      class="participant-item"
+                      :class="{
+                        'participant-item-you':
+                          participant.id === participantId,
+                      }"
+                    >
+                      <v-icon
+                        :color="
+                          participant.role === 'controller' ? 'blue' : 'green'
+                        "
+                        size="20"
+                        class="mr-3"
+                      >
+                        {{
+                          participant.role === "controller"
+                            ? "mdi-laptop"
+                            : "mdi-monitor"
+                        }}
+                      </v-icon>
+
+                      <div class="flex-grow-1">
+                        <div class="participant-name">
+                          {{
+                            participant.role === "controller"
+                              ? "Controller"
+                              : "Teleprompter"
+                          }}
+                          <span
+                            v-if="participant.id === participantId"
+                            class="participant-you-badge"
+                          >
+                            (You)
+                          </span>
+                        </div>
+                        <div class="participant-time">
+                          Joined {{ formatTime(participant.joined_at) }}
+                        </div>
+                      </div>
+
+                      <v-icon size="16" color="success"> mdi-circle </v-icon>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </v-col>
         </v-row>
       </v-container>
     </v-main>
-
-    <!-- Room Info Dialog -->
-    <v-dialog v-model="showRoomInfoDialog" max-width="600">
-      <v-card>
-        <v-card-title class="text-h5 pa-6 d-flex align-center">
-          <v-icon class="mr-2">mdi-information</v-icon>
-          Room Information
-          <v-spacer />
-          <v-btn
-            icon="mdi-close"
-            variant="text"
-            @click="showRoomInfoDialog = false"
-          />
-        </v-card-title>
-
-        <v-card-text class="pa-6">
-          <!-- Editable Room Name -->
-          <v-text-field
-            v-model="editableRoomName"
-            label="Room Name"
-            variant="outlined"
-            class="mb-4"
-            @blur="updateRoomName"
-            @keypress.enter="updateRoomName"
-          >
-            <template v-slot:prepend-inner>
-              <v-icon>mdi-tag</v-icon>
-            </template>
-          </v-text-field>
-
-          <v-divider class="mb-4" />
-
-          <!-- Room ID (Read-only) -->
-          <v-text-field
-            :model-value="roomCredentials?.room_id"
-            label="Room ID"
-            variant="outlined"
-            readonly
-            class="mb-4"
-          >
-            <template v-slot:prepend-inner>
-              <v-icon>mdi-key</v-icon>
-            </template>
-            <template v-slot:append-inner>
-              <v-btn
-                icon="mdi-content-copy"
-                size="small"
-                variant="text"
-                @click="
-                  copyToClipboard(roomCredentials?.room_id, 'Room ID copied!')
-                "
-              />
-            </template>
-          </v-text-field>
-
-          <!-- Room Secret (Read-only) -->
-          <v-text-field
-            :model-value="roomCredentials?.room_secret"
-            label="Room Secret"
-            variant="outlined"
-            :type="showSecret ? 'text' : 'password'"
-            readonly
-            class="mb-4"
-          >
-            <template v-slot:prepend-inner>
-              <v-icon>mdi-lock</v-icon>
-            </template>
-            <template v-slot:append-inner>
-              <v-btn
-                :icon="showSecret ? 'mdi-eye-off' : 'mdi-eye'"
-                size="small"
-                variant="text"
-                @click="showSecret = !showSecret"
-                class="mr-1"
-              />
-              <v-btn
-                icon="mdi-content-copy"
-                size="small"
-                variant="text"
-                @click="
-                  copyToClipboard(
-                    roomCredentials?.room_secret,
-                    'Room secret copied!'
-                  )
-                "
-              />
-            </template>
-          </v-text-field>
-
-          <!-- Copy Credentials Button -->
-          <div class="text-center mb-4">
-            <v-btn
-              prepend-icon="mdi-content-copy"
-              variant="outlined"
-              @click="copyCredentials"
-            >
-              Copy All Credentials
-            </v-btn>
-          </div>
-
-          <v-divider class="mb-4" />
-
-          <!-- QR Code -->
-          <div class="text-center mb-4">
-            <div v-if="qrCodeDataUrl">
-              <img
-                :src="qrCodeDataUrl"
-                alt="QR Code"
-                style="max-width: 200px; border-radius: 8px"
-              />
-            </div>
-            <div v-else>
-              <v-icon size="64" color="grey">mdi-qrcode</v-icon>
-            </div>
-          </div>
-
-          <!-- Join URL -->
-          <v-text-field
-            :model-value="joinUrl"
-            label="Teleprompter Join URL"
-            variant="outlined"
-            readonly
-          >
-            <template v-slot:prepend-inner>
-              <v-icon>mdi-link</v-icon>
-            </template>
-            <template v-slot:append-inner>
-              <v-btn
-                icon="mdi-content-copy"
-                size="small"
-                variant="text"
-                @click="copyToClipboard(joinUrl, 'Join URL copied!')"
-              />
-            </template>
-          </v-text-field>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
 
     <v-snackbar v-model="snackbar.show" :color="snackbar.color">
       {{ snackbar.text }}
@@ -546,6 +415,10 @@ export default {
       showSecret: false,
       qrCodeDataUrl: null,
 
+      // UI state for new design
+      showDrawer: false,
+      lastSyncTime: "Never",
+
       // Script content
       scriptText: `# Welcome to Remote Teleprompter!
 
@@ -572,21 +445,16 @@ This application supports multiple teleprompter devices connected to the same ch
 Happy teleprompting! 🎬`,
 
       // Control settings
-      scrollSpeed: 2.5,
+      scrollSpeed: 1.0,
       textWidth: 100,
       fontSize: 2.5,
       horizontalMirror: false,
       verticalMirror: false,
+      linesPerStep: 5,
 
       // Navigation settings
       isPlaying: false,
       currentScrollPosition: 0, // Track current scroll position in lines
-
-      // Click tracking for double-tap detection
-      lastClickTime: 0,
-      clickTimeout: null,
-
-      // Section navigation
 
       // UI state
       snackbar: {
@@ -598,10 +466,27 @@ Happy teleprompting! 🎬`,
       // Debounce timer
       syncTimeout: null,
 
+      // Undo/Redo functionality
+      undoStack: [],
+      redoStack: [],
+      isUndoRedoOperation: false,
+      lastScriptValue: "",
+
+      // Connection tracking
+      lastConnectionCount: 0,
     };
   },
 
   computed: {
+    scriptEditorStyle() {
+      // Mac width constraints for wider displays
+      return {
+        maxWidth: "1200px",
+        margin: "0 auto",
+        width: "100%",
+      };
+    },
+
     joinUrl() {
       if (!this.roomCredentials) return "";
       const baseUrl = window.location.origin;
@@ -628,22 +513,25 @@ Happy teleprompting! 🎬`,
         text: "Disconnected",
       };
     },
+
+    characterCount() {
+      return this.scriptText.length;
+    },
+
+    wordCount() {
+      const trimmed = this.scriptText.trim();
+      if (trimmed === "") return 0;
+      return trimmed.split(/\s+/).length;
+    },
   },
 
   async mounted() {
-    // Initialize authentication
-    const authSuccess = await this.initializeAuth();
+    await this.initializeRoom();
+    this.updateLastSyncTime();
+    this.generateQRCode();
 
-    // Connect to WebSocket
-    if (authSuccess) {
-      this.connect();
-    } else {
-      this.showSnackbar(
-        "No credentials found. Please select a mode.",
-        "error"
-      );
-      this.$router.push("/");
-    }
+    // Initialize undo stack with current script content
+    this.lastScriptValue = this.scriptText;
   },
 
   beforeUnmount() {
@@ -652,118 +540,106 @@ Happy teleprompting! 🎬`,
     }
   },
 
-  watch: {
-    joinUrl: {
-      handler() {
-        this.generateQRCode();
-      },
-      immediate: true,
-    },
-    showRoomInfoDialog(newVal) {
-      if (newVal) {
-        this.generateQRCode();
-      }
-    },
-  },
-
   methods: {
-    async initializeAuth() {
+    async initializeRoom() {
       try {
-        // Get credentials from session storage
-        const credentialsStr = sessionStorage.getItem("teleprompter_credentials");
-        if (!credentialsStr) {
-          return false;
-        }
-
-        const credentials = JSON.parse(credentialsStr);
-
-        // Verify this is a controller role
-        if (credentials.role !== "controller") {
-          this.showSnackbar(
-            "Access denied: Not authorized as controller",
-            "error"
-          );
-          return false;
-        }
-
-        return true;
+        await this.connectWebSocket();
+        this.showSnackbar("Connected to teleprompter server", "success");
       } catch (error) {
-        console.error("Error initializing auth:", error);
-        this.showSnackbar("Failed to initialize authentication", "error");
-        return false;
-      }
-    },
-
-    async joinRoomAsController() {
-      try {
-        const response = await fetch(`${config.getApiUrl()}/api/rooms/join`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            room_id: this.roomCredentials.room_id,
-            room_secret: this.roomCredentials.room_secret,
-            role: "controller",
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to join room");
-        }
-
-        const joinData = await response.json();
-        if (!joinData.success) {
-          this.showSnackbar(joinData.message, "error");
-          return null;
-        }
-
-        return joinData;
-      } catch (error) {
-        console.error("Error joining room as controller:", error);
-        this.showSnackbar("Failed to join room as controller", "error");
-        return null;
-      }
-    },
-
-    connect() {
-      try {
-        // Use simplified WebSocket endpoint
-        const wsUrl = config.getWebSocketUrl();
-        this.ws = new WebSocket(`${wsUrl}/api/ws`);
-
-        this.setupWebSocketHandlers();
-      } catch (error) {
+        console.error("Failed to initialize connection:", error);
         this.showSnackbar("Failed to connect to server", "error");
-        console.error("WebSocket connection error:", error);
       }
     },
 
-    setupWebSocketHandlers() {
+    exitTeleprompter() {
+      this.$router.push("/");
+    },
+
+    // Undo/Redo functionality
+    undoScript() {
+      if (this.undoStack.length > 0) {
+        this.isUndoRedoOperation = true;
+        this.redoStack.push(this.scriptText);
+        this.scriptText = this.undoStack.pop();
+        this.debouncedSyncText();
+        this.$nextTick(() => {
+          this.isUndoRedoOperation = false;
+        });
+      } else {
+      }
+    },
+
+    redoScript() {
+      if (this.redoStack.length > 0) {
+        this.isUndoRedoOperation = true;
+        this.undoStack.push(this.scriptText);
+        this.scriptText = this.redoStack.pop();
+        this.debouncedSyncText();
+        this.$nextTick(() => {
+          this.isUndoRedoOperation = false;
+        });
+      } else {
+      }
+    },
+
+    saveToUndoStack() {
+      if (
+        !this.isUndoRedoOperation &&
+        this.scriptText !== this.lastScriptValue
+      ) {
+        this.undoStack.push(this.lastScriptValue);
+        // Limit undo stack size
+        if (this.undoStack.length > 50) {
+          this.undoStack.shift();
+        }
+        // Clear redo stack on new changes
+        this.redoStack = [];
+        this.lastScriptValue = this.scriptText;
+      }
+    },
+
+    handleKeyboardShortcuts(event) {
+      // Ctrl+Z for undo
+      if (event.ctrlKey && event.key === "z" && !event.shiftKey) {
+        event.preventDefault();
+        this.undoScript();
+      }
+      // Ctrl+Y or Ctrl+Shift+Z for redo
+      else if (
+        event.ctrlKey &&
+        (event.key === "y" || (event.key === "z" && event.shiftKey))
+      ) {
+        event.preventDefault();
+        this.redoScript();
+      }
+      // Ctrl+S for sync (save)
+      else if (event.ctrlKey && event.key === "s") {
+        event.preventDefault();
+        this.syncScript();
+      }
+      // Space for play/pause (when not in input)
+      else if (event.key === " " && event.target.tagName !== "TEXTAREA") {
+        event.preventDefault();
+        this.togglePlayback();
+      }
+    },
+
+    async connectWebSocket() {
+      const wsUrl = config.getWebSocketUrl();
+      const wsFullUrl = `${wsUrl}/api/ws`;
+
+      this.ws = new WebSocket(wsFullUrl);
+
       this.ws.onopen = () => {
         console.log("WebSocket connected");
-        this.showSnackbar("Connected to teleprompter channel", "success");
-
-        // Send mode information
-        this.sendMessage({ type: "mode", mode: "controller" });
-
-        // Sync initial settings
-        setTimeout(() => {
-          this.syncText();
-          this.updateSpeed();
-          this.updateHorizontalMirror();
-          this.updateVerticalMirror();
-          this.updateFontSize();
-          this.updateWidth();
-        }, 500);
       };
 
       this.ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          this.handleMessage(message);
+          this.handleWebSocketMessage(message);
         } catch (error) {
-          console.error("Error parsing message:", error);
+          console.error("Error parsing WebSocket message:", error);
         }
       };
 
@@ -775,205 +651,134 @@ Happy teleprompting! 🎬`,
       this.ws.onclose = () => {
         console.log("WebSocket disconnected");
         this.showSnackbar("Disconnected from server", "warning");
-        this.connectionInfo.show = false;
       };
     },
 
-    handleMessage(message) {
+    handleWebSocketMessage(message) {
       switch (message.type) {
         case "connection_update":
-          this.connectionInfo.count = message.connection_count;
-          this.connectionInfo.show = true;
-          // Update participants list if available
-          if (message.participants) {
-            this.participants = message.participants;
+          // Simple connection count update - create mock participants
+          this.updateParticipantsList(message.connection_count || 0);
+          // Auto-sync script when new participant joins (increased count)
+          if (message.connection_count > this.lastConnectionCount) {
+            setTimeout(() => {
+              this.syncText();
+            }, 1000); // Small delay to ensure connection is ready
           }
+          this.lastConnectionCount = message.connection_count || 0;
           break;
-
-        case "mirror":
-          // Update mirror toggles when teleprompter changes mirror mode
-          this.horizontalMirror = message.horizontal;
-          this.verticalMirror = message.vertical;
+        case "participants_list":
+          this.participants = message.participants || [];
           break;
-
-        case "width":
-          // Update width when teleprompter changes width setting
-          this.textWidth = message.value;
-          break;
-
-        case "font_size":
-          // Update font size when teleprompter changes font size
-          this.fontSize = message.value;
-          break;
-
         case "participant_joined":
-          // Show notification when a new participant joins
           if (
             message.participant &&
-            message.participant.id !== this.participantId
+            !this.participants.find((p) => p.id === message.participant.id)
           ) {
-            const role =
-              message.participant.role === "controller"
-                ? "Controller"
-                : "Teleprompter";
-
-            this.showSnackbar(`${role} joined the room`, "info");
-
-            if (message.participant.role === "teleprompter") {
-              if (this.isPlaying) {
-                this.pauseScrolling();
-              }
-              setTimeout(() => {
-                this.syncText();
-              }, 500);
-            }
+            this.participants.push(message.participant);
+            // Auto-sync script when new participant joins
+            setTimeout(() => {
+              this.syncText();
+            }, 1000);
           }
           break;
-
-        case "room_name_updated":
-          // Update room name when changed by controller
-          if (this.roomCredentials) {
-            this.roomCredentials.room_name = message.room_name;
-            sessionStorage.setItem(
-              "room_credentials",
-              JSON.stringify(this.roomCredentials)
-            );
-          }
+        case "participant_left":
+          this.participants = this.participants.filter(
+            (p) => p.id !== message.participant_id
+          );
           break;
-
         default:
           console.log("Received message:", message);
       }
     },
 
-    // WebSocket communication
+    updateParticipantsList(connectionCount) {
+      // Create mock participants based on connection count for demo purposes
+      this.participants = [];
+      for (let i = 0; i < connectionCount; i++) {
+        this.participants.push({
+          id: `participant_${i}`,
+          role: i === 0 ? "controller" : "teleprompter",
+          joined_at: new Date().toISOString(),
+        });
+      }
+    },
+
     sendMessage(message) {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         this.ws.send(JSON.stringify(message));
-      } else {
-        console.warn("WebSocket not connected");
       }
     },
 
-    // Playback controls
+    // Playback control methods
     togglePlayback() {
-      if (this.isPlaying) {
-        this.pauseScrolling();
-      } else {
-        this.startScrolling();
-      }
+      this.isPlaying = !this.isPlaying;
+      this.sendMessage({
+        type: this.isPlaying ? "start" : "pause",
+      });
     },
 
-    startScrolling() {
-      this.isPlaying = true;
-      this.sendMessage({ type: "start" });
-      this.showSnackbar("Teleprompter started", "success");
-    },
-
-    pauseScrolling() {
+    resetScrolling() {
+      this.currentScrollPosition = 0;
       this.isPlaying = false;
-      this.sendMessage({ type: "pause" });
-      this.showSnackbar("Teleprompter paused", "warning");
+      this.sendMessage({ type: "reset" });
     },
 
-    // Navigation controls
     goToBeginning() {
+      this.currentScrollPosition = 0;
       this.sendMessage({ type: "go_to_beginning" });
-      this.showSnackbar("Teleprompter moved to beginning", "info");
     },
 
     goToEnd() {
       this.sendMessage({ type: "go_to_end" });
-      this.showSnackbar("Teleprompter moved to end", "info");
+    },
+
+    handleBackwardClick() {
+      this.scrollBackLines();
+    },
+
+    handleForwardClick() {
+      this.scrollForwardLines();
     },
 
     scrollBackLines() {
       this.sendMessage({
         type: "scroll_lines",
-        direction: "back",
-        lines: 5, // Fixed to 5 lines
-        smooth: true, // Add smooth animation flag
+        direction: "backward",
+        lines: this.linesPerStep,
+        smooth: true,
       });
-      this.showSnackbar(`Scrolled back 5 lines`, "info");
     },
 
     scrollForwardLines() {
       this.sendMessage({
         type: "scroll_lines",
         direction: "forward",
-        lines: 5, // Fixed to 5 lines
-        smooth: true, // Add smooth animation flag
-      });
-      this.showSnackbar(`Scrolled forward 5 lines`, "info");
-    },
-
-    // New click handlers for single/double tap functionality
-    handleBackwardClick() {
-      const currentTime = Date.now();
-      
-      // Clear any existing timeout
-      if (this.clickTimeout) {
-        clearTimeout(this.clickTimeout);
-        this.clickTimeout = null;
-      }
-      
-      // Check if this is a double click (within 300ms of last click)
-      if (currentTime - this.lastClickTime < 300) {
-        // Double click - go to beginning
-        this.goToBeginning();
-        this.lastClickTime = 0; // Reset to prevent triple clicks
-      } else {
-        // Single click - set timeout to execute if not followed by another click
-        this.lastClickTime = currentTime;
-        this.clickTimeout = setTimeout(() => {
-          this.scrollBackLines();
-          this.clickTimeout = null;
-        }, 300);
-      }
-    },
-
-    handleForwardClick() {
-      const currentTime = Date.now();
-      
-      // Clear any existing timeout
-      if (this.clickTimeout) {
-        clearTimeout(this.clickTimeout);
-        this.clickTimeout = null;
-      }
-      
-      // Check if this is a double click (within 300ms of last click)
-      if (currentTime - this.lastClickTime < 300) {
-        // Double click - go to end
-        this.goToEnd();
-        this.lastClickTime = 0; // Reset to prevent triple clicks
-      } else {
-        // Single click - set timeout to execute if not followed by another click
-        this.lastClickTime = currentTime;
-        this.clickTimeout = setTimeout(() => {
-          this.scrollForwardLines();
-          this.clickTimeout = null;
-        }, 300);
-      }
-    },
-
-
-
-    // Text sync
-    syncText() {
-      this.sendMessage({
-        type: "text",
-        content: this.scriptText,
+        lines: this.linesPerStep,
+        smooth: true,
       });
     },
 
-    debouncedSyncText() {
-      clearTimeout(this.syncTimeout);
-      this.syncTimeout = setTimeout(() => {
-        this.syncText();
-      }, 1000);
+    // Speed and formatting controls
+    adjustSpeed(delta) {
+      this.scrollSpeed = Math.max(0.1, Math.min(5.0, this.scrollSpeed + delta));
+      this.updateSpeed();
     },
 
-    // Speed controls
+    adjustFontSize(delta) {
+      this.fontSize = Math.max(0.5, Math.min(5.0, this.fontSize + delta));
+      this.updateFontSize();
+    },
+
+    adjustWidth(delta) {
+      this.textWidth = Math.max(20, Math.min(100, this.textWidth + delta));
+      this.updateWidth();
+    },
+
+    adjustLinesPerStep(delta) {
+      this.linesPerStep = Math.max(1, Math.min(20, this.linesPerStep + delta));
+    },
+
     updateSpeed() {
       this.sendMessage({
         type: "speed",
@@ -981,7 +786,6 @@ Happy teleprompting! 🎬`,
       });
     },
 
-    // Font size controls
     updateFontSize() {
       this.sendMessage({
         type: "font_size",
@@ -989,7 +793,6 @@ Happy teleprompting! 🎬`,
       });
     },
 
-    // Width controls
     updateWidth() {
       this.sendMessage({
         type: "width",
@@ -997,18 +800,17 @@ Happy teleprompting! 🎬`,
       });
     },
 
-    // Mirror controls
     toggleHorizontalMirror() {
       this.horizontalMirror = !this.horizontalMirror;
-      this.updateHorizontalMirror();
+      this.updateMirror();
     },
 
     toggleVerticalMirror() {
       this.verticalMirror = !this.verticalMirror;
-      this.updateVerticalMirror();
+      this.updateMirror();
     },
 
-    updateHorizontalMirror() {
+    updateMirror() {
       this.sendMessage({
         type: "mirror",
         horizontal: this.horizontalMirror,
@@ -1016,21 +818,55 @@ Happy teleprompting! 🎬`,
       });
     },
 
-    updateVerticalMirror() {
-      this.sendMessage({
-        type: "mirror",
-        horizontal: this.horizontalMirror,
-        vertical: this.verticalMirror,
-      });
+    // Script management
+    debouncedSyncText() {
+      if (!this.isUndoRedoOperation) {
+        this.saveToUndoStack();
+      }
+
+      if (this.syncTimeout) {
+        clearTimeout(this.syncTimeout);
+      }
+
+      this.syncTimeout = setTimeout(() => {
+        this.syncText();
+      }, 500);
     },
 
+    syncText() {
+      this.sendMessage({
+        type: "text",
+        content: this.scriptText,
+      });
+      this.updateLastSyncTime();
+    },
+
+    syncScript() {
+      this.syncText();
+    },
 
     // Utility methods
+    updateLastSyncTime() {
+      const now = new Date();
+      this.lastSyncTime = now.toLocaleTimeString();
+    },
+
+    async generateQRCode() {
+      try {
+        this.qrCodeDataUrl = await QRCode.toDataURL(this.joinUrl);
+      } catch (error) {
+        console.error("Error generating QR code:", error);
+      }
+    },
+
+    formatTime(timestamp) {
+      return new Date(timestamp).toLocaleTimeString();
+    },
+
     disconnect() {
       if (this.ws) {
         this.ws.close();
       }
-      // Navigate back to landing page using Vue Router
       this.$router.push("/");
     },
 
@@ -1039,158 +875,221 @@ Happy teleprompting! 🎬`,
       this.snackbar.color = color;
       this.snackbar.show = true;
     },
-
-    // Room management methods
-    async kickParticipant(participantId) {
-      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        this.showSnackbar("Cannot kick participant: not connected", "error");
-        return;
-      }
-
-      if (confirm("Are you sure you want to kick this participant?")) {
-        this.sendMessage({
-          type: "kick_participant",
-          target_participant_id: participantId,
-        });
-        this.showSnackbar("Participant kicked", "info");
-      }
-    },
-
-    formatTime(timestamp) {
-      return new Date(timestamp).toLocaleTimeString();
-    },
-
-    async copyToClipboard(text, successMessage) {
-      try {
-        await navigator.clipboard.writeText(text);
-        this.showSnackbar(successMessage, "success");
-      } catch (error) {
-        this.showSnackbar("Failed to copy to clipboard", "error");
-      }
-    },
-
-    async copyCredentials() {
-      if (!this.roomCredentials) return;
-
-      const credentials = {
-        room_id: this.roomCredentials.room_id,
-        room_secret: this.roomCredentials.room_secret,
-        room_name: this.roomCredentials.room_name || this.editableRoomName,
-      };
-
-      try {
-        await navigator.clipboard.writeText(
-          JSON.stringify(credentials, null, 2)
-        );
-        this.showSnackbar("Room credentials copied to clipboard!", "success");
-      } catch (error) {
-        this.showSnackbar("Failed to copy credentials", "error");
-      }
-    },
-
-    async generateQRCode() {
-      if (!this.joinUrl) {
-        this.qrCodeDataUrl = null;
-        return;
-      }
-
-      try {
-        this.qrCodeDataUrl = await QRCode.toDataURL(this.joinUrl, {
-          width: 200,
-          margin: 2,
-        });
-      } catch (error) {
-        console.error("Failed to generate QR code:", error);
-        this.qrCodeDataUrl = null;
-      }
-    },
-
-    async updateRoomName() {
-      if (
-        this.editableRoomName &&
-        this.editableRoomName !== this.roomCredentials?.room_name
-      ) {
-        try {
-          const apiUrl = config.getApiUrl();
-          const response = await fetch(
-            `${apiUrl}/api/rooms/${this.roomCredentials.room_id}/name`,
-            {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                room_id: this.roomCredentials.room_id,
-                room_name: this.editableRoomName,
-                participant_id: this.participantId,
-              }),
-            }
-          );
-
-          if (!response.ok) {
-            throw new Error("Failed to update room name");
-          }
-
-          // Update local credentials
-          if (this.roomCredentials) {
-            this.roomCredentials.room_name = this.editableRoomName;
-            sessionStorage.setItem(
-              "room_credentials",
-              JSON.stringify(this.roomCredentials)
-            );
-          }
-
-          this.showSnackbar("Room name updated successfully", "success");
-        } catch (error) {
-          console.error("Error updating room name:", error);
-          this.showSnackbar("Failed to update room name", "error");
-        }
-      }
-    },
   },
 };
 </script>
 
 <style scoped>
-.v-textarea :deep(.v-field__input) {
-  font-family: "Roboto Mono", monospace;
-  line-height: 1.6;
+/* Header */
+.v-app-bar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.v-label {
-  font-weight: 500;
-  font-size: 0.875rem;
-  opacity: 0.87;
+/* Script Editor Section */
+.script-editor-section {
+  background: rgba(33, 33, 33, 0.6);
+  height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
 }
 
-/* Unified Controls Styling */
-.play-pause-button {
-  width: 80px !important;
-  height: 80px !important;
-  border-radius: 50% !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+.script-editor-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.script-textarea {
+  height: 100%;
+}
+
+.script-textarea :deep(.v-input__control),
+.script-textarea :deep(.v-field),
+.script-textarea :deep(.v-field__field),
+.script-textarea :deep(.v-field__input) {
+  height: 100% !important;
+  max-height: none !important;
+}
+
+.script-textarea :deep(.v-field__input) {
+  font-family: "JetBrains Mono", "SF Mono", "Monaco", "Cascadia Code",
+    "Roboto Mono", monospace !important;
+  font-size: 1.1rem !important;
+  line-height: 1.8 !important;
+  color: #e0e0e0 !important;
+  overflow-y: auto !important;
+  min-height: 100% !important;
+}
+
+.script-status-bar {
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  min-height: 40px;
+}
+
+/* Sidebar */
+.sidebar {
+  background: rgba(48, 48, 48, 0.9);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: calc(100vh - 72px);
+}
+
+.controls-sidebar {
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Control Sections */
+.control-section {
+  margin-bottom: 2rem;
+}
+
+.control-group {
+  margin-bottom: 1rem;
+}
+
+/* Playback Controls */
+.control-btn,
+.play-btn {
   transition: all 0.3s ease !important;
-}
-
-.play-pause-button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
-}
-
-.control-button {
-  width: 56px !important;
-  height: 56px !important;
   border-radius: 50% !important;
-  transition: transform 0.2s ease !important;
 }
 
-.control-button:hover {
+.control-btn:hover,
+.play-btn:hover {
   transform: scale(1.1);
 }
 
-/* Ensure title stays inline */
-.v-card-title {
-  flex-wrap: nowrap !important;
-  align-items: center !important;
+.play-btn {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Value Displays */
+.speed-display,
+.lines-display,
+.value-display {
+  min-width: 60px;
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+/* Number input text fields */
+.text-center :deep(.v-field__input) {
+  text-align: center;
+  font-weight: 500;
+}
+
+.text-center :deep(input) {
+  text-align: center;
+}
+
+/* Participants Container */
+.participants-container {
+  min-height: 120px;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.participants-list {
+  padding: 4px;
+}
+
+.participant-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 0.2s ease;
+}
+
+.participant-item:last-child {
+  border-bottom: none;
+}
+
+.participant-item:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.participant-item-you {
+  background-color: rgba(0, 128, 128, 0.1);
+}
+
+.participant-item-you:hover {
+  background-color: rgba(0, 128, 128, 0.15);
+}
+
+.participant-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.87);
+  margin-bottom: 2px;
+}
+
+.participant-you-badge {
+  color: rgb(var(--v-theme-teal));
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.participant-time {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive Design */
+@media (max-width: 1263px) {
+  .sidebar {
+    position: fixed;
+    right: 0;
+    top: 72px;
+    z-index: 1000;
+    width: 350px;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.show {
+    transform: translateX(0);
+  }
+
+  .script-editor-section {
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 960px) {
+  .script-editor-section {
+    padding: 1rem;
+  }
+
+  .controls-sidebar {
+    padding: 1rem;
+  }
+
+  .control-btn,
+  .play-btn {
+    margin: 0 0.25rem;
+  }
+}
+
+/* Animation keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.script-editor-section,
+.controls-sidebar {
+  animation: fadeInUp 0.5s ease-out;
 }
 </style>

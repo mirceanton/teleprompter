@@ -1,7 +1,15 @@
 <template>
   <v-app>
-    <v-app-bar app color="primary" dark>
-      <v-toolbar-title>Remote Teleprompter</v-toolbar-title>
+    <v-app-bar app elevation="16" height="64" color="grey-darken-4">
+      <v-container fluid class="d-flex align-center">
+        <div class="d-flex align-center">
+          <v-icon color="teal" size="32" class="mr-3"
+            >mdi-presentation-play</v-icon
+          >
+          <div class="text-h5 font-weight-bold">Teleprompter</div>
+        </div>
+        <v-spacer />
+      </v-container>
     </v-app-bar>
 
     <v-main>
@@ -10,11 +18,10 @@
           <v-col cols="12" md="10" lg="8">
             <!-- Header Section -->
             <div class="text-center mb-8">
-              <v-icon size="64" color="primary" class="mb-4">mdi-presentation-play</v-icon>
+              <v-icon size="64" color="primary" class="mb-4"
+                >mdi-presentation-play</v-icon
+              >
               <h1 class="text-h3 font-weight-bold mb-3">Remote Teleprompter</h1>
-              <p class="text-h6 text-medium-emphasis">
-                Professional teleprompter solution for seamless content delivery
-              </p>
             </div>
 
             <!-- Mode Selection Cards -->
@@ -32,17 +39,23 @@
                     <div class="mode-icon-container mb-4">
                       <v-icon size="80" class="mode-icon">mdi-laptop</v-icon>
                     </div>
-                    
+
                     <div class="mode-title mb-3">
                       <h2 class="text-h4 font-weight-bold">Controller</h2>
-                      <div class="mode-subtitle text-h6 text-medium-emphasis mt-1">
-                        Command Center
+                      <div
+                        class="mode-subtitle text-h6 text-medium-emphasis mt-1"
+                      >
+                        Write and edit your script, then control the
+                        teleprompter display.
                       </div>
                     </div>
                   </v-card-text>
-                  
+
                   <v-overlay v-if="loading" contained class="loading-overlay">
-                    <v-progress-circular indeterminate size="32"></v-progress-circular>
+                    <v-progress-circular
+                      indeterminate
+                      size="32"
+                    ></v-progress-circular>
                   </v-overlay>
                 </v-card>
               </v-col>
@@ -60,17 +73,23 @@
                     <div class="mode-icon-container mb-4">
                       <v-icon size="80" class="mode-icon">mdi-monitor</v-icon>
                     </div>
-                    
+
                     <div class="mode-title mb-3">
                       <h2 class="text-h4 font-weight-bold">Teleprompter</h2>
-                      <div class="mode-subtitle text-h6 text-medium-emphasis mt-1">
-                        Display Screen
+                      <div
+                        class="mode-subtitle text-h6 text-medium-emphasis mt-1"
+                      >
+                        Display the script in a large, readable format for
+                        presenters.
                       </div>
                     </div>
                   </v-card-text>
-                  
+
                   <v-overlay v-if="loading" contained class="loading-overlay">
-                    <v-progress-circular indeterminate size="32"></v-progress-circular>
+                    <v-progress-circular
+                      indeterminate
+                      size="32"
+                    ></v-progress-circular>
                   </v-overlay>
                 </v-card>
               </v-col>
@@ -117,7 +136,7 @@ export default {
       this.loading = true;
       try {
         const apiUrl = config.getApiUrl();
-        
+
         // Join as controller (simplified API)
         const response = await fetch(`${apiUrl}/api/join`, {
           method: "POST",
@@ -151,13 +170,13 @@ export default {
         // Navigate to controller
         this.$router.push({
           path: "/controller",
-          query: {
-            role: "controller",
-          },
         });
       } catch (error) {
         console.error("Error starting controller mode:", error);
-        this.showSnackbar("Failed to start controller mode. Please try again.", "error");
+        this.showSnackbar(
+          "Failed to start controller mode. Please try again.",
+          "error"
+        );
       } finally {
         this.loading = false;
       }
@@ -167,7 +186,7 @@ export default {
       this.loading = true;
       try {
         const apiUrl = config.getApiUrl();
-        
+
         // Join as teleprompter (simplified API)
         const response = await fetch(`${apiUrl}/api/join`, {
           method: "POST",
@@ -201,13 +220,13 @@ export default {
         // Navigate to teleprompter
         this.$router.push({
           path: "/teleprompter",
-          query: {
-            role: "teleprompter",
-          },
         });
       } catch (error) {
         console.error("Error starting teleprompter mode:", error);
-        this.showSnackbar("Failed to start teleprompter mode. Please try again.", "error");
+        this.showSnackbar(
+          "Failed to start teleprompter mode. Please try again.",
+          "error"
+        );
       } finally {
         this.loading = false;
       }
@@ -297,11 +316,11 @@ export default {
   .mode-card {
     margin-bottom: 16px;
   }
-  
+
   .mode-icon {
     padding: 12px;
   }
-  
+
   .mode-title h2 {
     font-size: 1.5rem !important;
   }

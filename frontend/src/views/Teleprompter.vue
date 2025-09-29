@@ -1,82 +1,28 @@
 <template>
   <v-app>
-    <!-- Top Control Bar (hidden in fullscreen mode) -->
-    <v-app-bar v-if="!isFullscreen" app color="primary" dark density="compact">
-      <v-toolbar-title class="text-subtitle-1">
-        Prompter - {{ roomCredentials?.room_name || "Loading..." }}
-      </v-toolbar-title>
-      <v-spacer />
-
-      <v-btn
-        prepend-icon="mdi-logout"
-        variant="outlined"
-        class="mr-4"
-        @click="exitTeleprompter"
-      >
-        Leave Room
-      </v-btn>
+    <v-app-bar app elevation="16" height="64" color="grey-darken-4">
+      <v-container fluid class="d-flex align-center">
+        <div class="d-flex align-center">
+          <v-icon color="teal" size="32" class="mr-3"
+            >mdi-presentation-play</v-icon
+          >
+          <div class="text-h5 font-weight-bold">Teleprompter</div>
+        </div>
+        <v-spacer></v-spacer>
+        <v-btn prepend-icon="mdi-logout" @click="exitTeleprompter">
+          Leave Room
+        </v-btn>
+      </v-container>
     </v-app-bar>
-
-    <!-- Floating Controls for fullscreen mode -->
-    <div
-      v-if="isFullscreen"
-      class="floating-controls"
-      :class="{ visible: showControls }"
-      @click="showControls = true"
-    >
-      <v-card class="pa-2" elevation="8">
-        <v-btn-group density="compact">
-          <v-btn
-            @click="exitFullscreen"
-            icon="mdi-fullscreen-exit"
-            size="small"
-          />
-          <v-btn
-            @click="toggleMirrorMode"
-            icon="mdi-flip-horizontal"
-            size="small"
-          />
-          <v-btn
-            @click="changeFontSize(-0.2)"
-            icon="mdi-format-font-size-decrease"
-            size="small"
-          />
-          <v-btn
-            @click="changeFontSize(0.2)"
-            icon="mdi-format-font-size-increase"
-            size="small"
-          />
-          <v-btn
-            @click="changeWidth(-10)"
-            icon="mdi-arrow-collapse-horizontal"
-            size="small"
-          />
-          <v-btn
-            @click="changeWidth(10)"
-            icon="mdi-arrow-expand-horizontal"
-            size="small"
-          />
-        </v-btn-group>
-      </v-card>
-    </div>
 
     <v-main>
       <!-- Teleprompter Display -->
       <div
         ref="teleprompterContainer"
         class="teleprompter-container"
-        :class="{
-          fullscreen: isFullscreen,
-        }"
+        :class="{ fullscreen: isFullscreen }"
         @click="enterFullscreen"
-        @mousemove="onMouseMove"
       >
-        <!-- Mirror Indicator -->
-        <div v-if="horizontalMirror || verticalMirror" class="mirror-indicator">
-          MIRROR MODE
-        </div>
-
-        <!-- Teleprompter Text -->
         <div
           ref="teleprompterText"
           class="teleprompter-text"
@@ -90,68 +36,13 @@
             {{ teleprompterContent || "Waiting for text from controller..." }}
           </div>
         </div>
-
-        <!-- Non-fullscreen controls -->
-        <div v-if="!isFullscreen" class="teleprompter-controls">
-          <v-card class="ma-4" elevation="4">
-            <v-card-text>
-              <v-row align="center">
-                <v-col>
-                  <v-btn
-                    color="error"
-                    variant="outlined"
-                    @click="exitTeleprompter"
-                    size="small"
-                  >
-                    <v-icon class="mr-2">mdi-close</v-icon>
-                    Exit
-                  </v-btn>
-                </v-col>
-                <v-col cols="auto">
-                  <v-btn color="primary" @click="enterFullscreen" size="small">
-                    <v-icon class="mr-2">mdi-fullscreen</v-icon>
-                    Fullscreen
-                  </v-btn>
-                </v-col>
-              </v-row>
-
-              <!-- Quick controls -->
-              <v-row class="mt-2">
-                <v-col>
-                  <v-btn-group density="compact" class="w-100">
-                    <v-btn
-                      @click="toggleMirrorMode"
-                      variant="outlined"
-                      class="flex-grow-1"
-                    >
-                      <v-icon class="mr-1">mdi-flip-horizontal</v-icon>
-                      Mirror
-                    </v-btn>
-                    <v-btn @click="changeFontSize(-0.2)" variant="outlined">
-                      A-
-                    </v-btn>
-                    <v-btn @click="changeFontSize(0.2)" variant="outlined">
-                      A+
-                    </v-btn>
-                    <v-btn @click="changeWidth(-10)" variant="outlined">
-                      ◀
-                    </v-btn>
-                    <v-btn @click="changeWidth(10)" variant="outlined">
-                      ▶
-                    </v-btn>
-                  </v-btn-group>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-        </div>
       </div>
     </v-main>
 
-    <v-snackbar v-model="snackbar.show" :color="snackbar.color">
+    <v-snackbar top right v-model="snackbar.show" :color="snackbar.color">
       {{ snackbar.text }}
       <template v-slot:actions>
-        <v-btn variant="text" @click="snackbar.show = false"> Close </v-btn>
+        <v-btn variant="text" @click="snackbar.show = false">Close</v-btn>
       </template>
     </v-snackbar>
   </v-app>
@@ -159,40 +50,23 @@
 
 <script>
 import { config } from "@/utils/config.js";
-import {
-  parseMarkdownSections,
-  getCharacterPositionForLine,
-} from "@/utils/markdown.js";
 
 export default {
   name: "Teleprompter",
 
   data() {
     return {
-      // Connection state
       ws: null,
-      channelName: "",
-      roomCredentials: null,
-      participantId: null,
-
-      // Teleprompter content and state
       teleprompterContent: "",
       isScrolling: false,
       scrollPosition: 0,
-      scrollSpeed: 2.5,
+      scrollSpeed: 1.0,
       animationId: null,
-
-      // Display settings
       fontSize: 2.5,
       textWidth: 100,
       horizontalMirror: false,
       verticalMirror: false,
-
-      // UI state
       isFullscreen: false,
-      showControls: false,
-      controlsTimeout: null,
-
       snackbar: {
         show: false,
         text: "",
@@ -203,7 +77,6 @@ export default {
 
   computed: {
     teleprompterTransform() {
-      // Build the transform string combining scroll position and mirror effects
       let transforms = [
         `translateX(-50%)`,
         `translateY(${this.scrollPosition}px)`,
@@ -222,21 +95,15 @@ export default {
   },
 
   async mounted() {
-    // Initialize authentication
     const authSuccess = await this.initializeAuth();
 
-    // Connect to WebSocket
     if (authSuccess) {
       this.connect();
     } else {
-      this.showSnackbar(
-        "No credentials found. Please select a mode.",
-        "error"
-      );
+      this.showSnackbar("No credentials found. Please select a mode.", "error");
       this.$router.push("/");
     }
 
-    // Setup fullscreen detection
     document.addEventListener("fullscreenchange", this.onFullscreenChange);
     document.addEventListener(
       "webkitfullscreenchange",
@@ -254,7 +121,6 @@ export default {
       cancelAnimationFrame(this.animationId);
     }
 
-    // Remove fullscreen event listeners
     document.removeEventListener("fullscreenchange", this.onFullscreenChange);
     document.removeEventListener(
       "webkitfullscreenchange",
@@ -270,15 +136,15 @@ export default {
   methods: {
     async initializeAuth() {
       try {
-        // Get credentials from session storage
-        const credentialsStr = sessionStorage.getItem("teleprompter_credentials");
+        const credentialsStr = sessionStorage.getItem(
+          "teleprompter_credentials"
+        );
         if (!credentialsStr) {
           return false;
         }
 
         const credentials = JSON.parse(credentialsStr);
 
-        // Verify this is a teleprompter role
         if (credentials.role !== "teleprompter") {
           this.showSnackbar(
             "Access denied: Not authorized as teleprompter",
@@ -295,41 +161,12 @@ export default {
       }
     },
 
-    async joinRoomAsTeleprompter() {
-      try {
-        const response = await fetch(`${config.getApiUrl()}/api/rooms/join`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            room_id: this.roomCredentials.room_id,
-            room_secret: this.roomCredentials.room_secret,
-            role: "teleprompter",
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to join room");
-        }
-
-        const joinData = await response.json();
-        if (!joinData.success) {
-          this.showSnackbar(joinData.message, "error");
-          return null;
-        }
-
-        return joinData;
-      } catch (error) {
-        console.error("Error joining room as teleprompter:", error);
-        this.showSnackbar("Failed to join room as teleprompter", "error");
-        return null;
-      }
+    exitTeleprompter() {
+      this.$router.push("/");
     },
 
     connect() {
       try {
-        // Use simplified WebSocket endpoint
         const wsUrl = config.getWebSocketUrl();
         this.ws = new WebSocket(`${wsUrl}/api/ws`);
 
@@ -344,8 +181,6 @@ export default {
       this.ws.onopen = () => {
         console.log("WebSocket connected");
         this.showSnackbar("Connected to teleprompter channel", "success");
-
-        // Send mode information
         this.sendMessage({ type: "mode", mode: "teleprompter" });
       };
 
@@ -375,91 +210,46 @@ export default {
           this.teleprompterContent = message.content;
           this.resetScrolling();
           break;
-
         case "start":
           this.startScrolling();
           break;
-
         case "pause":
           this.pauseScrolling();
           break;
-
         case "reset":
           this.resetScrolling();
           break;
-
-        case "fast_forward":
-          this.fastForward();
-          break;
-
         case "speed":
           this.scrollSpeed = message.value;
           break;
-
         case "font_size":
           this.fontSize = message.value;
           break;
-
         case "width":
           this.textWidth = message.value;
           break;
-
         case "mirror":
           this.horizontalMirror = message.horizontal;
           this.verticalMirror = message.vertical;
           break;
-
-
-
         case "go_to_beginning":
           this.resetScrolling();
           break;
-
         case "go_to_end":
           this.goToEnd();
           break;
-
         case "scroll_lines":
           this.scrollByLines(message.direction, message.lines, message.smooth);
           break;
-
-        case "participant_kicked":
-          // Handle being kicked from the room
-          if (message.participant_id === this.participantId) {
-            this.showSnackbar("You have been removed from the room", "error");
-            // Redirect to landing page after a brief delay
-            setTimeout(() => {
-              this.$router.push("/");
-            }, 2000);
-          }
-          break;
-
-        case "room_name_updated":
-          // Update room name when changed by controller
-          if (this.roomCredentials) {
-            this.roomCredentials.room_name = message.room_name;
-            sessionStorage.setItem(
-              "room_credentials",
-              JSON.stringify(this.roomCredentials)
-            );
-          }
-          break;
-
-        default:
-          console.log("Received message:", message);
       }
     },
 
-    // WebSocket communication
     sendMessage(message) {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         this.ws.send(JSON.stringify(message));
-      } else {
-        console.warn("WebSocket not connected");
       }
     },
 
-    // Scrolling controls
     startScrolling() {
       this.isScrolling = true;
       this.scroll();
@@ -474,36 +264,35 @@ export default {
 
     resetScrolling() {
       this.isScrolling = false;
-      this.scrollPosition = 0;
       if (this.animationId) {
         cancelAnimationFrame(this.animationId);
       }
-    },
-
-    fastForward() {
-      if (this.$refs.teleprompterText) {
-        const textHeight = this.$refs.teleprompterText.scrollHeight;
-        const containerHeight = this.$refs.teleprompterContainer.clientHeight;
-        this.scrollPosition = Math.max(
-          this.scrollPosition - containerHeight * 0.3,
-          -(textHeight - containerHeight)
-        );
-      }
+      // Smoothly animate to beginning
+      this.animateToPosition(0);
     },
 
     scroll() {
       if (!this.isScrolling) return;
 
-      // Calculate scroll speed
-      const speed = this.scrollSpeed * 0.5;
-      this.scrollPosition -= speed;
+      const speed = this.scrollSpeed * 0.5 * -1;
+      this.scrollPosition += speed;
 
-      // Check if we've scrolled past the end
       if (this.$refs.teleprompterText) {
         const textHeight = this.$refs.teleprompterText.scrollHeight;
         const containerHeight = this.$refs.teleprompterContainer.clientHeight;
 
-        if (this.scrollPosition < -(textHeight + containerHeight)) {
+        // Allow scrolling from start (0) to beyond end (-textHeight) with buffer
+        // Buffer allows text to scroll slightly past for a cleaner finish
+        const buffer = containerHeight * 0.5;
+        const scrollLimit = this.verticalMirror
+          ? textHeight + buffer
+          : -(textHeight + buffer);
+
+        const isOutOfBounds = this.verticalMirror
+          ? this.scrollPosition > scrollLimit
+          : this.scrollPosition < scrollLimit;
+
+        if (isOutOfBounds) {
           this.resetScrolling();
           return;
         }
@@ -512,28 +301,41 @@ export default {
       this.animationId = requestAnimationFrame(this.scroll);
     },
 
-
-
     goToEnd() {
       if (this.$refs.teleprompterText) {
         const textHeight = this.$refs.teleprompterText.scrollHeight;
-        const containerHeight = this.$refs.teleprompterContainer.clientHeight;
-        this.scrollPosition = -(textHeight - containerHeight);
+
+        // Position so the last line of text is centered
+        // Text top is at: containerHeight/2 + scrollPosition
+        // Text bottom is at: containerHeight/2 + scrollPosition + textHeight
+        // We want text bottom at center: containerHeight/2
+        // Therefore: scrollPosition = -textHeight
+        const targetPosition = this.verticalMirror ? textHeight : -textHeight;
+
+        // Smoothly animate to end
+        this.animateToPosition(targetPosition);
       }
     },
 
     scrollByLines(direction, lines, smooth = false) {
-      const lineHeight = this.calculateLineHeight();
+      const lineHeight = this.fontSize * 16 * 1.8;
       const scrollAmount = lines * lineHeight;
-      const targetPosition = direction === "back" 
-        ? this.scrollPosition + scrollAmount
-        : this.scrollPosition - scrollAmount;
+
+      let targetPosition;
+      if (direction === "backward") {
+        // Scroll backward/up: increase scrollPosition (less negative)
+        targetPosition = this.scrollPosition + scrollAmount;
+      } else if (direction === "forward") {
+        // Scroll forward/down: decrease scrollPosition (more negative)
+        targetPosition = this.scrollPosition - scrollAmount;
+      } else {
+        console.warn(`Unknown scroll direction: ${direction}`);
+        return;
+      }
 
       if (smooth) {
-        // Animate to the target position
         this.animateToPosition(targetPosition);
       } else {
-        // Instant jump to position
         this.scrollPosition = targetPosition;
       }
     },
@@ -541,20 +343,20 @@ export default {
     animateToPosition(targetPosition) {
       const startPosition = this.scrollPosition;
       const distance = targetPosition - startPosition;
-      const duration = 500; // 500ms animation
+      const duration = 500;
       const startTime = performance.now();
 
       const animate = (currentTime) => {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        
-        // Use easeInOutCubic for smooth animation
-        const easeProgress = progress < 0.5 
-          ? 4 * progress * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-        
-        this.scrollPosition = startPosition + (distance * easeProgress);
-        
+
+        const easeProgress =
+          progress < 0.5
+            ? 4 * progress * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+        this.scrollPosition = startPosition + distance * easeProgress;
+
         if (progress < 1) {
           requestAnimationFrame(animate);
         }
@@ -563,72 +365,6 @@ export default {
       requestAnimationFrame(animate);
     },
 
-    calculateLineHeight() {
-      // Estimate line height based on font size
-      // This is an approximation - in a real implementation you might measure actual line height
-      return this.fontSize * 16 * 1.8; // fontSize (em) * base font size * line-height
-    },
-
-    scrollToCharacterPosition(charPosition) {
-      // Convert character position to scroll position
-      if (!this.teleprompterContent || charPosition <= 0) {
-        this.scrollPosition = 0;
-        return;
-      }
-
-      // Approximate character to pixel conversion
-      const averageCharWidth = this.fontSize * 16 * 0.6; // Rough estimate
-      const lineHeight = this.calculateLineHeight();
-      const textWidth = this.$refs.teleprompterText
-        ? this.$refs.teleprompterText.clientWidth
-        : 400;
-      const charsPerLine = Math.floor(textWidth / averageCharWidth);
-
-      // Calculate approximate line position
-      const linePosition = Math.floor(charPosition / charsPerLine);
-      const targetScrollPosition = linePosition * lineHeight;
-
-      // Adjust for container height to center the text
-      const containerHeight = this.$refs.teleprompterContainer
-        ? this.$refs.teleprompterContainer.clientHeight
-        : 400;
-      const centerOffset = containerHeight * 0.3; // Show text in upper third
-
-      this.scrollPosition = -(targetScrollPosition - centerOffset);
-    },
-
-    // Font size controls
-    changeFontSize(delta) {
-      this.fontSize = Math.max(0.5, Math.min(5, this.fontSize + delta));
-      // Sync with controller
-      this.sendMessage({
-        type: "font_size",
-        value: this.fontSize,
-      });
-    },
-
-    // Width controls
-    changeWidth(delta) {
-      this.textWidth = Math.max(20, Math.min(100, this.textWidth + delta));
-      // Sync with controller
-      this.sendMessage({
-        type: "width",
-        value: this.textWidth,
-      });
-    },
-
-    // Mirror controls
-    toggleMirrorMode() {
-      this.horizontalMirror = !this.horizontalMirror;
-      // Sync with controller
-      this.sendMessage({
-        type: "mirror",
-        horizontal: this.horizontalMirror,
-        vertical: this.verticalMirror,
-      });
-    },
-
-    // Fullscreen controls
     enterFullscreen() {
       const element = this.$refs.teleprompterContainer;
       if (element.requestFullscreen) {
@@ -642,18 +378,6 @@ export default {
       }
     },
 
-    exitFullscreen() {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-      } else if (document.mozCancelFullScreen) {
-        document.mozCancelFullScreen();
-      } else if (document.msExitFullscreen) {
-        document.msExitFullscreen();
-      }
-    },
-
     onFullscreenChange() {
       this.isFullscreen = !!(
         document.fullscreenElement ||
@@ -661,22 +385,6 @@ export default {
         document.mozFullScreenElement ||
         document.msFullscreenElement
       );
-    },
-
-    onMouseMove() {
-      if (this.isFullscreen) {
-        this.showControls = true;
-        clearTimeout(this.controlsTimeout);
-        this.controlsTimeout = setTimeout(() => {
-          this.showControls = false;
-        }, 3000);
-      }
-    },
-
-    // Utility methods
-    exitTeleprompter() {
-      // Navigate back to landing page using Vue Router
-      this.$router.push("/");
     },
 
     showSnackbar(text, color = "success") {
@@ -691,7 +399,7 @@ export default {
 <style scoped>
 .teleprompter-container {
   position: relative;
-  height: 100vh;
+  height: 100%;
   background: #000;
   color: #fff;
   overflow: hidden;
@@ -724,51 +432,5 @@ export default {
   display: inline-block;
   max-width: 100%;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-}
-
-.mirror-indicator {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(255, 0, 0, 0.8);
-  color: white;
-  padding: 5px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: bold;
-  z-index: 1000;
-}
-
-.floating-controls {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 10000;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.floating-controls.visible {
-  opacity: 1;
-}
-
-.teleprompter-controls {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  max-width: 600px;
-  width: auto;
-}
-
-/* Hide scrollbar */
-.teleprompter-container::-webkit-scrollbar {
-  display: none;
-}
-
-.teleprompter-container {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
 }
 </style>
