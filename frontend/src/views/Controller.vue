@@ -161,7 +161,7 @@
                   <!-- Playback Speed -->
                   <div class="control-group flex-grow-1">
                     <v-number-input
-                      v-model="scrollSpeed"
+                      v-model.number="scrollSpeed"
                       label="Playback Speed"
                       variant="solo-filled"
                       control-variant="split"
@@ -172,7 +172,11 @@
                       :step="0.1"
                       suffix="x"
                       @update:model-value="updateSpeed"
-                    />
+                    >
+                      <template v-slot:display-value="{ displayValue }">
+                        {{ Number(displayValue).toFixed(1) }}
+                      </template>
+                    </v-number-input>
                   </div>
 
                   <!-- Lines to Scroll -->
@@ -218,7 +222,7 @@
                   <!-- Font Size -->
                   <div class="control-group flex-grow-1">
                     <v-number-input
-                      v-model="fontSize"
+                      v-model.number="fontSize"
                       label="Font Size"
                       variant="solo-filled"
                       control-variant="split"
@@ -229,7 +233,11 @@
                       :step="0.1"
                       suffix="em"
                       @update:model-value="updateFontSize"
-                    />
+                    >
+                      <template v-slot:display-value="{ displayValue }">
+                        {{ Number(displayValue).toFixed(1) }}
+                      </template>
+                    </v-number-input>
                   </div>
                 </div>
               </div>
@@ -263,12 +271,12 @@
               <div class="control-section">
                 <h3 class="text-h6 font-weight-bold mb-6">Room Participants</h3>
                 <div
-                  class="participants-container bg-grey-darken-3 rounded pa-4"
-                  style="min-height: 120px"
+                  class="participants-container"
+                  style="min-height: 120px; max-height: 300px; overflow-y: auto"
                 >
                   <div
                     v-if="participants.length === 0"
-                    class="text-center text-medium-emphasis"
+                    class="text-center text-medium-emphasis pa-4"
                   >
                     <v-icon size="48" class="mb-2 text-grey-darken-1"
                       >mdi-account-group</v-icon
@@ -278,67 +286,75 @@
                       Waiting for devices to join...
                     </div>
                   </div>
-                  <v-list v-else class="pa-0" density="compact">
-                    <v-list-item
-                      v-for="participant in participants"
-                      :key="participant.id"
-                      :class="{
-                        'bg-teal-darken-4': participant.id === participantId,
-                      }"
-                      class="px-0 mb-2 rounded"
-                    >
-                      <template v-slot:prepend>
-                        <v-avatar
-                          size="32"
-                          :color="
-                            participant.role === 'controller'
-                              ? 'primary'
-                              : 'success'
-                          "
+                  
+                  <!-- Data Iterator for Participants -->
+                  <v-data-iterator
+                    v-else
+                    :items="participants"
+                    item-value="id"
+                    hide-default-footer
+                    class="pa-0"
+                  >
+                    <template v-slot:default="{ items }">
+                      <v-row dense>
+                        <v-col
+                          v-for="participant in items"
+                          :key="participant.raw.id"
+                          cols="12"
+                          class="pb-2"
                         >
-                          <v-icon size="small" color="white">{{
-                            participant.role === "controller"
-                              ? "mdi-laptop"
-                              : "mdi-cellphone"
-                          }}</v-icon>
-                        </v-avatar>
-                      </template>
-
-                      <v-list-item-title class="text-body-2">
-                        {{
-                          participant.role === "controller"
-                            ? "Controller"
-                            : "Teleprompter"
-                        }}
-                        <v-chip
-                          v-if="participant.id === participantId"
-                          size="x-small"
-                          color="teal"
-                          variant="flat"
-                          class="ml-2"
-                        >
-                          You
-                        </v-chip>
-                      </v-list-item-title>
-
-                      <v-list-item-subtitle class="text-caption">
-                        {{ formatTime(participant.joined_at) }}
-                      </v-list-item-subtitle>
-
-                      <template
-                        v-slot:append
-                        v-if="participant.id !== participantId"
-                      >
-                        <v-btn
-                          icon="mdi-account-remove"
-                          size="x-small"
-                          color="error"
-                          variant="text"
-                          @click="kickParticipant(participant.id)"
-                        />
-                      </template>
-                    </v-list-item>
-                  </v-list>
+                          <v-card
+                            variant="outlined"
+                            :color="participant.raw.id === participantId ? 'teal-darken-4' : 'grey-darken-3'"
+                            class="participant-card"
+                            density="compact"
+                          >
+                            <v-card-text class="pa-3">
+                              <div class="d-flex align-center">
+                                <v-avatar
+                                  size="28"
+                                  :color="
+                                    participant.raw.role === 'controller'
+                                      ? 'primary'
+                                      : 'success'
+                                  "
+                                  class="mr-3"
+                                >
+                                  <v-icon size="16" color="white">{{
+                                    participant.raw.role === "controller"
+                                      ? "mdi-laptop"
+                                      : "mdi-cellphone"
+                                  }}</v-icon>
+                                </v-avatar>
+                                
+                                <div class="flex-grow-1">
+                                  <div class="text-body-2 font-weight-medium">
+                                    {{
+                                      participant.raw.role === "controller"
+                                        ? "Controller"
+                                        : "Teleprompter"
+                                    }}
+                                    <v-chip
+                                      v-if="participant.raw.id === participantId"
+                                      size="x-small"
+                                      color="teal"
+                                      variant="flat"
+                                      class="ml-2"
+                                    >
+                                      You
+                                    </v-chip>
+                                  </div>
+                                  <div class="text-caption text-medium-emphasis">
+                                    {{ formatTime(participant.raw.joined_at) }}
+                                  </div>
+                                </div>
+                              </div>
+                            </v-card-text>
+                          </v-card>
+                        </v-col>
+                      </v-row>
+                    </template>
+                  </v-data-iterator>
                 </div>
               </div>
             </div>
@@ -544,6 +560,9 @@ Happy teleprompting! 🎬`,
       redoStack: [],
       isUndoRedoOperation: false,
       lastScriptValue: "",
+      
+      // Connection tracking
+      lastConnectionCount: 0,
     };
   },
 
@@ -713,6 +732,13 @@ Happy teleprompting! 🎬`,
         case "connection_update":
           // Simple connection count update - create mock participants
           this.updateParticipantsList(message.connection_count || 0);
+          // Auto-sync script when new participant joins (increased count)
+          if (message.connection_count > this.lastConnectionCount) {
+            setTimeout(() => {
+              this.syncText();
+            }, 1000); // Small delay to ensure connection is ready
+          }
+          this.lastConnectionCount = message.connection_count || 0;
           break;
         case "participants_list":
           this.participants = message.participants || [];
@@ -723,6 +749,10 @@ Happy teleprompting! 🎬`,
             !this.participants.find((p) => p.id === message.participant.id)
           ) {
             this.participants.push(message.participant);
+            // Auto-sync script when new participant joins
+            setTimeout(() => {
+              this.syncText();
+            }, 1000);
           }
           break;
         case "participant_left":
@@ -993,7 +1023,10 @@ Happy teleprompting! 🎬`,
   font-size: 1.1rem !important;
   line-height: 1.8 !important;
   color: #e0e0e0 !important;
-  min-height: 600px !important;
+  height: 500px !important;
+  min-height: 500px !important;
+  max-height: 500px !important;
+  overflow-y: auto !important;
 }
 
 /* Sidebar */
@@ -1046,6 +1079,15 @@ Happy teleprompting! 🎬`,
 /* Participants Container */
 .participants-container {
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.participant-card {
+  transition: all 0.2s ease;
+}
+
+.participant-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Responsive Design */
