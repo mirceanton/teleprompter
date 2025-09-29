@@ -139,20 +139,49 @@ export default {
         const credentialsStr = sessionStorage.getItem(
           "teleprompter_credentials"
         );
-        if (!credentialsStr) {
+        
+        // Check if we already have valid credentials
+        if (credentialsStr) {
+          const credentials = JSON.parse(credentialsStr);
+          if (credentials.role === "teleprompter") {
+            return true;
+          }
+          // If wrong role, continue to auto-join as teleprompter
+        }
+        
+        // Auto-join as teleprompter (either no credentials or wrong role)
+        const apiUrl = config.getApiUrl();
+        
+        const response = await fetch(`${apiUrl}/api/join`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            role: "teleprompter",
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to join as teleprompter");
+        }
+
+        const joinData = await response.json();
+
+        if (!joinData.success) {
+          this.showSnackbar(joinData.message, "error");
           return false;
         }
 
-        const credentials = JSON.parse(credentialsStr);
+        // Store credentials in session storage
+        sessionStorage.setItem(
+          "teleprompter_credentials",
+          JSON.stringify({
+            role: "teleprompter",
+          })
+        );
 
-        if (credentials.role !== "teleprompter") {
-          this.showSnackbar(
-            "Access denied: Not authorized as teleprompter",
-            "error"
-          );
-          return false;
-        }
-
+        this.showSnackbar("Automatically joined as teleprompter", "success");
         return true;
       } catch (error) {
         console.error("Error initializing auth:", error);

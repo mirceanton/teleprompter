@@ -526,12 +526,20 @@ Happy teleprompting! 🎬`,
   },
 
   async mounted() {
-    await this.initializeRoom();
-    this.updateLastSyncTime();
-    this.generateQRCode();
+    // Check if we have credentials, if not, automatically join as controller
+    const authSuccess = await this.ensureAuthentication();
+    
+    if (authSuccess) {
+      await this.initializeRoom();
+      this.updateLastSyncTime();
+      this.generateQRCode();
 
-    // Initialize undo stack with current script content
-    this.lastScriptValue = this.scriptText;
+      // Initialize undo stack with current script content
+      this.lastScriptValue = this.scriptText;
+    } else {
+      // Redirect to landing page if authentication fails
+      this.$router.push("/");
+    }
   },
 
   beforeUnmount() {
@@ -541,6 +549,58 @@ Happy teleprompting! 🎬`,
   },
 
   methods: {
+    async ensureAuthentication() {
+      try {
+        // Check if we already have credentials
+        const credentialsStr = sessionStorage.getItem("teleprompter_credentials");
+        if (credentialsStr) {
+          const credentials = JSON.parse(credentialsStr);
+          if (credentials.role === "controller") {
+            return true;
+          }
+          // If wrong role, continue to auto-join as controller
+        }
+
+        // Auto-join as controller (either no credentials or wrong role)
+        const apiUrl = config.getApiUrl();
+        const response = await fetch(`${apiUrl}/api/join`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            role: "controller",
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to join as controller");
+        }
+
+        const joinData = await response.json();
+
+        if (!joinData.success) {
+          this.showSnackbar(joinData.message, "error");
+          return false;
+        }
+
+        // Store credentials in session storage
+        sessionStorage.setItem(
+          "teleprompter_credentials",
+          JSON.stringify({
+            role: "controller",
+          })
+        );
+
+        this.showSnackbar("Automatically joined as controller", "success");
+        return true;
+      } catch (error) {
+        console.error("Error ensuring authentication:", error);
+        this.showSnackbar("Failed to authenticate as controller", "error");
+        return false;
+      }
+    },
+
     async initializeRoom() {
       try {
         await this.connectWebSocket();
