@@ -10,11 +10,10 @@
           <v-col cols="12" md="10" lg="8">
             <!-- Header Section -->
             <div class="text-center mb-8">
-              <v-icon size="64" color="primary" class="mb-4">mdi-presentation-play</v-icon>
+              <v-icon size="64" color="primary" class="mb-4"
+                >mdi-presentation-play</v-icon
+              >
               <h1 class="text-h3 font-weight-bold mb-3">Remote Teleprompter</h1>
-              <p class="text-h6 text-medium-emphasis">
-                Professional teleprompter solution for seamless content delivery
-              </p>
             </div>
 
             <!-- Mode Selection Cards -->
@@ -32,17 +31,22 @@
                     <div class="mode-icon-container mb-4">
                       <v-icon size="80" class="mode-icon">mdi-laptop</v-icon>
                     </div>
-                    
+
                     <div class="mode-title mb-3">
                       <h2 class="text-h4 font-weight-bold">Controller</h2>
-                      <div class="mode-subtitle text-h6 text-medium-emphasis mt-1">
+                      <div
+                        class="mode-subtitle text-h6 text-medium-emphasis mt-1"
+                      >
                         Command Center
                       </div>
                     </div>
                   </v-card-text>
-                  
+
                   <v-overlay v-if="loading" contained class="loading-overlay">
-                    <v-progress-circular indeterminate size="32"></v-progress-circular>
+                    <v-progress-circular
+                      indeterminate
+                      size="32"
+                    ></v-progress-circular>
                   </v-overlay>
                 </v-card>
               </v-col>
@@ -60,17 +64,22 @@
                     <div class="mode-icon-container mb-4">
                       <v-icon size="80" class="mode-icon">mdi-monitor</v-icon>
                     </div>
-                    
+
                     <div class="mode-title mb-3">
                       <h2 class="text-h4 font-weight-bold">Teleprompter</h2>
-                      <div class="mode-subtitle text-h6 text-medium-emphasis mt-1">
+                      <div
+                        class="mode-subtitle text-h6 text-medium-emphasis mt-1"
+                      >
                         Display Screen
                       </div>
                     </div>
                   </v-card-text>
-                  
+
                   <v-overlay v-if="loading" contained class="loading-overlay">
-                    <v-progress-circular indeterminate size="32"></v-progress-circular>
+                    <v-progress-circular
+                      indeterminate
+                      size="32"
+                    ></v-progress-circular>
                   </v-overlay>
                 </v-card>
               </v-col>
@@ -117,7 +126,7 @@ export default {
       this.loading = true;
       try {
         const apiUrl = config.getApiUrl();
-        
+
         // Join as controller (simplified API)
         const response = await fetch(`${apiUrl}/api/join`, {
           method: "POST",
@@ -157,7 +166,10 @@ export default {
         });
       } catch (error) {
         console.error("Error starting controller mode:", error);
-        this.showSnackbar("Failed to start controller mode. Please try again.", "error");
+        this.showSnackbar(
+          "Failed to start controller mode. Please try again.",
+          "error"
+        );
       } finally {
         this.loading = false;
       }
@@ -167,7 +179,7 @@ export default {
       this.loading = true;
       try {
         const apiUrl = config.getApiUrl();
-        
+
         // Join as teleprompter (simplified API)
         const response = await fetch(`${apiUrl}/api/join`, {
           method: "POST",
@@ -207,7 +219,10 @@ export default {
         });
       } catch (error) {
         console.error("Error starting teleprompter mode:", error);
-        this.showSnackbar("Failed to start teleprompter mode. Please try again.", "error");
+        this.showSnackbar(
+          "Failed to start teleprompter mode. Please try again.",
+          "error"
+        );
       } finally {
         this.loading = false;
       }
@@ -297,11 +312,11 @@ export default {
   .mode-card {
     margin-bottom: 16px;
   }
-  
+
   .mode-icon {
     padding: 12px;
   }
-  
+
   .mode-title h2 {
     font-size: 1.5rem !important;
   }

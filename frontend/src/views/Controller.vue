@@ -4,11 +4,12 @@
     <v-app-bar app elevation="0" height="72" color="grey-darken-4">
       <v-container fluid class="d-flex align-center">
         <div class="d-flex align-center">
-          <v-icon color="teal" size="32" class="mr-3">mdi-television-play</v-icon>
+          <v-icon color="teal" size="32" class="mr-3"
+            >mdi-presentation-play</v-icon
+          >
           <div class="text-h5 font-weight-bold">Teleprompter</div>
         </div>
         <v-spacer />
-        <!-- Status indicators could go here if needed -->
       </v-container>
     </v-app-bar>
 
@@ -23,6 +24,7 @@
                 <h2 class="text-h6 font-weight-bold">Script Editor</h2>
                 <div class="d-flex align-center gap-3">
                   <v-btn
+                    class="mr-2"
                     variant="outlined"
                     size="small"
                     prepend-icon="mdi-undo"
@@ -31,6 +33,7 @@
                     Undo
                   </v-btn>
                   <v-btn
+                    class="ml-2"
                     variant="outlined"
                     size="small"
                     prepend-icon="mdi-redo"
@@ -41,25 +44,19 @@
                 </div>
               </div>
 
-              <!-- Script Editor Textarea -->
-              <div class="script-editor-container flex-grow-1">
-                <v-textarea
-                  v-model="scriptText"
-                  variant="outlined"
-                  class="script-textarea"
-                  hide-details
-                  :rows="25"
-                  style="height: 500px; overflow-y: auto;"
-                  @input="debouncedSyncText"
-                  @keydown="handleKeyboardShortcuts"
-                />
-              </div>
 
               <!-- Script Status Footer -->
-              <div class="script-status-footer mt-4 pa-4 rounded bg-grey-darken-3">
+              <div
+                class="script-status-footer mt-4 pa-4 rounded bg-grey-darken-3"
+              >
                 <div class="d-flex align-center justify-space-between">
                   <div class="d-flex align-center">
-                    <v-chip size="small" color="success" variant="flat" class="mr-3">
+                    <v-chip
+                      size="small"
+                      color="success"
+                      variant="flat"
+                      class="mr-3"
+                    >
                       <v-icon start size="small">mdi-check-circle</v-icon>
                       Synced
                     </v-chip>
@@ -77,6 +74,18 @@
                   </v-btn>
                 </div>
               </div>
+
+              <!-- Script Editor Textarea -->
+              <div class="script-editor-container flex-grow-1">
+                <v-textarea
+                  v-model="scriptText"
+                  variant="outlined"
+                  class="script-textarea"
+                  hide-details
+                  @input="debouncedSyncText"
+                  @keydown="handleKeyboardShortcuts"
+                />
+              </div>
             </div>
           </v-col>
 
@@ -86,7 +95,7 @@
               <!-- Playback Controls Section -->
               <div class="control-section mb-8">
                 <h3 class="text-h6 font-weight-bold mb-6">Playback Controls</h3>
-                
+
                 <!-- Large Circular Playback Buttons -->
                 <div class="d-flex justify-center align-center mb-6">
                   <v-btn
@@ -99,7 +108,7 @@
                   >
                     <v-icon size="20">mdi-skip-backward</v-icon>
                   </v-btn>
-                  
+
                   <v-btn
                     icon
                     size="64"
@@ -110,7 +119,7 @@
                   >
                     <v-icon size="24">mdi-step-backward</v-icon>
                   </v-btn>
-                  
+
                   <v-btn
                     icon
                     size="100"
@@ -119,9 +128,11 @@
                     class="play-btn mr-4"
                     @click="togglePlayback"
                   >
-                    <v-icon size="40">{{ isPlaying ? 'mdi-pause' : 'mdi-play' }}</v-icon>
+                    <v-icon size="40">{{
+                      isPlaying ? "mdi-pause" : "mdi-play"
+                    }}</v-icon>
                   </v-btn>
-                  
+
                   <v-btn
                     icon
                     size="64"
@@ -132,7 +143,7 @@
                   >
                     <v-icon size="24">mdi-step-forward</v-icon>
                   </v-btn>
-                  
+
                   <v-btn
                     icon
                     size="48"
@@ -151,23 +162,21 @@
                   <div class="control-group flex-grow-1">
                     <div class="d-flex align-center justify-space-between mb-2">
                       <span class="text-body-2">Playback Speed</span>
-                      <div class="d-flex align-center">
-                        <v-btn
-                          icon="mdi-minus"
-                          size="small"
-                          variant="text"
-                          @click="adjustSpeed(-0.1)"
-                        />
-                        <div class="speed-display mx-2 px-3 py-1 bg-grey-darken-2 rounded">
-                          {{ scrollSpeed.toFixed(1) }}x
-                        </div>
-                        <v-btn
-                          icon="mdi-plus"
-                          size="small"
-                          variant="text"
-                          @click="adjustSpeed(0.1)"
-                        />
-                      </div>
+                      <v-text-field
+                        v-model.number="scrollSpeed"
+                        type="number"
+                        min="0.1"
+                        max="5.0"
+                        step="0.1"
+                        variant="solo-filled"
+                        hide-details
+                        density="compact"
+                        class="mx-2"
+                        style="max-width: 100px;"
+                        @change="updateSpeed"
+                        :append-inner="'x'"
+                        split
+                      />
                     </div>
                   </div>
 
@@ -182,7 +191,9 @@
                           variant="text"
                           @click="adjustLinesPerStep(-1)"
                         />
-                        <div class="lines-display mx-2 px-3 py-1 bg-grey-darken-2 rounded">
+                        <div
+                          class="lines-display mx-2 px-3 py-1 bg-grey-darken-2 rounded"
+                        >
                           {{ linesPerStep }}
                         </div>
                         <v-btn
@@ -200,7 +211,7 @@
               <!-- Text Settings Section -->
               <div class="control-section mb-8">
                 <h3 class="text-h6 font-weight-bold mb-6">Text Settings</h3>
-                
+
                 <!-- Text Formatting Row -->
                 <div class="d-flex gap-3 mb-4">
                   <!-- Text Width -->
@@ -214,7 +225,9 @@
                           variant="text"
                           @click="adjustWidth(-5)"
                         />
-                        <div class="value-display mx-2 px-3 py-1 bg-grey-darken-2 rounded">
+                        <div
+                          class="value-display mx-2 px-3 py-1 bg-grey-darken-2 rounded"
+                        >
                           {{ textWidth }}%
                         </div>
                         <v-btn
@@ -238,7 +251,9 @@
                           variant="text"
                           @click="adjustFontSize(-0.1)"
                         />
-                        <div class="value-display mx-2 px-3 py-1 bg-grey-darken-2 rounded">
+                        <div
+                          class="value-display mx-2 px-3 py-1 bg-grey-darken-2 rounded"
+                        >
                           {{ fontSize.toFixed(1) }}
                         </div>
                         <v-btn
@@ -261,7 +276,7 @@
                     :color="verticalMirror ? 'teal' : 'grey-darken-2'"
                     :variant="verticalMirror ? 'flat' : 'outlined'"
                     size="small"
-                    class="flex-grow-1"
+                    class="flex-grow-1 mr-2 ml-2"
                     @click="toggleVerticalMirror"
                   >
                     Vertical
@@ -270,7 +285,7 @@
                     :color="horizontalMirror ? 'teal' : 'grey-darken-2'"
                     :variant="horizontalMirror ? 'flat' : 'outlined'"
                     size="small"
-                    class="flex-grow-1"
+                    class="flex-grow-1 mr-2 ml-2"
                     @click="toggleHorizontalMirror"
                   >
                     Horizontal
@@ -281,32 +296,54 @@
               <!-- Room Participants Section -->
               <div class="control-section">
                 <h3 class="text-h6 font-weight-bold mb-6">Room Participants</h3>
-                <div class="participants-container bg-grey-darken-3 rounded pa-4" style="min-height: 120px;">
-                  <div v-if="participants.length === 0" class="text-center text-medium-emphasis">
-                    <v-icon size="48" class="mb-2 text-grey-darken-1">mdi-account-group</v-icon>
+                <div
+                  class="participants-container bg-grey-darken-3 rounded pa-4"
+                  style="min-height: 120px"
+                >
+                  <div
+                    v-if="participants.length === 0"
+                    class="text-center text-medium-emphasis"
+                  >
+                    <v-icon size="48" class="mb-2 text-grey-darken-1"
+                      >mdi-account-group</v-icon
+                    >
                     <div class="text-body-2">No participants connected</div>
-                    <div class="text-caption">Waiting for devices to join...</div>
+                    <div class="text-caption">
+                      Waiting for devices to join...
+                    </div>
                   </div>
                   <v-list v-else class="pa-0" density="compact">
                     <v-list-item
                       v-for="participant in participants"
                       :key="participant.id"
-                      :class="{ 'bg-teal-darken-4': participant.id === participantId }"
+                      :class="{
+                        'bg-teal-darken-4': participant.id === participantId,
+                      }"
                       class="px-0 mb-2 rounded"
                     >
                       <template v-slot:prepend>
                         <v-avatar
                           size="32"
-                          :color="participant.role === 'controller' ? 'primary' : 'success'"
+                          :color="
+                            participant.role === 'controller'
+                              ? 'primary'
+                              : 'success'
+                          "
                         >
                           <v-icon size="small" color="white">{{
-                            participant.role === "controller" ? "mdi-laptop" : "mdi-cellphone"
+                            participant.role === "controller"
+                              ? "mdi-laptop"
+                              : "mdi-cellphone"
                           }}</v-icon>
                         </v-avatar>
                       </template>
 
                       <v-list-item-title class="text-body-2">
-                        {{ participant.role === "controller" ? "Controller" : "Teleprompter" }}
+                        {{
+                          participant.role === "controller"
+                            ? "Controller"
+                            : "Teleprompter"
+                        }}
                         <v-chip
                           v-if="participant.id === participantId"
                           size="x-small"
@@ -322,7 +359,10 @@
                         {{ formatTime(participant.joined_at) }}
                       </v-list-item-subtitle>
 
-                      <template v-slot:append v-if="participant.id !== participantId">
+                      <template
+                        v-slot:append
+                        v-if="participant.id !== participantId"
+                      >
                         <v-btn
                           icon="mdi-account-remove"
                           size="x-small"
@@ -371,14 +411,27 @@
                 icon="mdi-content-copy"
                 size="small"
                 variant="text"
-                @click="copyToClipboard(roomCredentials?.room_id || '', 'Room ID copied!')"
+                @click="
+                  copyToClipboard(
+                    roomCredentials?.room_id || '',
+                    'Room ID copied!'
+                  )
+                "
               />
             </template>
           </v-text-field>
 
           <v-text-field
-            :label="`Room Secret: ${showSecret ? (roomCredentials?.room_secret || 'Loading...') : '••••••••'}`"
-            :value="showSecret ? (roomCredentials?.room_secret || 'Loading...') : '••••••••'"
+            :label="`Room Secret: ${
+              showSecret
+                ? roomCredentials?.room_secret || 'Loading...'
+                : '••••••••'
+            }`"
+            :value="
+              showSecret
+                ? roomCredentials?.room_secret || 'Loading...'
+                : '••••••••'
+            "
             variant="outlined"
             readonly
             class="mb-3"
@@ -394,14 +447,19 @@
                 icon="mdi-content-copy"
                 size="small"
                 variant="text"
-                @click="copyToClipboard(roomCredentials?.room_secret || '', 'Room Secret copied!')"
+                @click="
+                  copyToClipboard(
+                    roomCredentials?.room_secret || '',
+                    'Room Secret copied!'
+                  )
+                "
                 class="ml-1"
               />
             </template>
           </v-text-field>
 
           <div v-if="qrCodeDataUrl" class="text-center mb-3">
-            <img :src="qrCodeDataUrl" alt="QR Code" style="max-width: 200px;" />
+            <img :src="qrCodeDataUrl" alt="QR Code" style="max-width: 200px" />
             <div class="text-caption text-medium-emphasis mt-2">
               Scan QR code to join the teleprompter
             </div>
@@ -469,15 +527,10 @@ export default {
       lastSyncTime: "Never",
 
       // Script content
-      scriptText: `Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu genesan sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.
-Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu genesan sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.
-Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu genesan sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.
-Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu genesan sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.
-Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu genesan sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.
-Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis conval`,
+      scriptText: ``,
 
       // Control settings
-      scrollSpeed: 2.5,
+      scrollSpeed: 1.0,
       textWidth: 100,
       fontSize: 2.5,
       horizontalMirror: false,
@@ -487,10 +540,6 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
       // Navigation settings
       isPlaying: false,
       currentScrollPosition: 0, // Track current scroll position in lines
-
-      // Click tracking for double-tap detection
-      lastClickTime: 0,
-      clickTimeout: null,
 
       // UI state
       snackbar: {
@@ -508,9 +557,9 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
     scriptEditorStyle() {
       // Mac width constraints for wider displays
       return {
-        maxWidth: '1200px',
-        margin: '0 auto',
-        width: '100%'
+        maxWidth: "1200px",
+        margin: "0 auto",
+        width: "100%",
       };
     },
 
@@ -558,7 +607,7 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
     async initializeRoom() {
       try {
         const apiUrl = config.getApiUrl();
-        
+
         const response = await fetch(`${apiUrl}/api/join`, {
           method: "POST",
           headers: {
@@ -578,7 +627,11 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
         this.editableRoomName = data.room_name;
         this.participantId = data.participant_id;
 
-        await this.connectWebSocket(data.room_id, data.room_secret, data.participant_id);
+        await this.connectWebSocket(
+          data.room_id,
+          data.room_secret,
+          data.participant_id
+        );
         this.showSnackbar("Connected to teleprompter channel", "success");
       } catch (error) {
         console.error("Failed to initialize room:", error);
@@ -587,9 +640,9 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
     },
 
     async connectWebSocket(roomId, roomSecret, participantId) {
-      const wsUrl = config.getWsUrl();
+      const wsUrl = config.getWebSocketUrl();
       const wsFullUrl = `${wsUrl}/ws/${roomId}/${roomSecret}/${participantId}`;
-      
+
       this.ws = new WebSocket(wsFullUrl);
 
       this.ws.onopen = () => {
@@ -622,12 +675,17 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
           this.participants = message.participants || [];
           break;
         case "participant_joined":
-          if (message.participant && !this.participants.find(p => p.id === message.participant.id)) {
+          if (
+            message.participant &&
+            !this.participants.find((p) => p.id === message.participant.id)
+          ) {
             this.participants.push(message.participant);
           }
           break;
         case "participant_left":
-          this.participants = this.participants.filter(p => p.id !== message.participant_id);
+          this.participants = this.participants.filter(
+            (p) => p.id !== message.participant_id
+          );
           break;
         default:
           console.log("Received message:", message);
@@ -644,9 +702,12 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
     togglePlayback() {
       this.isPlaying = !this.isPlaying;
       this.sendMessage({
-        type: this.isPlaying ? "start" : "pause"
+        type: this.isPlaying ? "start" : "pause",
       });
-      this.showSnackbar(this.isPlaying ? "Teleprompter started" : "Teleprompter paused", "info");
+      this.showSnackbar(
+        this.isPlaying ? "Teleprompter started" : "Teleprompter paused",
+        "info"
+      );
     },
 
     resetScrolling() {
@@ -688,7 +749,7 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
     scrollForwardLines() {
       this.sendMessage({
         type: "scroll_lines",
-        direction: "forward", 
+        direction: "forward",
         lines: this.linesPerStep,
         smooth: true,
       });
@@ -759,7 +820,7 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
       if (this.syncTimeout) {
         clearTimeout(this.syncTimeout);
       }
-      
+
       this.syncTimeout = setTimeout(() => {
         this.syncText();
       }, 500);
@@ -803,12 +864,15 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
     },
 
     copyToClipboard(text, successMessage) {
-      navigator.clipboard.writeText(text).then(() => {
-        this.showSnackbar(successMessage, "success");
-      }).catch(err => {
-        console.error("Failed to copy: ", err);
-        this.showSnackbar("Failed to copy to clipboard", "error");
-      });
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          this.showSnackbar(successMessage, "success");
+        })
+        .catch((err) => {
+          console.error("Failed to copy: ", err);
+          this.showSnackbar("Failed to copy to clipboard", "error");
+        });
     },
 
     formatTime(timestamp) {
@@ -838,22 +902,22 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
     handleKeyboardShortcuts(event) {
       if (event.ctrlKey || event.metaKey) {
         switch (event.key) {
-          case 's':
+          case "s":
             event.preventDefault();
             this.syncScript();
             break;
-          case 'z':
+          case "z":
             event.preventDefault();
             this.undoScript();
             break;
-          case 'y':
+          case "y":
             event.preventDefault();
             this.redoScript();
             break;
         }
       }
-      
-      if (event.key === ' ' && !event.target.closest('.v-textarea')) {
+
+      if (event.key === " " && !event.target.closest(".v-textarea")) {
         event.preventDefault();
         this.togglePlayback();
       }
@@ -875,7 +939,8 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
 }
 
 .script-textarea :deep(.v-field__input) {
-  font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace !important;
+  font-family: "JetBrains Mono", "SF Mono", "Monaco", "Cascadia Code",
+    "Roboto Mono", monospace !important;
   font-size: 1.1rem !important;
   line-height: 1.8 !important;
   color: #e0e0e0 !important;
@@ -904,12 +969,14 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
 }
 
 /* Playback Controls */
-.control-btn, .play-btn {
+.control-btn,
+.play-btn {
   transition: all 0.3s ease !important;
   border-radius: 50% !important;
 }
 
-.control-btn:hover, .play-btn:hover {
+.control-btn:hover,
+.play-btn:hover {
   transform: scale(1.1);
 }
 
@@ -918,7 +985,9 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
 }
 
 /* Value Displays */
-.speed-display, .lines-display, .value-display {
+.speed-display,
+.lines-display,
+.value-display {
   min-width: 60px;
   text-align: center;
   font-weight: 500;
@@ -941,11 +1010,11 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
     transform: translateX(100%);
     transition: transform 0.3s ease;
   }
-  
+
   .sidebar.show {
     transform: translateX(0);
   }
-  
+
   .script-editor-section {
     margin-right: 0;
   }
@@ -955,12 +1024,13 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
   .script-editor-section {
     padding: 1rem;
   }
-  
+
   .controls-sidebar {
     padding: 1rem;
   }
-  
-  .control-btn, .play-btn {
+
+  .control-btn,
+  .play-btn {
     margin: 0 0.25rem;
   }
 }
@@ -977,7 +1047,8 @@ Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapi
   }
 }
 
-.script-editor-section, .controls-sidebar {
+.script-editor-section,
+.controls-sidebar {
   animation: fadeInUp 0.5s ease-out;
 }
 </style>

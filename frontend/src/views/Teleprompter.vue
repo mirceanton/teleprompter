@@ -159,10 +159,6 @@
 
 <script>
 import { config } from "@/utils/config.js";
-import {
-  parseMarkdownSections,
-  getCharacterPositionForLine,
-} from "@/utils/markdown.js";
 
 export default {
   name: "Teleprompter",
@@ -229,10 +225,7 @@ export default {
     if (authSuccess) {
       this.connect();
     } else {
-      this.showSnackbar(
-        "No credentials found. Please select a mode.",
-        "error"
-      );
+      this.showSnackbar("No credentials found. Please select a mode.", "error");
       this.$router.push("/");
     }
 
@@ -271,7 +264,9 @@ export default {
     async initializeAuth() {
       try {
         // Get credentials from session storage
-        const credentialsStr = sessionStorage.getItem("teleprompter_credentials");
+        const credentialsStr = sessionStorage.getItem(
+          "teleprompter_credentials"
+        );
         if (!credentialsStr) {
           return false;
         }
@@ -409,8 +404,6 @@ export default {
           this.verticalMirror = message.vertical;
           break;
 
-
-
         case "go_to_beginning":
           this.resetScrolling();
           break;
@@ -512,8 +505,6 @@ export default {
       this.animationId = requestAnimationFrame(this.scroll);
     },
 
-
-
     goToEnd() {
       if (this.$refs.teleprompterText) {
         const textHeight = this.$refs.teleprompterText.scrollHeight;
@@ -525,9 +516,10 @@ export default {
     scrollByLines(direction, lines, smooth = false) {
       const lineHeight = this.calculateLineHeight();
       const scrollAmount = lines * lineHeight;
-      const targetPosition = direction === "back" 
-        ? this.scrollPosition + scrollAmount
-        : this.scrollPosition - scrollAmount;
+      const targetPosition =
+        direction === "back"
+          ? this.scrollPosition + scrollAmount
+          : this.scrollPosition - scrollAmount;
 
       if (smooth) {
         // Animate to the target position
@@ -547,14 +539,15 @@ export default {
       const animate = (currentTime) => {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        
+
         // Use easeInOutCubic for smooth animation
-        const easeProgress = progress < 0.5 
-          ? 4 * progress * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-        
-        this.scrollPosition = startPosition + (distance * easeProgress);
-        
+        const easeProgress =
+          progress < 0.5
+            ? 4 * progress * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+        this.scrollPosition = startPosition + distance * easeProgress;
+
         if (progress < 1) {
           requestAnimationFrame(animate);
         }
