@@ -160,50 +160,34 @@
                 <div class="d-flex gap-3 mb-4">
                   <!-- Playback Speed -->
                   <div class="control-group flex-grow-1">
-                    <div class="d-flex align-center justify-space-between mb-2">
-                      <span class="text-body-2">Playback Speed</span>
-                      <v-text-field
-                        v-model.number="scrollSpeed"
-                        type="number"
-                        min="0.1"
-                        max="5.0"
-                        step="0.1"
-                        variant="solo-filled"
-                        hide-details
-                        density="compact"
-                        class="mx-2"
-                        style="max-width: 100px;"
-                        @change="updateSpeed"
-                        :append-inner="'x'"
-                        split
-                      />
-                    </div>
+                    <v-number-input
+                      v-model="scrollSpeed"
+                      label="Playback Speed"
+                      variant="solo-filled"
+                      control-variant="split"
+                      hide-details
+                      density="compact"
+                      :min="0.1"
+                      :max="5.0"
+                      :step="0.1"
+                      suffix="x"
+                      @update:model-value="updateSpeed"
+                    />
                   </div>
 
                   <!-- Lines to Scroll -->
                   <div class="control-group flex-grow-1">
-                    <div class="d-flex align-center justify-space-between mb-2">
-                      <span class="text-body-2">Lines to scroll</span>
-                      <div class="d-flex align-center">
-                        <v-btn
-                          icon="mdi-minus"
-                          size="small"
-                          variant="text"
-                          @click="adjustLinesPerStep(-1)"
-                        />
-                        <div
-                          class="lines-display mx-2 px-3 py-1 bg-grey-darken-2 rounded"
-                        >
-                          {{ linesPerStep }}
-                        </div>
-                        <v-btn
-                          icon="mdi-plus"
-                          size="small"
-                          variant="text"
-                          @click="adjustLinesPerStep(1)"
-                        />
-                      </div>
-                    </div>
+                    <v-number-input
+                      v-model="linesPerStep"
+                      label="Lines to scroll"
+                      variant="solo-filled"
+                      control-variant="split"
+                      hide-details
+                      density="compact"
+                      :min="1"
+                      :max="20"
+                      :step="1"
+                    />
                   </div>
                 </div>
               </div>
@@ -216,54 +200,36 @@
                 <div class="d-flex gap-3 mb-4">
                   <!-- Text Width -->
                   <div class="control-group flex-grow-1">
-                    <div class="d-flex align-center justify-space-between mb-2">
-                      <span class="text-body-2">Text Width</span>
-                      <div class="d-flex align-center">
-                        <v-btn
-                          icon="mdi-minus"
-                          size="small"
-                          variant="text"
-                          @click="adjustWidth(-5)"
-                        />
-                        <div
-                          class="value-display mx-2 px-3 py-1 bg-grey-darken-2 rounded"
-                        >
-                          {{ textWidth }}%
-                        </div>
-                        <v-btn
-                          icon="mdi-plus"
-                          size="small"
-                          variant="text"
-                          @click="adjustWidth(5)"
-                        />
-                      </div>
-                    </div>
+                    <v-number-input
+                      v-model="textWidth"
+                      label="Text Width"
+                      variant="solo-filled"
+                      control-variant="split"
+                      hide-details
+                      density="compact"
+                      :min="20"
+                      :max="100"
+                      :step="5"
+                      suffix="%"
+                      @update:model-value="updateWidth"
+                    />
                   </div>
 
                   <!-- Font Size -->
                   <div class="control-group flex-grow-1">
-                    <div class="d-flex align-center justify-space-between mb-2">
-                      <span class="text-body-2">Font Size (em)</span>
-                      <div class="d-flex align-center">
-                        <v-btn
-                          icon="mdi-minus"
-                          size="small"
-                          variant="text"
-                          @click="adjustFontSize(-0.1)"
-                        />
-                        <div
-                          class="value-display mx-2 px-3 py-1 bg-grey-darken-2 rounded"
-                        >
-                          {{ fontSize.toFixed(1) }}
-                        </div>
-                        <v-btn
-                          icon="mdi-plus"
-                          size="small"
-                          variant="text"
-                          @click="adjustFontSize(0.1)"
-                        />
-                      </div>
-                    </div>
+                    <v-number-input
+                      v-model="fontSize"
+                      label="Font Size"
+                      variant="solo-filled"
+                      control-variant="split"
+                      hide-details
+                      density="compact"
+                      :min="0.5"
+                      :max="5.0"
+                      :step="0.1"
+                      suffix="em"
+                      @update:model-value="updateFontSize"
+                    />
                   </div>
                 </div>
               </div>
@@ -527,7 +493,29 @@ export default {
       lastSyncTime: "Never",
 
       // Script content
-      scriptText: ``,
+      scriptText: `# Welcome to Remote Teleprompter!
+
+This is your teleprompter script. Edit this text on your computer, and it will appear on your phone's screen.
+
+Use the controls to start, pause, and navigate through your script with smooth scrolling.
+
+Instructions:
+1. Use the same channel name on all devices
+2. Select "Controller Mode" on your computer
+3. Select "Teleprompter Mode" on your phones/tablets
+4. Click "Start" to begin scrolling
+
+Features:
+- Play/Pause controls for smooth teleprompter operation
+- Scroll forward/backward by customizable number of lines
+- Jump to beginning or end of script instantly
+- Adjustable text size, width, and scrolling speed
+- Mirror settings for camera setups
+
+Multi-Camera Support:
+This application supports multiple teleprompter devices connected to the same channel, perfect for multi-camera setups.
+
+Happy teleprompting! 🎬`,
 
       // Control settings
       scrollSpeed: 1.0,
@@ -550,6 +538,12 @@ export default {
 
       // Debounce timer
       syncTimeout: null,
+
+      // Undo/Redo functionality
+      undoStack: [],
+      redoStack: [],
+      isUndoRedoOperation: false,
+      lastScriptValue: "",
     };
   },
 
@@ -595,6 +589,9 @@ export default {
     await this.initializeRoom();
     this.updateLastSyncTime();
     this.generateQRCode();
+    
+    // Initialize undo stack with current script content
+    this.lastScriptValue = this.scriptText;
   },
 
   beforeUnmount() {
@@ -606,42 +603,84 @@ export default {
   methods: {
     async initializeRoom() {
       try {
-        const apiUrl = config.getApiUrl();
-
-        const response = await fetch(`${apiUrl}/api/join`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            role: "controller",
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        this.roomCredentials = data;
-        this.editableRoomName = data.room_name;
-        this.participantId = data.participant_id;
-
-        await this.connectWebSocket(
-          data.room_id,
-          data.room_secret,
-          data.participant_id
-        );
+        await this.connectWebSocket();
         this.showSnackbar("Connected to teleprompter channel", "success");
       } catch (error) {
-        console.error("Failed to initialize room:", error);
+        console.error("Failed to initialize connection:", error);
         this.showSnackbar("Failed to connect to server", "error");
       }
     },
 
-    async connectWebSocket(roomId, roomSecret, participantId) {
+    // Undo/Redo functionality
+    undoScript() {
+      if (this.undoStack.length > 0) {
+        this.isUndoRedoOperation = true;
+        this.redoStack.push(this.scriptText);
+        this.scriptText = this.undoStack.pop();
+        this.debouncedSyncText();
+        this.showSnackbar("Undo completed", "info");
+        this.$nextTick(() => {
+          this.isUndoRedoOperation = false;
+        });
+      } else {
+        this.showSnackbar("Nothing to undo", "warning");
+      }
+    },
+
+    redoScript() {
+      if (this.redoStack.length > 0) {
+        this.isUndoRedoOperation = true;
+        this.undoStack.push(this.scriptText);
+        this.scriptText = this.redoStack.pop();
+        this.debouncedSyncText();
+        this.showSnackbar("Redo completed", "info");
+        this.$nextTick(() => {
+          this.isUndoRedoOperation = false;
+        });
+      } else {
+        this.showSnackbar("Nothing to redo", "warning");
+      }
+    },
+
+    saveToUndoStack() {
+      if (!this.isUndoRedoOperation && this.scriptText !== this.lastScriptValue) {
+        this.undoStack.push(this.lastScriptValue);
+        // Limit undo stack size
+        if (this.undoStack.length > 50) {
+          this.undoStack.shift();
+        }
+        // Clear redo stack on new changes
+        this.redoStack = [];
+        this.lastScriptValue = this.scriptText;
+      }
+    },
+
+    handleKeyboardShortcuts(event) {
+      // Ctrl+Z for undo
+      if (event.ctrlKey && event.key === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        this.undoScript();
+      }
+      // Ctrl+Y or Ctrl+Shift+Z for redo
+      else if (event.ctrlKey && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
+        event.preventDefault();
+        this.redoScript();
+      }
+      // Ctrl+S for sync (save)
+      else if (event.ctrlKey && event.key === 's') {
+        event.preventDefault();
+        this.syncScript();
+      }
+      // Space for play/pause (when not in input)
+      else if (event.key === ' ' && event.target.tagName !== 'TEXTAREA') {
+        event.preventDefault();
+        this.togglePlayback();
+      }
+    },
+
+    async connectWebSocket() {
       const wsUrl = config.getWebSocketUrl();
-      const wsFullUrl = `${wsUrl}/ws/${roomId}/${roomSecret}/${participantId}`;
+      const wsFullUrl = `${wsUrl}/api/ws`;
 
       this.ws = new WebSocket(wsFullUrl);
 
@@ -671,6 +710,10 @@ export default {
 
     handleWebSocketMessage(message) {
       switch (message.type) {
+        case "connection_update":
+          // Simple connection count update - create mock participants
+          this.updateParticipantsList(message.connection_count || 0);
+          break;
         case "participants_list":
           this.participants = message.participants || [];
           break;
@@ -689,6 +732,18 @@ export default {
           break;
         default:
           console.log("Received message:", message);
+      }
+    },
+
+    updateParticipantsList(connectionCount) {
+      // Create mock participants based on connection count for demo purposes
+      this.participants = [];
+      for (let i = 0; i < connectionCount; i++) {
+        this.participants.push({
+          id: `participant_${i}`,
+          role: i === 0 ? 'controller' : 'teleprompter',
+          joined_at: new Date().toISOString(),
+        });
       }
     },
 
@@ -817,6 +872,10 @@ export default {
 
     // Script management
     debouncedSyncText() {
+      if (!this.isUndoRedoOperation) {
+        this.saveToUndoStack();
+      }
+
       if (this.syncTimeout) {
         clearTimeout(this.syncTimeout);
       }
@@ -837,16 +896,6 @@ export default {
     syncScript() {
       this.syncText();
       this.showSnackbar("Script synchronized", "success");
-    },
-
-    undoScript() {
-      // Implement undo functionality
-      this.showSnackbar("Undo functionality not implemented", "warning");
-    },
-
-    redoScript() {
-      // Implement redo functionality
-      this.showSnackbar("Redo functionality not implemented", "warning");
     },
 
     // Utility methods
