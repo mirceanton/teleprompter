@@ -66,11 +66,21 @@ export default {
       textWidth: 100,
       horizontalMirror: false,
       verticalMirror: false,
+      linesPerStep: 5,
       isFullscreen: false,
       snackbar: {
         show: false,
         text: "",
         color: "success",
+      },
+      // Default values for resetting
+      defaultSettings: {
+        scrollSpeed: 1.0,
+        fontSize: 2.5,
+        textWidth: 100,
+        horizontalMirror: false,
+        verticalMirror: false,
+        linesPerStep: 5,
       },
     };
   },
@@ -245,6 +255,9 @@ export default {
           // This setting affects scroll behavior but doesn't need to be stored in teleprompter
           // The lines are sent with each scroll_lines message
           break;
+        case "reset_to_defaults":
+          this.resetToDefaults();
+          break;
       }
     },
 
@@ -395,6 +408,18 @@ export default {
       this.snackbar.text = text;
       this.snackbar.color = color;
       this.snackbar.show = true;
+    },
+
+    resetToDefaults() {
+      // Reset all settings to default values
+      this.scrollSpeed = this.defaultSettings.scrollSpeed;
+      this.fontSize = this.defaultSettings.fontSize;
+      this.textWidth = this.defaultSettings.textWidth;
+      this.horizontalMirror = this.defaultSettings.horizontalMirror;
+      this.verticalMirror = this.defaultSettings.verticalMirror;
+      this.linesPerStep = this.defaultSettings.linesPerStep;
+      
+      this.showSnackbar("Settings reset to defaults", "info");
     },
   },
 };

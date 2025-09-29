@@ -85,250 +85,106 @@
 
           <!-- Right Sidebar - Controls -->
           <v-col cols="12" lg="4" xl="3" class="sidebar">
-            <div class="controls-sidebar pa-6">
+            <div class="controls-sidebar d-flex flex-column pa-6">
               <!-- Playback Controls Section -->
-              <div class="control-section mb-8">
-                <h3 class="text-h6 font-weight-bold mb-6">Playback Controls</h3>
+              <div class="control-section mb-6">
+                <h3 class="text-h6 font-weight-bold mb-4">Playback Controls</h3>
 
-                <!-- Large Circular Playback Buttons -->
-                <div class="d-flex justify-center align-center mb-6">
+                <!-- Main Control Buttons Row -->
+                <div class="d-flex gap-2 mb-3">
                   <v-btn
-                    icon
-                    size="48"
+                    variant="elevated"
                     color="teal"
-                    variant="flat"
-                    class="control-btn mr-4"
+                    class="control-btn flex-grow-1"
                     @click="goToBeginning"
+                    prepend-icon="mdi-skip-backward"
+                    size="small"
                   >
-                    <v-icon size="20">mdi-skip-backward</v-icon>
+                    Start
                   </v-btn>
 
                   <v-btn
-                    icon
-                    size="64"
-                    color="teal"
-                    variant="flat"
-                    class="control-btn mr-4"
-                    @click="handleBackwardClick"
-                  >
-                    <v-icon size="24">mdi-step-backward</v-icon>
-                  </v-btn>
-
-                  <v-btn
-                    icon
-                    size="100"
-                    :color="isPlaying ? 'error' : 'success'"
-                    variant="flat"
-                    class="play-btn mr-4"
+                    variant="elevated"
+                    :color="isPlaying ? 'amber' : 'success'"
+                    class="control-btn flex-grow-1 play-btn"
                     @click="togglePlayback"
+                    :prepend-icon="isPlaying ? 'mdi-pause' : 'mdi-play'"
+                    size="small"
                   >
-                    <v-icon size="40">{{
-                      isPlaying ? "mdi-pause" : "mdi-play"
-                    }}</v-icon>
+                    {{ isPlaying ? 'Pause' : 'Play' }}
                   </v-btn>
 
                   <v-btn
-                    icon
-                    size="64"
+                    variant="elevated" 
+                    color="orange"
+                    class="control-btn flex-grow-1"
+                    @click="resetScrolling"
+                    prepend-icon="mdi-stop"
+                    size="small"
+                  >
+                    Stop
+                  </v-btn>
+                </div>
+
+                <!-- Navigation Buttons Row -->
+                <div class="d-flex gap-2 mb-4">
+                  <v-btn
+                    variant="outlined"
                     color="teal"
-                    variant="flat"
-                    class="control-btn mr-4"
+                    class="control-btn flex-grow-1"
+                    @click="handleBackwardClick"
+                    prepend-icon="mdi-step-backward"
+                    size="small"
+                  >
+                    Back
+                  </v-btn>
+
+                  <v-btn
+                    variant="outlined"
+                    color="teal"
+                    class="control-btn flex-grow-1"
                     @click="handleForwardClick"
+                    prepend-icon="mdi-step-forward"
+                    size="small"
                   >
-                    <v-icon size="24">mdi-step-forward</v-icon>
+                    Forward
                   </v-btn>
 
                   <v-btn
-                    icon
-                    size="48"
+                    variant="outlined"
                     color="teal"
-                    variant="flat"
-                    class="control-btn"
+                    class="control-btn flex-grow-1"
                     @click="goToEnd"
-                  >
-                    <v-icon size="20">mdi-skip-forward</v-icon>
-                  </v-btn>
-                </div>
-
-                <!-- Speed Controls Row -->
-                <div class="d-flex gap-3 mb-4">
-                  <!-- Playback Speed -->
-                  <div class="control-group flex-grow-1">
-                    <label
-                      class="text-caption text-medium-emphasis mb-1 d-block"
-                      >Playback Speed</label
-                    >
-                    <div class="d-flex align-center gap-2">
-                      <v-btn
-                        icon="mdi-minus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustSpeed(-0.1)"
-                      />
-                      <v-text-field
-                        :model-value="scrollSpeed.toFixed(1) + 'x'"
-                        readonly
-                        variant="solo-filled"
-                        hide-details
-                        density="compact"
-                        class="text-center"
-                      />
-                      <v-btn
-                        icon="mdi-plus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustSpeed(0.1)"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Lines to Scroll -->
-                  <div class="control-group flex-grow-1">
-                    <label
-                      class="text-caption text-medium-emphasis mb-1 d-block"
-                      >Lines to scroll</label
-                    >
-                    <div class="d-flex align-center gap-2">
-                      <v-btn
-                        icon="mdi-minus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustLinesPerStep(-1)"
-                      />
-                      <v-text-field
-                        :model-value="linesPerStep"
-                        readonly
-                        variant="solo-filled"
-                        hide-details
-                        density="compact"
-                        class="text-center"
-                      />
-                      <v-btn
-                        icon="mdi-plus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustLinesPerStep(1)"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Text Settings Section -->
-              <div class="control-section mb-8">
-                <h3 class="text-h6 font-weight-bold mb-6">Text Settings</h3>
-
-                <!-- Text Formatting Row -->
-                <div class="d-flex gap-3 mb-4">
-                  <!-- Text Width -->
-                  <div class="control-group flex-grow-1">
-                    <label
-                      class="text-caption text-medium-emphasis mb-1 d-block"
-                      >Text Width</label
-                    >
-                    <div class="d-flex align-center gap-2">
-                      <v-btn
-                        icon="mdi-minus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustWidth(-5)"
-                      />
-                      <v-text-field
-                        :model-value="textWidth + '%'"
-                        readonly
-                        variant="solo-filled"
-                        hide-details
-                        density="compact"
-                        class="text-center"
-                      />
-                      <v-btn
-                        icon="mdi-plus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustWidth(5)"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Font Size -->
-                  <div class="control-group flex-grow-1">
-                    <label
-                      class="text-caption text-medium-emphasis mb-1 d-block"
-                      >Font Size</label
-                    >
-                    <div class="d-flex align-center gap-2">
-                      <v-btn
-                        icon="mdi-minus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustFontSize(-0.1)"
-                      />
-                      <v-text-field
-                        :model-value="fontSize.toFixed(1) + 'em'"
-                        readonly
-                        variant="solo-filled"
-                        hide-details
-                        density="compact"
-                        class="text-center"
-                      />
-                      <v-btn
-                        icon="mdi-plus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustFontSize(0.1)"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Mirroring Section -->
-              <div class="control-section mb-8">
-                <h3 class="text-h6 font-weight-bold mb-6">Mirroring</h3>
-                <div class="d-flex gap-2">
-                  <v-btn
-                    :color="verticalMirror ? 'teal' : 'grey-darken-2'"
-                    :variant="verticalMirror ? 'flat' : 'outlined'"
+                    prepend-icon="mdi-skip-forward"
                     size="small"
-                    class="flex-grow-1 mr-2 ml-2"
-                    @click="toggleVerticalMirror"
                   >
-                    Vertical
-                  </v-btn>
-                  <v-btn
-                    :color="horizontalMirror ? 'teal' : 'grey-darken-2'"
-                    :variant="horizontalMirror ? 'flat' : 'outlined'"
-                    size="small"
-                    class="flex-grow-1 mr-2 ml-2"
-                    @click="toggleHorizontalMirror"
-                  >
-                    Horizontal
+                    End
                   </v-btn>
                 </div>
               </div>
 
-              <!-- Room Participants Section -->
-              <div class="control-section">
-                <h3 class="text-h6 font-weight-bold mb-6">Room Participants</h3>
-                <div class="participants-container">
+              <!-- Teleprompters Section - Takes remaining space -->
+              <div class="teleprompters-section flex-grow-1 d-flex flex-column">
+                <h3 class="text-h6 font-weight-bold mb-4">Teleprompters</h3>
+                <div class="teleprompters-container flex-grow-1">
                   <div
-                    v-if="participants.length === 0"
+                    v-if="teleprompterParticipants.length === 0"
                     class="text-center text-medium-emphasis pa-6"
                   >
                     <v-icon size="48" class="mb-3 text-grey-darken-1"
-                      >mdi-account-group</v-icon
+                      >mdi-monitor</v-icon
                     >
                     <div class="text-body-2 mb-1">
-                      No participants connected
+                      No teleprompters connected
                     </div>
                     <div class="text-caption">
-                      Waiting for devices to join...
+                      Waiting for teleprompter devices to join...
                     </div>
                   </div>
 
                   <div v-else class="participants-list">
                     <div
-                      v-for="participant in participants"
+                      v-for="participant in teleprompterParticipants"
                       :key="participant.id"
                       class="participant-card"
                       :class="{
@@ -591,14 +447,6 @@ This application supports multiple teleprompter devices connected to the same ch
 
 Happy teleprompting! 🎬`,
 
-      // Control settings
-      scrollSpeed: 1.0,
-      textWidth: 100,
-      fontSize: 2.5,
-      horizontalMirror: false,
-      verticalMirror: false,
-      linesPerStep: 5,
-
       // Navigation settings
       isPlaying: false,
       currentScrollPosition: 0, // Track current scroll position in lines
@@ -673,6 +521,10 @@ Happy teleprompting! 🎬`,
       const trimmed = this.scriptText.trim();
       if (trimmed === "") return 0;
       return trimmed.split(/\s+/).length;
+    },
+
+    teleprompterParticipants() {
+      return this.participants.filter(participant => participant.role === 'teleprompter');
     },
   },
 
@@ -917,65 +769,6 @@ Happy teleprompting! 🎬`,
       });
     },
 
-    // Speed and formatting controls
-    adjustSpeed(delta) {
-      this.scrollSpeed = Math.max(0.1, Math.min(5.0, this.scrollSpeed + delta));
-      this.updateSpeed();
-    },
-
-    adjustFontSize(delta) {
-      this.fontSize = Math.max(0.5, Math.min(5.0, this.fontSize + delta));
-      this.updateFontSize();
-    },
-
-    adjustWidth(delta) {
-      this.textWidth = Math.max(20, Math.min(100, this.textWidth + delta));
-      this.updateWidth();
-    },
-
-    adjustLinesPerStep(delta) {
-      this.linesPerStep = Math.max(1, Math.min(20, this.linesPerStep + delta));
-    },
-
-    updateSpeed() {
-      this.sendMessage({
-        type: "speed",
-        value: this.scrollSpeed,
-      });
-    },
-
-    updateFontSize() {
-      this.sendMessage({
-        type: "font_size",
-        value: this.fontSize,
-      });
-    },
-
-    updateWidth() {
-      this.sendMessage({
-        type: "width",
-        value: this.textWidth,
-      });
-    },
-
-    toggleHorizontalMirror() {
-      this.horizontalMirror = !this.horizontalMirror;
-      this.updateMirror();
-    },
-
-    toggleVerticalMirror() {
-      this.verticalMirror = !this.verticalMirror;
-      this.updateMirror();
-    },
-
-    updateMirror() {
-      this.sendMessage({
-        type: "mirror",
-        horizontal: this.horizontalMirror,
-        vertical: this.verticalMirror,
-      });
-    },
-
     // Script management
     debouncedSyncText() {
       if (!this.isUndoRedoOperation) {
@@ -1046,13 +839,21 @@ Happy teleprompting! 🎬`,
     },
 
     getParticipantSetting(participantId, settingName) {
-      // Return participant-specific setting or fall back to global setting
+      // Return participant-specific setting or fall back to teleprompter defaults
       if (this.participantSettings[participantId] && 
           this.participantSettings[participantId][settingName] !== undefined) {
         return this.participantSettings[participantId][settingName];
       }
-      // Fall back to global setting
-      return this[settingName];
+      // Fall back to teleprompter default values
+      const teleprompterDefaults = {
+        scrollSpeed: 1.0,
+        fontSize: 2.5,
+        textWidth: 100,
+        horizontalMirror: false,
+        verticalMirror: false,
+        linesPerStep: 5,
+      };
+      return teleprompterDefaults[settingName];
     },
 
     setParticipantSetting(participantId, settingName, value) {
@@ -1117,30 +918,14 @@ Happy teleprompting! 🎬`,
     },
 
     resetParticipantSettings(participantId) {
-      // Remove all participant-specific settings (fall back to global)
+      // Remove all participant-specific settings (fall back to teleprompter defaults)
       delete this.participantSettings[participantId];
       
-      // Send current global settings to the participant
-      const globalSettings = {
-        scrollSpeed: this.scrollSpeed,
-        fontSize: this.fontSize,
-        textWidth: this.textWidth,
-        horizontalMirror: this.horizontalMirror,
-        verticalMirror: this.verticalMirror,
-        linesPerStep: this.linesPerStep
-      };
-      
-      // Send each setting individually
-      for (const [settingName, value] of Object.entries(globalSettings)) {
-        this.sendMessage({
-          type: this.getMessageType(settingName),
-          value: settingName === 'horizontalMirror' || settingName === 'verticalMirror' ? undefined : value,
-          horizontal: settingName === 'horizontalMirror' ? value : globalSettings.horizontalMirror,
-          vertical: settingName === 'verticalMirror' ? value : globalSettings.verticalMirror,
-          lines: settingName === 'linesPerStep' ? value : undefined,
-          target_participant_id: participantId
-        });
-      }
+      // Send reset message to teleprompter to reset to its default values
+      this.sendMessage({
+        type: "reset_to_defaults",
+        target_participant_id: participantId
+      });
     },
   },
 };
@@ -1259,6 +1044,19 @@ Happy teleprompting! 🎬`,
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.2);
+}
+
+/* Teleprompters Container - Full height */
+.teleprompters-container {
+  min-height: 200px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.teleprompters-section {
+  min-height: 0; /* Allow flex item to shrink */
 }
 
 .participants-list {
