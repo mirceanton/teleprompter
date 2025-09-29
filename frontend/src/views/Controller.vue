@@ -1,7 +1,6 @@
 <template>
   <v-app theme="dark">
-    <!-- Header with App Title -->
-    <v-app-bar app elevation="0" height="72" color="grey-darken-4">
+    <v-app-bar app elevation="16" height="64" color="grey-darken-4">
       <v-container fluid class="d-flex align-center">
         <div class="d-flex align-center">
           <v-icon color="teal" size="32" class="mr-3"
@@ -9,7 +8,10 @@
           >
           <div class="text-h5 font-weight-bold">Teleprompter</div>
         </div>
-        <v-spacer />
+        <v-spacer></v-spacer>
+        <v-btn prepend-icon="mdi-logout" @click="exitTeleprompter">
+          Leave Room
+        </v-btn>
       </v-container>
     </v-app-bar>
 
@@ -18,9 +20,9 @@
         <v-row no-gutters class="fill-height">
           <!-- Left Side - Script Editor -->
           <v-col cols="12" lg="8" xl="9" class="d-flex flex-column">
-            <div class="script-editor-section pa-6">
+            <div class="script-editor-section pa-6 d-flex flex-column">
               <!-- Script Editor Header -->
-              <div class="d-flex align-center justify-space-between mb-6">
+              <div class="d-flex align-center justify-space-between mb-4">
                 <h2 class="text-h6 font-weight-bold">Script Editor</h2>
                 <div class="d-flex align-center gap-3">
                   <v-btn
@@ -44,26 +46,30 @@
                 </div>
               </div>
 
+              <!-- Script Editor Textarea -->
+              <div class="script-editor-container flex-grow-1">
+                <v-textarea
+                  v-model="scriptText"
+                  variant="outlined"
+                  class="script-textarea fill-height"
+                  hide-details
+                  @input="debouncedSyncText"
+                  @keydown="handleKeyboardShortcuts"
+                />
+              </div>
 
               <!-- Script Status Footer -->
-              <div
-                class="script-status-footer mt-4 pa-4 rounded bg-grey-darken-3"
-              >
+              <div class="script-status-footer pa-1 bg-grey-darken-4">
                 <div class="d-flex align-center justify-space-between">
-                  <div class="d-flex align-center">
-                    <v-chip
-                      size="small"
-                      color="success"
-                      variant="flat"
-                      class="mr-3"
-                    >
-                      <v-icon start size="small">mdi-check-circle</v-icon>
-                      Synced
-                    </v-chip>
+                  <div class="d-flex align-center gap-4">
                     <span class="text-caption text-medium-emphasis">
-                      Last update: {{ lastSyncTime }}
+                      {{ characterCount }} characters · {{ wordCount }} words
                     </span>
                   </div>
+                  <v-spacer></v-spacer>
+                  <span class="text-caption text-medium-emphasis mr-8">
+                    Last update: {{ lastSyncTime }}
+                  </span>
                   <v-btn
                     variant="outlined"
                     size="small"
@@ -73,18 +79,6 @@
                     Sync now
                   </v-btn>
                 </div>
-              </div>
-
-              <!-- Script Editor Textarea -->
-              <div class="script-editor-container flex-grow-1">
-                <v-textarea
-                  v-model="scriptText"
-                  variant="outlined"
-                  class="script-textarea"
-                  hide-details
-                  @input="debouncedSyncText"
-                  @keydown="handleKeyboardShortcuts"
-                />
               </div>
             </div>
           </v-col>
@@ -160,38 +154,64 @@
                 <div class="d-flex gap-3 mb-4">
                   <!-- Playback Speed -->
                   <div class="control-group flex-grow-1">
-                    <v-number-input
-                      v-model.number="scrollSpeed"
-                      label="Playback Speed"
-                      variant="solo-filled"
-                      control-variant="split"
-                      hide-details
-                      density="compact"
-                      :min="0.1"
-                      :max="5.0"
-                      :step="0.1"
-                      suffix="x"
-                      @update:model-value="updateSpeed"
+                    <label
+                      class="text-caption text-medium-emphasis mb-1 d-block"
+                      >Playback Speed</label
                     >
-                      <template v-slot:display-value="{ displayValue }">
-                        {{ Number(displayValue).toFixed(1) }}
-                      </template>
-                    </v-number-input>
+                    <div class="d-flex align-center gap-2">
+                      <v-btn
+                        icon="mdi-minus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustSpeed(-0.1)"
+                      />
+                      <v-text-field
+                        :model-value="scrollSpeed.toFixed(1) + 'x'"
+                        readonly
+                        disabled
+                        variant="solo-filled"
+                        hide-details
+                        density="compact"
+                        class="text-center"
+                      />
+                      <v-btn
+                        icon="mdi-plus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustSpeed(0.1)"
+                      />
+                    </div>
                   </div>
 
                   <!-- Lines to Scroll -->
                   <div class="control-group flex-grow-1">
-                    <v-number-input
-                      v-model="linesPerStep"
-                      label="Lines to scroll"
-                      variant="solo-filled"
-                      control-variant="split"
-                      hide-details
-                      density="compact"
-                      :min="1"
-                      :max="20"
-                      :step="1"
-                    />
+                    <label
+                      class="text-caption text-medium-emphasis mb-1 d-block"
+                      >Lines to scroll</label
+                    >
+                    <div class="d-flex align-center gap-2">
+                      <v-btn
+                        icon="mdi-minus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustLinesPerStep(-1)"
+                      />
+                      <v-text-field
+                        :model-value="linesPerStep"
+                        readonly
+                        disabled
+                        variant="solo-filled"
+                        hide-details
+                        density="compact"
+                        class="text-center"
+                      />
+                      <v-btn
+                        icon="mdi-plus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustLinesPerStep(1)"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -204,40 +224,64 @@
                 <div class="d-flex gap-3 mb-4">
                   <!-- Text Width -->
                   <div class="control-group flex-grow-1">
-                    <v-number-input
-                      v-model="textWidth"
-                      label="Text Width"
-                      variant="solo-filled"
-                      control-variant="split"
-                      hide-details
-                      density="compact"
-                      :min="20"
-                      :max="100"
-                      :step="5"
-                      suffix="%"
-                      @update:model-value="updateWidth"
-                    />
+                    <label
+                      class="text-caption text-medium-emphasis mb-1 d-block"
+                      >Text Width</label
+                    >
+                    <div class="d-flex align-center gap-2">
+                      <v-btn
+                        icon="mdi-minus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustWidth(-5)"
+                      />
+                      <v-text-field
+                        :model-value="textWidth + '%'"
+                        disabled
+                        readonly
+                        variant="solo-filled"
+                        hide-details
+                        density="compact"
+                        class="text-center"
+                      />
+                      <v-btn
+                        icon="mdi-plus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustWidth(5)"
+                      />
+                    </div>
                   </div>
 
                   <!-- Font Size -->
                   <div class="control-group flex-grow-1">
-                    <v-number-input
-                      v-model.number="fontSize"
-                      label="Font Size"
-                      variant="solo-filled"
-                      control-variant="split"
-                      hide-details
-                      density="compact"
-                      :min="0.5"
-                      :max="5.0"
-                      :step="0.1"
-                      suffix="em"
-                      @update:model-value="updateFontSize"
+                    <label
+                      class="text-caption text-medium-emphasis mb-1 d-block"
+                      >Font Size</label
                     >
-                      <template v-slot:display-value="{ displayValue }">
-                        {{ Number(displayValue).toFixed(1) }}
-                      </template>
-                    </v-number-input>
+                    <div class="d-flex align-center gap-2">
+                      <v-btn
+                        icon="mdi-minus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustFontSize(-0.1)"
+                      />
+                      <v-text-field
+                        :model-value="fontSize.toFixed(1) + 'em'"
+                        disabled
+                        readonly
+                        variant="solo-filled"
+                        hide-details
+                        density="compact"
+                        class="text-center"
+                      />
+                      <v-btn
+                        icon="mdi-plus"
+                        size="small"
+                        variant="outlined"
+                        @click="adjustFontSize(0.1)"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -286,7 +330,7 @@
                       Waiting for devices to join...
                     </div>
                   </div>
-                  
+
                   <!-- Data Iterator for Participants -->
                   <v-data-iterator
                     v-else
@@ -305,7 +349,11 @@
                         >
                           <v-card
                             variant="outlined"
-                            :color="participant.raw.id === participantId ? 'teal-darken-4' : 'grey-darken-3'"
+                            :color="
+                              participant.raw.id === participantId
+                                ? 'teal-darken-4'
+                                : 'grey-darken-3'
+                            "
                             class="participant-card"
                             density="compact"
                           >
@@ -326,7 +374,7 @@
                                       : "mdi-cellphone"
                                   }}</v-icon>
                                 </v-avatar>
-                                
+
                                 <div class="flex-grow-1">
                                   <div class="text-body-2 font-weight-medium">
                                     {{
@@ -335,7 +383,9 @@
                                         : "Teleprompter"
                                     }}
                                     <v-chip
-                                      v-if="participant.raw.id === participantId"
+                                      v-if="
+                                        participant.raw.id === participantId
+                                      "
                                       size="x-small"
                                       color="teal"
                                       variant="flat"
@@ -344,7 +394,9 @@
                                       You
                                     </v-chip>
                                   </div>
-                                  <div class="text-caption text-medium-emphasis">
+                                  <div
+                                    class="text-caption text-medium-emphasis"
+                                  >
                                     {{ formatTime(participant.raw.joined_at) }}
                                   </div>
                                 </div>
@@ -362,112 +414,6 @@
         </v-row>
       </v-container>
     </v-main>
-
-    <!-- Room Information Dialog -->
-    <v-dialog v-model="showRoomInfoDialog" max-width="500">
-      <v-card>
-        <v-card-title class="text-h6 pa-4">
-          <v-icon class="mr-2">mdi-information</v-icon>
-          Room Information
-        </v-card-title>
-
-        <v-divider />
-
-        <v-card-text class="pa-4">
-          <v-text-field
-            label="Room Name"
-            v-model="editableRoomName"
-            variant="outlined"
-            class="mb-3"
-          />
-
-          <v-text-field
-            :label="`Room ID: ${roomCredentials?.room_id || 'Loading...'}`"
-            :value="roomCredentials?.room_id || 'Loading...'"
-            variant="outlined"
-            readonly
-            class="mb-3"
-          >
-            <template v-slot:append-inner>
-              <v-btn
-                icon="mdi-content-copy"
-                size="small"
-                variant="text"
-                @click="
-                  copyToClipboard(
-                    roomCredentials?.room_id || '',
-                    'Room ID copied!'
-                  )
-                "
-              />
-            </template>
-          </v-text-field>
-
-          <v-text-field
-            :label="`Room Secret: ${
-              showSecret
-                ? roomCredentials?.room_secret || 'Loading...'
-                : '••••••••'
-            }`"
-            :value="
-              showSecret
-                ? roomCredentials?.room_secret || 'Loading...'
-                : '••••••••'
-            "
-            variant="outlined"
-            readonly
-            class="mb-3"
-          >
-            <template v-slot:append-inner>
-              <v-btn
-                :icon="showSecret ? 'mdi-eye-off' : 'mdi-eye'"
-                size="small"
-                variant="text"
-                @click="showSecret = !showSecret"
-              />
-              <v-btn
-                icon="mdi-content-copy"
-                size="small"
-                variant="text"
-                @click="
-                  copyToClipboard(
-                    roomCredentials?.room_secret || '',
-                    'Room Secret copied!'
-                  )
-                "
-                class="ml-1"
-              />
-            </template>
-          </v-text-field>
-
-          <div v-if="qrCodeDataUrl" class="text-center mb-3">
-            <img :src="qrCodeDataUrl" alt="QR Code" style="max-width: 200px" />
-            <div class="text-caption text-medium-emphasis mt-2">
-              Scan QR code to join the teleprompter
-            </div>
-          </div>
-
-          <v-text-field
-            :value="joinUrl"
-            label="Teleprompter Join URL"
-            variant="outlined"
-            readonly
-          >
-            <template v-slot:prepend-inner>
-              <v-icon>mdi-link</v-icon>
-            </template>
-            <template v-slot:append-inner>
-              <v-btn
-                icon="mdi-content-copy"
-                size="small"
-                variant="text"
-                @click="copyToClipboard(joinUrl, 'Join URL copied!')"
-              />
-            </template>
-          </v-text-field>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
 
     <v-snackbar v-model="snackbar.show" :color="snackbar.color">
       {{ snackbar.text }}
@@ -560,7 +506,7 @@ Happy teleprompting! 🎬`,
       redoStack: [],
       isUndoRedoOperation: false,
       lastScriptValue: "",
-      
+
       // Connection tracking
       lastConnectionCount: 0,
     };
@@ -602,13 +548,23 @@ Happy teleprompting! 🎬`,
         text: "Disconnected",
       };
     },
+
+    characterCount() {
+      return this.scriptText.length;
+    },
+
+    wordCount() {
+      const trimmed = this.scriptText.trim();
+      if (trimmed === "") return 0;
+      return trimmed.split(/\s+/).length;
+    },
   },
 
   async mounted() {
     await this.initializeRoom();
     this.updateLastSyncTime();
     this.generateQRCode();
-    
+
     // Initialize undo stack with current script content
     this.lastScriptValue = this.scriptText;
   },
@@ -623,11 +579,15 @@ Happy teleprompting! 🎬`,
     async initializeRoom() {
       try {
         await this.connectWebSocket();
-        this.showSnackbar("Connected to teleprompter channel", "success");
+        this.showSnackbar("Connected to teleprompter server", "success");
       } catch (error) {
         console.error("Failed to initialize connection:", error);
         this.showSnackbar("Failed to connect to server", "error");
       }
+    },
+
+    exitTeleprompter() {
+      this.$router.push("/");
     },
 
     // Undo/Redo functionality
@@ -637,12 +597,10 @@ Happy teleprompting! 🎬`,
         this.redoStack.push(this.scriptText);
         this.scriptText = this.undoStack.pop();
         this.debouncedSyncText();
-        this.showSnackbar("Undo completed", "info");
         this.$nextTick(() => {
           this.isUndoRedoOperation = false;
         });
       } else {
-        this.showSnackbar("Nothing to undo", "warning");
       }
     },
 
@@ -652,17 +610,18 @@ Happy teleprompting! 🎬`,
         this.undoStack.push(this.scriptText);
         this.scriptText = this.redoStack.pop();
         this.debouncedSyncText();
-        this.showSnackbar("Redo completed", "info");
         this.$nextTick(() => {
           this.isUndoRedoOperation = false;
         });
       } else {
-        this.showSnackbar("Nothing to redo", "warning");
       }
     },
 
     saveToUndoStack() {
-      if (!this.isUndoRedoOperation && this.scriptText !== this.lastScriptValue) {
+      if (
+        !this.isUndoRedoOperation &&
+        this.scriptText !== this.lastScriptValue
+      ) {
         this.undoStack.push(this.lastScriptValue);
         // Limit undo stack size
         if (this.undoStack.length > 50) {
@@ -676,22 +635,25 @@ Happy teleprompting! 🎬`,
 
     handleKeyboardShortcuts(event) {
       // Ctrl+Z for undo
-      if (event.ctrlKey && event.key === 'z' && !event.shiftKey) {
+      if (event.ctrlKey && event.key === "z" && !event.shiftKey) {
         event.preventDefault();
         this.undoScript();
       }
       // Ctrl+Y or Ctrl+Shift+Z for redo
-      else if (event.ctrlKey && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) {
+      else if (
+        event.ctrlKey &&
+        (event.key === "y" || (event.key === "z" && event.shiftKey))
+      ) {
         event.preventDefault();
         this.redoScript();
       }
       // Ctrl+S for sync (save)
-      else if (event.ctrlKey && event.key === 's') {
+      else if (event.ctrlKey && event.key === "s") {
         event.preventDefault();
         this.syncScript();
       }
       // Space for play/pause (when not in input)
-      else if (event.key === ' ' && event.target.tagName !== 'TEXTAREA') {
+      else if (event.key === " " && event.target.tagName !== "TEXTAREA") {
         event.preventDefault();
         this.togglePlayback();
       }
@@ -771,7 +733,7 @@ Happy teleprompting! 🎬`,
       for (let i = 0; i < connectionCount; i++) {
         this.participants.push({
           id: `participant_${i}`,
-          role: i === 0 ? 'controller' : 'teleprompter',
+          role: i === 0 ? "controller" : "teleprompter",
           joined_at: new Date().toISOString(),
         });
       }
@@ -789,28 +751,21 @@ Happy teleprompting! 🎬`,
       this.sendMessage({
         type: this.isPlaying ? "start" : "pause",
       });
-      this.showSnackbar(
-        this.isPlaying ? "Teleprompter started" : "Teleprompter paused",
-        "info"
-      );
     },
 
     resetScrolling() {
       this.currentScrollPosition = 0;
       this.isPlaying = false;
       this.sendMessage({ type: "reset" });
-      this.showSnackbar("Reset to beginning", "info");
     },
 
     goToBeginning() {
       this.currentScrollPosition = 0;
       this.sendMessage({ type: "go_to_beginning" });
-      this.showSnackbar("Jumped to beginning", "info");
     },
 
     goToEnd() {
       this.sendMessage({ type: "go_to_end" });
-      this.showSnackbar("Jumped to end", "info");
     },
 
     handleBackwardClick() {
@@ -828,7 +783,6 @@ Happy teleprompting! 🎬`,
         lines: this.linesPerStep,
         smooth: true,
       });
-      this.showSnackbar(`Scrolled back ${this.linesPerStep} lines`, "info");
     },
 
     scrollForwardLines() {
@@ -838,7 +792,6 @@ Happy teleprompting! 🎬`,
         lines: this.linesPerStep,
         smooth: true,
       });
-      this.showSnackbar(`Scrolled forward ${this.linesPerStep} lines`, "info");
     },
 
     // Speed and formatting controls
@@ -925,7 +878,6 @@ Happy teleprompting! 🎬`,
 
     syncScript() {
       this.syncText();
-      this.showSnackbar("Script synchronized", "success");
     },
 
     // Utility methods
@@ -942,27 +894,8 @@ Happy teleprompting! 🎬`,
       }
     },
 
-    copyToClipboard(text, successMessage) {
-      navigator.clipboard
-        .writeText(text)
-        .then(() => {
-          this.showSnackbar(successMessage, "success");
-        })
-        .catch((err) => {
-          console.error("Failed to copy: ", err);
-          this.showSnackbar("Failed to copy to clipboard", "error");
-        });
-    },
-
     formatTime(timestamp) {
       return new Date(timestamp).toLocaleTimeString();
-    },
-
-    kickParticipant(participantId) {
-      this.sendMessage({
-        type: "kick_participant",
-        participant_id: participantId,
-      });
     },
 
     disconnect() {
@@ -977,30 +910,6 @@ Happy teleprompting! 🎬`,
       this.snackbar.color = color;
       this.snackbar.show = true;
     },
-
-    handleKeyboardShortcuts(event) {
-      if (event.ctrlKey || event.metaKey) {
-        switch (event.key) {
-          case "s":
-            event.preventDefault();
-            this.syncScript();
-            break;
-          case "z":
-            event.preventDefault();
-            this.undoScript();
-            break;
-          case "y":
-            event.preventDefault();
-            this.redoScript();
-            break;
-        }
-      }
-
-      if (event.key === " " && !event.target.closest(".v-textarea")) {
-        event.preventDefault();
-        this.togglePlayback();
-      }
-    },
   },
 };
 </script>
@@ -1014,7 +923,27 @@ Happy teleprompting! 🎬`,
 /* Script Editor Section */
 .script-editor-section {
   background: rgba(33, 33, 33, 0.6);
-  min-height: calc(100vh - 72px);
+  height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+}
+
+.script-editor-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.script-textarea {
+  height: 100%;
+}
+
+.script-textarea :deep(.v-input__control),
+.script-textarea :deep(.v-field),
+.script-textarea :deep(.v-field__field),
+.script-textarea :deep(.v-field__input) {
+  height: 100% !important;
+  max-height: none !important;
 }
 
 .script-textarea :deep(.v-field__input) {
@@ -1023,10 +952,14 @@ Happy teleprompting! 🎬`,
   font-size: 1.1rem !important;
   line-height: 1.8 !important;
   color: #e0e0e0 !important;
-  height: 500px !important;
-  min-height: 500px !important;
-  max-height: 500px !important;
   overflow-y: auto !important;
+  min-height: 100% !important;
+}
+
+.script-status-bar {
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  min-height: 40px;
 }
 
 /* Sidebar */
@@ -1074,6 +1007,16 @@ Happy teleprompting! 🎬`,
   text-align: center;
   font-weight: 500;
   font-size: 0.875rem;
+}
+
+/* Number input text fields */
+.text-center :deep(.v-field__input) {
+  text-align: center;
+  font-weight: 500;
+}
+
+.text-center :deep(input) {
+  text-align: center;
 }
 
 /* Participants Container */
