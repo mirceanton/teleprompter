@@ -1,7 +1,15 @@
 <template>
   <v-app>
-    <v-app-bar app color="primary" dark>
-      <v-toolbar-title>Remote Teleprompter</v-toolbar-title>
+    <v-app-bar app elevation="16" height="64" color="grey-darken-4">
+      <v-container fluid class="d-flex align-center">
+        <div class="d-flex align-center">
+          <v-icon color="teal" size="32" class="mr-3"
+            >mdi-presentation-play</v-icon
+          >
+          <div class="text-h5 font-weight-bold">Teleprompter</div>
+        </div>
+        <v-spacer />
+      </v-container>
     </v-app-bar>
 
     <v-main>
@@ -37,7 +45,8 @@
                       <div
                         class="mode-subtitle text-h6 text-medium-emphasis mt-1"
                       >
-                        Command Center
+                        Write and edit your script, then control the
+                        teleprompter display.
                       </div>
                     </div>
                   </v-card-text>
@@ -70,7 +79,8 @@
                       <div
                         class="mode-subtitle text-h6 text-medium-emphasis mt-1"
                       >
-                        Display Screen
+                        Display the script in a large, readable format for
+                        presenters.
                       </div>
                     </div>
                   </v-card-text>
@@ -160,9 +170,6 @@ export default {
         // Navigate to controller
         this.$router.push({
           path: "/controller",
-          query: {
-            role: "controller",
-          },
         });
       } catch (error) {
         console.error("Error starting controller mode:", error);
@@ -213,9 +220,6 @@ export default {
         // Navigate to teleprompter
         this.$router.push({
           path: "/teleprompter",
-          query: {
-            role: "teleprompter",
-          },
         });
       } catch (error) {
         console.error("Error starting teleprompter mode:", error);
