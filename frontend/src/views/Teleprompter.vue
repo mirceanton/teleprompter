@@ -95,14 +95,7 @@ export default {
   },
 
   async mounted() {
-    const authSuccess = await this.initializeAuth();
-
-    if (authSuccess) {
-      this.connect();
-    } else {
-      this.showSnackbar("No credentials found. Please select a mode.", "error");
-      this.$router.push("/");
-    }
+    this.connect();
 
     document.addEventListener("fullscreenchange", this.onFullscreenChange);
     document.addEventListener(
@@ -134,62 +127,6 @@ export default {
   },
 
   methods: {
-    async initializeAuth() {
-      try {
-        const credentialsStr = sessionStorage.getItem(
-          "teleprompter_credentials"
-        );
-        
-        // Check if we already have valid credentials
-        if (credentialsStr) {
-          const credentials = JSON.parse(credentialsStr);
-          if (credentials.role === "teleprompter") {
-            return true;
-          }
-          // If wrong role, continue to auto-join as teleprompter
-        }
-        
-        // Auto-join as teleprompter (either no credentials or wrong role)
-        const apiUrl = config.getApiUrl();
-        
-        const response = await fetch(`${apiUrl}/api/join`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            role: "teleprompter",
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to join as teleprompter");
-        }
-
-        const joinData = await response.json();
-
-        if (!joinData.success) {
-          this.showSnackbar(joinData.message, "error");
-          return false;
-        }
-
-        // Store credentials in session storage
-        sessionStorage.setItem(
-          "teleprompter_credentials",
-          JSON.stringify({
-            role: "teleprompter",
-          })
-        );
-
-        this.showSnackbar("Automatically joined as teleprompter", "success");
-        return true;
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-        this.showSnackbar("Failed to initialize authentication", "error");
-        return false;
-      }
-    },
-
     exitTeleprompter() {
       this.$router.push("/");
     },
