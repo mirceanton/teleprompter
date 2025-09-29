@@ -95,14 +95,7 @@ export default {
   },
 
   async mounted() {
-    const authSuccess = await this.initializeAuth();
-
-    if (authSuccess) {
-      this.connect();
-    } else {
-      this.showSnackbar("No credentials found. Please select a mode.", "error");
-      this.$router.push("/");
-    }
+    this.connect();
 
     document.addEventListener("fullscreenchange", this.onFullscreenChange);
     document.addEventListener(
@@ -134,33 +127,6 @@ export default {
   },
 
   methods: {
-    async initializeAuth() {
-      try {
-        const credentialsStr = sessionStorage.getItem(
-          "teleprompter_credentials"
-        );
-        if (!credentialsStr) {
-          return false;
-        }
-
-        const credentials = JSON.parse(credentialsStr);
-
-        if (credentials.role !== "teleprompter") {
-          this.showSnackbar(
-            "Access denied: Not authorized as teleprompter",
-            "error"
-          );
-          return false;
-        }
-
-        return true;
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-        this.showSnackbar("Failed to initialize authentication", "error");
-        return false;
-      }
-    },
-
     exitTeleprompter() {
       this.$router.push("/");
     },
