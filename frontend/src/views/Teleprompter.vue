@@ -60,7 +60,7 @@ export default {
       teleprompterContent: "",
       isScrolling: false,
       scrollPosition: 0,
-      scrollSpeed: 2.5,
+      scrollSpeed: 1.0,
       animationId: null,
       fontSize: 2.5,
       textWidth: 100,
