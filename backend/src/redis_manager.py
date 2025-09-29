@@ -7,11 +7,12 @@ import asyncio
 import json
 import logging
 import os
-from typing import Callable, Optional, Dict, Any
+from typing import Callable, Optional, Awaitable
 import redis.asyncio as redis
 from redis.exceptions import ConnectionError, TimeoutError
 
 logger = logging.getLogger(__name__)
+
 
 class RedisManager:
     """Manages Redis connections and pub/sub for cross-instance communication"""
@@ -19,9 +20,8 @@ class RedisManager:
     def __init__(self):
         self.redis_client: Optional[redis.Redis] = None
         self.pubsub: Optional[redis.client.PubSub] = None
-        self.subscribed_channels: set = set()
-        self.message_handlers: Dict[str, Callable] = {}
         self.is_connected = False
+        self.message_handler: Optional[Callable[[dict], Awaitable[None]]] = None
         
         # Redis configuration from environment variables
         self.redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
@@ -40,7 +40,6 @@ class RedisManager:
                     decode_responses=True,
                     socket_connect_timeout=5,
                     socket_keepalive=True,
-                    socket_keepalive_options={},
                     retry_on_timeout=True
                 )
             else:
@@ -52,7 +51,6 @@ class RedisManager:
                     decode_responses=True,
                     socket_connect_timeout=5,
                     socket_keepalive=True,
-                    socket_keepalive_options={},
                     retry_on_timeout=True
                 )
             
@@ -64,7 +62,7 @@ class RedisManager:
             return True
             
         except (ConnectionError, TimeoutError) as e:
-            logger.error(f"Redis connection failed: {e}. The application will exit.")
+            logger.error(f"Redis connection failed: {e}")
             raise
         except Exception as e:
             logger.error(f"Unexpected error connecting to Redis: {e}")
@@ -91,9 +89,19 @@ class RedisManager:
         return f"room:{channel}"
     
     async def publish_message(self, channel: str, message: dict) -> bool:
-        """Publish a message to a Redis channel"""
+        """
+        Publish a message to a Redis channel.
+        
+        Args:
+            channel: Teleprompter channel name
+            message: Message dictionary to publish
+            
+        Returns:
+            True if successful, False otherwise
+        """
         if not self.redis_client:
-            raise ConnectionError("Redis client not initialized. Cannot publish message.")
+            logger.error("Redis client not initialized. Cannot publish message.")
+            return False
             
         try:
             redis_channel = self.get_channel_name(channel)
@@ -105,49 +113,24 @@ class RedisManager:
             logger.error(f"Error publishing message to Redis: {e}")
             return False
     
-    async def subscribe_to_channel(self, channel: str, message_handler: Callable[[dict], None]):
-        """Subscribe to a Redis channel and register a message handler"""
-        if not self.is_connected:
-            logger.warning(f"Cannot subscribe to channel {channel}: Redis not connected")
-            return False
-            
-        try:
-            redis_channel = self.get_channel_name(channel)
-            
-            if redis_channel not in self.subscribed_channels:
-                await self.pubsub.subscribe(redis_channel)
-                self.subscribed_channels.add(redis_channel)
-                logger.info(f"Subscribed to Redis channel: {redis_channel}")
-            
-            self.message_handlers[redis_channel] = message_handler
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error subscribing to Redis channel: {e}")
-            return False
-    
-    async def unsubscribe_from_channel(self, channel: str):
-        """Unsubscribe from a Redis channel"""
-        if not self.is_connected:
-            return
-            
-        try:
-            redis_channel = self.get_channel_name(channel)
-            
-            if redis_channel in self.subscribed_channels:
-                await self.pubsub.unsubscribe(redis_channel)
-                self.subscribed_channels.discard(redis_channel)
-                self.message_handlers.pop(redis_channel, None)
-                logger.info(f"Unsubscribed from Redis channel: {redis_channel}")
-                
-        except Exception as e:
-            logger.error(f"Error unsubscribing from Redis channel: {e}")
+    def set_message_handler(self, handler: Callable[[dict], Awaitable[None]]):
+        """
+        Set the message handler for incoming Redis messages.
+        
+        Args:
+            handler: Async callable that processes incoming messages
+        """
+        self.message_handler = handler
+        logger.info("Redis message handler registered")
     
     async def start_message_listener(self):
         """Start the Redis message listener loop"""
         if not self.is_connected:
             logger.warning("Cannot start message listener: Redis not connected")
             return
+        
+        if not self.message_handler:
+            logger.warning("No message handler set. Messages will be ignored.")
             
         logger.info("Starting Redis message listener")
         
@@ -157,17 +140,19 @@ class RedisManager:
             logger.info("Subscribed to Redis pattern: room:*")
             
             async for message in self.pubsub.listen():
-                if message['type'] == 'pmessage':  # Pattern message
-                    await self._handle_redis_pattern_message(message)
+                if message['type'] == 'pmessage':
+                    await self._handle_pattern_message(message)
                     
+        except asyncio.CancelledError:
+            logger.info("Redis message listener cancelled")
+            raise
         except Exception as e:
             logger.error(f"Error in Redis message listener: {e}")
             logger.exception("Full traceback:")
     
-    async def _handle_redis_pattern_message(self, redis_message):
+    async def _handle_pattern_message(self, redis_message):
         """Handle incoming Redis pattern messages"""
         try:
-            pattern = redis_message['pattern']
             channel = redis_message['channel']
             data = redis_message['data']
             
@@ -178,14 +163,13 @@ class RedisManager:
             # Redis channel format: "room:channel_name"
             if channel.startswith('room:'):
                 teleprompter_channel = channel[5:]  # Remove "room:" prefix
-                
-                # Add channel info to message
                 message['_teleprompter_channel'] = teleprompter_channel
                 
-                # Call the connection manager's message handler
-                # Import here to avoid circular imports
-                from main import manager
-                await manager._handle_redis_message(message)
+                # Call the registered message handler
+                if self.message_handler:
+                    await self.message_handler(message)
+                else:
+                    logger.warning(f"Received message but no handler registered: {message.get('type', 'unknown')}")
             else:
                 logger.warning(f"Invalid Redis channel format: {channel}")
                 
@@ -202,25 +186,22 @@ class RedisManager:
     async def health_check(self) -> dict:
         """Health check for Redis connection"""
         if not self.is_connected:
-            return {"redis": {"status": "disconnected", "available": False}}
+            return {"status": "disconnected", "available": False}
             
         try:
             await self.redis_client.ping()
             return {
-                "redis": {
-                    "status": "healthy", 
-                    "available": True,
-                    "subscribed_channels": len(self.subscribed_channels)
-                }
+                "status": "healthy", 
+                "available": True,
+                "handler_registered": self.message_handler is not None
             }
         except Exception as e:
             return {
-                "redis": {
-                    "status": "error", 
-                    "available": False, 
-                    "error": str(e)
-                }
+                "status": "error", 
+                "available": False, 
+                "error": str(e)
             }
+
 
 # Global Redis manager instance
 redis_manager = RedisManager()
