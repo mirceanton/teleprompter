@@ -8,10 +8,10 @@
           >
           <div class="text-h5 font-weight-bold">Teleprompter</div>
         </div>
-      <v-spacer></v-spacer>
-      <v-btn prepend-icon="mdi-logout" @click="exitTeleprompter">
-        Leave Room
-      </v-btn>
+        <v-spacer></v-spacer>
+        <v-btn prepend-icon="mdi-logout" @click="exitTeleprompter">
+          Leave Room
+        </v-btn>
       </v-container>
     </v-app-bar>
 
