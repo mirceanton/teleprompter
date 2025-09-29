@@ -90,13 +90,14 @@ async def join_teleprompter(request: JoinRequest):
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time communication"""
     
-    await connection_manager.connect(websocket)
+    participant_id = await connection_manager.connect(websocket)
     
     try:
         # Send connection update to all clients
         connection_update = {
             "type": "connection_update",
-            "connection_count": connection_manager.get_connection_count()
+            "connection_count": connection_manager.get_connection_count(),
+            "participants": connection_manager.get_participant_list()
         }
         await connection_manager.broadcast_to_all_instances(connection_update, exclude=websocket)
         
@@ -108,9 +109,30 @@ async def websocket_endpoint(websocket: WebSocket):
                 message = json.loads(message_text)
                 message["_sender"] = "client"
                 
-                # Broadcast to all other clients across instances
-                await connection_manager.broadcast_to_all_instances(message, exclude=websocket)
-                logger.info(f"Broadcast message: {message.get('type', 'unknown')}")
+                # Handle special mode setting message
+                if message.get("type") == "mode":
+                    mode = message.get("mode", "unknown")
+                    connection_manager.set_participant_role(websocket, mode)
+                    
+                    # Send updated participant list
+                    participant_update = {
+                        "type": "participants_list",
+                        "participants": connection_manager.get_participant_list()
+                    }
+                    await connection_manager.broadcast_to_all_instances(participant_update)
+                    continue
+                
+                # Check if this is a targeted message for a specific participant
+                target_participant_id = message.get("target_participant_id")
+                
+                if target_participant_id:
+                    # Send to specific participant only
+                    await connection_manager.broadcast_to_all_instances(message, exclude=websocket, target_participant_id=target_participant_id)
+                else:
+                    # Broadcast to all other clients across instances
+                    await connection_manager.broadcast_to_all_instances(message, exclude=websocket)
+                
+                logger.info(f"Broadcast message: {message.get('type', 'unknown')} to {target_participant_id or 'all'}")
                 
             except json.JSONDecodeError:
                 logger.error(f"Invalid JSON received: {message_text}")
@@ -118,10 +140,11 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         connection_manager.disconnect(websocket)
         
-        # Notify remaining clients about updated connection count
+        # Notify remaining clients about updated connection count and participants
         connection_update = {
             "type": "connection_update", 
-            "connection_count": connection_manager.get_connection_count()
+            "connection_count": connection_manager.get_connection_count(),
+            "participants": connection_manager.get_participant_list()
         }
         await connection_manager.broadcast_to_all_instances(connection_update)
         

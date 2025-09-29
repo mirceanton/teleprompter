@@ -241,6 +241,10 @@ export default {
         case "scroll_lines":
           this.scrollByLines(message.direction, message.lines, message.smooth);
           break;
+        case "lines_per_step":
+          // This setting affects scroll behavior but doesn't need to be stored in teleprompter
+          // The lines are sent with each scroll_lines message
+          break;
       }
     },
 

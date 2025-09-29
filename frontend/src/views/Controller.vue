@@ -330,46 +330,193 @@
                     <div
                       v-for="participant in participants"
                       :key="participant.id"
-                      class="participant-item"
+                      class="participant-card"
                       :class="{
-                        'participant-item-you':
+                        'participant-card-you':
                           participant.id === participantId,
+                        'participant-card-expanded': expandedParticipants.has(participant.id)
                       }"
                     >
-                      <v-icon
-                        :color="
-                          participant.role === 'controller' ? 'blue' : 'green'
-                        "
-                        size="20"
-                        class="mr-3"
-                      >
-                        {{
-                          participant.role === "controller"
-                            ? "mdi-laptop"
-                            : "mdi-monitor"
-                        }}
-                      </v-icon>
-
-                      <div class="flex-grow-1">
-                        <div class="participant-name">
+                      <div class="participant-header" @click="toggleParticipantExpansion(participant.id)">
+                        <v-icon
+                          :color="
+                            participant.role === 'controller' ? 'blue' : 'green'
+                          "
+                          size="20"
+                          class="mr-3"
+                        >
                           {{
                             participant.role === "controller"
-                              ? "Controller"
-                              : "Teleprompter"
+                              ? "mdi-laptop"
+                              : "mdi-monitor"
                           }}
-                          <span
-                            v-if="participant.id === participantId"
-                            class="participant-you-badge"
-                          >
-                            (You)
-                          </span>
+                        </v-icon>
+
+                        <div class="flex-grow-1">
+                          <div class="participant-name">
+                            {{
+                              participant.role === "controller"
+                                ? "Controller"
+                                : "Teleprompter"
+                            }}
+                            <span
+                              v-if="participant.id === participantId"
+                              class="participant-you-badge"
+                            >
+                              (You)
+                            </span>
+                          </div>
+                          <div class="participant-time">
+                            Joined {{ formatTime(participant.joined_at) }}
+                          </div>
                         </div>
-                        <div class="participant-time">
-                          Joined {{ formatTime(participant.joined_at) }}
+
+                        <div class="participant-status">
+                          <v-icon size="16" color="success"> mdi-circle </v-icon>
+                          <!-- Show settings icon for teleprompter participants only -->
+                          <v-icon 
+                            v-if="participant.role === 'teleprompter'"
+                            size="18" 
+                            class="ml-2 participant-settings-icon"
+                            :class="{ 'participant-settings-icon-expanded': expandedParticipants.has(participant.id) }"
+                          > 
+                            mdi-chevron-down 
+                          </v-icon>
                         </div>
                       </div>
 
-                      <v-icon size="16" color="success"> mdi-circle </v-icon>
+                      <!-- Per-participant settings panel (only for teleprompters) -->
+                      <div 
+                        v-if="participant.role === 'teleprompter' && expandedParticipants.has(participant.id)"
+                        class="participant-settings-panel"
+                      >
+                        <div class="settings-grid">
+                          <!-- Playback Speed -->
+                          <div class="setting-item">
+                            <label class="setting-label">Speed</label>
+                            <div class="setting-control">
+                              <v-btn
+                                size="x-small"
+                                variant="outlined"
+                                icon="mdi-minus"
+                                @click="adjustParticipantSetting(participant.id, 'scrollSpeed', -0.1)"
+                                class="setting-btn"
+                              ></v-btn>
+                              <span class="setting-value">{{ getParticipantSetting(participant.id, 'scrollSpeed').toFixed(1) }}x</span>
+                              <v-btn
+                                size="x-small"
+                                variant="outlined"
+                                icon="mdi-plus"
+                                @click="adjustParticipantSetting(participant.id, 'scrollSpeed', 0.1)"
+                                class="setting-btn"
+                              ></v-btn>
+                            </div>
+                          </div>
+
+                          <!-- Font Size -->
+                          <div class="setting-item">
+                            <label class="setting-label">Font</label>
+                            <div class="setting-control">
+                              <v-btn
+                                size="x-small"
+                                variant="outlined"
+                                icon="mdi-minus"
+                                @click="adjustParticipantSetting(participant.id, 'fontSize', -0.1)"
+                                class="setting-btn"
+                              ></v-btn>
+                              <span class="setting-value">{{ getParticipantSetting(participant.id, 'fontSize').toFixed(1) }}em</span>
+                              <v-btn
+                                size="x-small"
+                                variant="outlined"
+                                icon="mdi-plus"
+                                @click="adjustParticipantSetting(participant.id, 'fontSize', 0.1)"
+                                class="setting-btn"
+                              ></v-btn>
+                            </div>
+                          </div>
+
+                          <!-- Text Width -->
+                          <div class="setting-item">
+                            <label class="setting-label">Width</label>
+                            <div class="setting-control">
+                              <v-btn
+                                size="x-small"
+                                variant="outlined"
+                                icon="mdi-minus"
+                                @click="adjustParticipantSetting(participant.id, 'textWidth', -5)"
+                                class="setting-btn"
+                              ></v-btn>
+                              <span class="setting-value">{{ getParticipantSetting(participant.id, 'textWidth') }}%</span>
+                              <v-btn
+                                size="x-small"
+                                variant="outlined"
+                                icon="mdi-plus"
+                                @click="adjustParticipantSetting(participant.id, 'textWidth', 5)"
+                                class="setting-btn"
+                              ></v-btn>
+                            </div>
+                          </div>
+
+                          <!-- Lines Per Step -->
+                          <div class="setting-item">
+                            <label class="setting-label">Lines</label>
+                            <div class="setting-control">
+                              <v-btn
+                                size="x-small"
+                                variant="outlined"
+                                icon="mdi-minus"
+                                @click="adjustParticipantSetting(participant.id, 'linesPerStep', -1)"
+                                class="setting-btn"
+                              ></v-btn>
+                              <span class="setting-value">{{ getParticipantSetting(participant.id, 'linesPerStep') }}</span>
+                              <v-btn
+                                size="x-small"
+                                variant="outlined"
+                                icon="mdi-plus"
+                                @click="adjustParticipantSetting(participant.id, 'linesPerStep', 1)"
+                                class="setting-btn"
+                              ></v-btn>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Mirror Controls -->
+                        <div class="mirror-controls">
+                          <v-btn
+                            size="small"
+                            variant="outlined"
+                            :color="getParticipantSetting(participant.id, 'verticalMirror') ? 'primary' : 'default'"
+                            @click="toggleParticipantMirror(participant.id, 'vertical')"
+                            class="mirror-btn"
+                          >
+                            <v-icon size="16">mdi-flip-vertical</v-icon>
+                            <span class="ml-1">Vertical</span>
+                          </v-btn>
+                          <v-btn
+                            size="small"
+                            variant="outlined"
+                            :color="getParticipantSetting(participant.id, 'horizontalMirror') ? 'primary' : 'default'"
+                            @click="toggleParticipantMirror(participant.id, 'horizontal')"
+                            class="mirror-btn"
+                          >
+                            <v-icon size="16">mdi-flip-horizontal</v-icon>
+                            <span class="ml-1">Horizontal</span>
+                          </v-btn>
+                        </div>
+
+                        <!-- Reset Button -->
+                        <div class="reset-controls">
+                          <v-btn
+                            size="small"
+                            variant="outlined"
+                            color="warning"
+                            @click="resetParticipantSettings(participant.id)"
+                            prepend-icon="mdi-restore"
+                          >
+                            Reset to Global
+                          </v-btn>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -474,6 +621,10 @@ Happy teleprompting! 🎬`,
 
       // Connection tracking
       lastConnectionCount: 0,
+      
+      // Per-participant settings
+      participantSettings: {}, // participant_id -> settings object
+      expandedParticipants: new Set(), // Track which participant cards are expanded
     };
   },
 
@@ -632,6 +783,8 @@ Happy teleprompting! 🎬`,
 
       this.ws.onopen = () => {
         console.log("WebSocket connected");
+        // Send mode information to backend
+        this.sendMessage({ type: "mode", mode: "controller" });
       };
 
       this.ws.onmessage = (event) => {
@@ -657,8 +810,13 @@ Happy teleprompting! 🎬`,
     handleWebSocketMessage(message) {
       switch (message.type) {
         case "connection_update":
-          // Simple connection count update - create mock participants
-          this.updateParticipantsList(message.connection_count || 0);
+          // Handle real participants list from backend
+          if (message.participants) {
+            this.participants = message.participants;
+          } else {
+            // Fallback to mock participants for compatibility
+            this.updateParticipantsList(message.connection_count || 0);
+          }
           // Auto-sync script when new participant joins (increased count)
           if (message.connection_count > this.lastConnectionCount) {
             setTimeout(() => {
@@ -875,6 +1033,115 @@ Happy teleprompting! 🎬`,
       this.snackbar.color = color;
       this.snackbar.show = true;
     },
+
+    // Per-participant settings methods
+    toggleParticipantExpansion(participantId) {
+      if (this.expandedParticipants.has(participantId)) {
+        this.expandedParticipants.delete(participantId);
+      } else {
+        this.expandedParticipants.add(participantId);
+      }
+      // Force reactivity update
+      this.expandedParticipants = new Set(this.expandedParticipants);
+    },
+
+    getParticipantSetting(participantId, settingName) {
+      // Return participant-specific setting or fall back to global setting
+      if (this.participantSettings[participantId] && 
+          this.participantSettings[participantId][settingName] !== undefined) {
+        return this.participantSettings[participantId][settingName];
+      }
+      // Fall back to global setting
+      return this[settingName];
+    },
+
+    setParticipantSetting(participantId, settingName, value) {
+      // Initialize participant settings if not exists
+      if (!this.participantSettings[participantId]) {
+        this.participantSettings[participantId] = {};
+      }
+      
+      // Set the specific setting
+      this.participantSettings[participantId][settingName] = value;
+      
+      // Send targeted message to specific participant
+      this.sendMessage({
+        type: settingName === 'linesPerStep' ? 'lines_per_step' : this.getMessageType(settingName),
+        value: settingName === 'horizontalMirror' || settingName === 'verticalMirror' ? undefined : value,
+        horizontal: settingName === 'horizontalMirror' ? value : this.getParticipantSetting(participantId, 'horizontalMirror'),
+        vertical: settingName === 'verticalMirror' ? value : this.getParticipantSetting(participantId, 'verticalMirror'),
+        lines: settingName === 'linesPerStep' ? value : undefined,
+        target_participant_id: participantId
+      });
+    },
+
+    getMessageType(settingName) {
+      const mapping = {
+        scrollSpeed: 'speed',
+        fontSize: 'font_size',
+        textWidth: 'width',
+        horizontalMirror: 'mirror',
+        verticalMirror: 'mirror',
+        linesPerStep: 'lines_per_step'
+      };
+      return mapping[settingName] || settingName;
+    },
+
+    adjustParticipantSetting(participantId, settingName, delta) {
+      const currentValue = this.getParticipantSetting(participantId, settingName);
+      let newValue = currentValue + delta;
+      
+      // Apply constraints
+      switch (settingName) {
+        case 'scrollSpeed':
+          newValue = Math.max(0.1, Math.min(5.0, newValue));
+          break;
+        case 'fontSize':
+          newValue = Math.max(0.5, Math.min(5.0, newValue));
+          break;
+        case 'textWidth':
+          newValue = Math.max(20, Math.min(100, newValue));
+          break;
+        case 'linesPerStep':
+          newValue = Math.max(1, Math.min(20, newValue));
+          break;
+      }
+      
+      this.setParticipantSetting(participantId, settingName, newValue);
+    },
+
+    toggleParticipantMirror(participantId, direction) {
+      const settingName = direction === 'horizontal' ? 'horizontalMirror' : 'verticalMirror';
+      const currentValue = this.getParticipantSetting(participantId, settingName);
+      this.setParticipantSetting(participantId, settingName, !currentValue);
+    },
+
+    resetParticipantSettings(participantId) {
+      // Remove all participant-specific settings (fall back to global)
+      delete this.participantSettings[participantId];
+      
+      // Send current global settings to the participant
+      const globalSettings = {
+        scrollSpeed: this.scrollSpeed,
+        fontSize: this.fontSize,
+        textWidth: this.textWidth,
+        horizontalMirror: this.horizontalMirror,
+        verticalMirror: this.verticalMirror,
+        linesPerStep: this.linesPerStep
+      };
+      
+      // Send each setting individually
+      for (const [settingName, value] of Object.entries(globalSettings)) {
+        this.sendMessage({
+          type: this.getMessageType(settingName),
+          value: settingName === 'horizontalMirror' || settingName === 'verticalMirror' ? undefined : value,
+          horizontal: settingName === 'horizontalMirror' ? value : globalSettings.horizontalMirror,
+          vertical: settingName === 'verticalMirror' ? value : globalSettings.verticalMirror,
+          lines: settingName === 'linesPerStep' ? value : undefined,
+          target_participant_id: participantId
+        });
+      }
+    },
   },
 };
 </script>
@@ -987,7 +1254,7 @@ Happy teleprompting! 🎬`,
 /* Participants Container */
 .participants-container {
   min-height: 120px;
-  max-height: 300px;
+  max-height: 400px;
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
@@ -998,28 +1265,63 @@ Happy teleprompting! 🎬`,
   padding: 4px;
 }
 
-.participant-item {
+/* Participant Cards */
+.participant-card {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.participant-card:last-child {
+  margin-bottom: 0;
+}
+
+.participant-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.participant-card-you {
+  background: rgba(0, 128, 128, 0.1);
+  border-color: rgba(0, 128, 128, 0.3);
+}
+
+.participant-card-you:hover {
+  background: rgba(0, 128, 128, 0.15);
+}
+
+.participant-card-expanded {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Participant Header */
+.participant-header {
   display: flex;
   align-items: center;
   padding: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  transition: background-color 0.2s ease;
+  cursor: pointer;
+  user-select: none;
 }
 
-.participant-item:last-child {
-  border-bottom: none;
+.participant-header:hover {
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.participant-item:hover {
-  background-color: rgba(255, 255, 255, 0.03);
+.participant-status {
+  display: flex;
+  align-items: center;
 }
 
-.participant-item-you {
-  background-color: rgba(0, 128, 128, 0.1);
+.participant-settings-icon {
+  transition: transform 0.2s ease;
+  opacity: 0.7;
 }
 
-.participant-item-you:hover {
-  background-color: rgba(0, 128, 128, 0.15);
+.participant-settings-icon-expanded {
+  transform: rotate(180deg);
 }
 
 .participant-name {
@@ -1038,6 +1340,78 @@ Happy teleprompting! 🎬`,
 .participant-time {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.5);
+}
+
+/* Participant Settings Panel */
+.participant-settings-panel {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.setting-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setting-btn {
+  min-width: 28px !important;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px !important;
+}
+
+.setting-value {
+  min-width: 45px;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Mirror Controls */
+.mirror-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.mirror-btn {
+  flex: 1;
+  height: 32px !important;
+  font-size: 0.75rem !important;
+}
+
+/* Reset Controls */
+.reset-controls {
+  display: flex;
+  justify-content: center;
+}
+
+.reset-controls .v-btn {
+  font-size: 0.75rem;
 }
 
 /* Responsive Design */
