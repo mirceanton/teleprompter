@@ -274,10 +274,8 @@ export default {
     scroll() {
       if (!this.isScrolling) return;
 
-      const speed = this.scrollSpeed * 0.5;
-      // Invert scroll direction when vertically mirrored
-      const direction = this.verticalMirror ? 1 : -1;
-      this.scrollPosition += speed * direction;
+      const speed = this.scrollSpeed * 0.5 * -1;
+      this.scrollPosition += speed;
 
       if (this.$refs.teleprompterText) {
         const textHeight = this.$refs.teleprompterText.scrollHeight;
@@ -323,16 +321,13 @@ export default {
       const lineHeight = this.fontSize * 16 * 1.8;
       const scrollAmount = lines * lineHeight;
 
-      // Account for vertical mirroring in scroll direction
-      const mirrorFactor = this.verticalMirror ? -1 : 1;
-
       let targetPosition;
       if (direction === "backward") {
         // Scroll backward/up: increase scrollPosition (less negative)
-        targetPosition = this.scrollPosition + scrollAmount * mirrorFactor;
+        targetPosition = this.scrollPosition + scrollAmount;
       } else if (direction === "forward") {
         // Scroll forward/down: decrease scrollPosition (more negative)
-        targetPosition = this.scrollPosition - scrollAmount * mirrorFactor;
+        targetPosition = this.scrollPosition - scrollAmount;
       } else {
         console.warn(`Unknown scroll direction: ${direction}`);
         return;
