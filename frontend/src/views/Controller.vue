@@ -47,7 +47,7 @@
               </div>
 
               <!-- Script Editor Textarea -->
-              <div class="script-editor-container flex-grow-1">
+              <div class="script-editor-container flex-grow-1 mb-4">
                 <v-textarea
                   v-model="scriptText"
                   variant="outlined"
@@ -59,17 +59,24 @@
               </div>
 
               <!-- Script Status Footer -->
-              <div class="script-status-footer pa-1 bg-grey-darken-4">
+              <div class="script-status-footer pa-4 rounded bg-grey-darken-3">
                 <div class="d-flex align-center justify-space-between">
                   <div class="d-flex align-center gap-4">
+                    <v-chip
+                      size="small"
+                      color="success"
+                      variant="flat"
+                    >
+                      <v-icon start size="small">mdi-check-circle</v-icon>
+                      Synced
+                    </v-chip>
+                    <span class="text-caption text-medium-emphasis">
+                      Last update: {{ lastSyncTime }}
+                    </span>
                     <span class="text-caption text-medium-emphasis">
                       {{ characterCount }} characters · {{ wordCount }} words
                     </span>
                   </div>
-                  <v-spacer></v-spacer>
-                  <span class="text-caption text-medium-emphasis mr-8">
-                    Last update: {{ lastSyncTime }}
-                  </span>
                   <v-btn
                     variant="outlined"
                     size="small"
@@ -154,10 +161,7 @@
                 <div class="d-flex gap-3 mb-4">
                   <!-- Playback Speed -->
                   <div class="control-group flex-grow-1">
-                    <label
-                      class="text-caption text-medium-emphasis mb-1 d-block"
-                      >Playback Speed</label
-                    >
+                    <label class="text-caption text-medium-emphasis mb-1 d-block">Playback Speed</label>
                     <div class="d-flex align-center gap-2">
                       <v-btn
                         icon="mdi-minus"
@@ -168,7 +172,6 @@
                       <v-text-field
                         :model-value="scrollSpeed.toFixed(1) + 'x'"
                         readonly
-                        disabled
                         variant="solo-filled"
                         hide-details
                         density="compact"
@@ -185,10 +188,7 @@
 
                   <!-- Lines to Scroll -->
                   <div class="control-group flex-grow-1">
-                    <label
-                      class="text-caption text-medium-emphasis mb-1 d-block"
-                      >Lines to scroll</label
-                    >
+                    <label class="text-caption text-medium-emphasis mb-1 d-block">Lines to scroll</label>
                     <div class="d-flex align-center gap-2">
                       <v-btn
                         icon="mdi-minus"
@@ -199,7 +199,6 @@
                       <v-text-field
                         :model-value="linesPerStep"
                         readonly
-                        disabled
                         variant="solo-filled"
                         hide-details
                         density="compact"
@@ -224,10 +223,7 @@
                 <div class="d-flex gap-3 mb-4">
                   <!-- Text Width -->
                   <div class="control-group flex-grow-1">
-                    <label
-                      class="text-caption text-medium-emphasis mb-1 d-block"
-                      >Text Width</label
-                    >
+                    <label class="text-caption text-medium-emphasis mb-1 d-block">Text Width</label>
                     <div class="d-flex align-center gap-2">
                       <v-btn
                         icon="mdi-minus"
@@ -237,7 +233,6 @@
                       />
                       <v-text-field
                         :model-value="textWidth + '%'"
-                        disabled
                         readonly
                         variant="solo-filled"
                         hide-details
@@ -255,10 +250,7 @@
 
                   <!-- Font Size -->
                   <div class="control-group flex-grow-1">
-                    <label
-                      class="text-caption text-medium-emphasis mb-1 d-block"
-                      >Font Size</label
-                    >
+                    <label class="text-caption text-medium-emphasis mb-1 d-block">Font Size</label>
                     <div class="d-flex align-center gap-2">
                       <v-btn
                         icon="mdi-minus"
@@ -268,7 +260,6 @@
                       />
                       <v-text-field
                         :model-value="fontSize.toFixed(1) + 'em'"
-                        disabled
                         readonly
                         variant="solo-filled"
                         hide-details
@@ -314,99 +305,58 @@
               <!-- Room Participants Section -->
               <div class="control-section">
                 <h3 class="text-h6 font-weight-bold mb-6">Room Participants</h3>
-                <div
-                  class="participants-container"
-                  style="min-height: 120px; max-height: 300px; overflow-y: auto"
-                >
+                <div class="participants-container">
                   <div
                     v-if="participants.length === 0"
-                    class="text-center text-medium-emphasis pa-4"
+                    class="text-center text-medium-emphasis pa-6"
                   >
-                    <v-icon size="48" class="mb-2 text-grey-darken-1"
+                    <v-icon size="48" class="mb-3 text-grey-darken-1"
                       >mdi-account-group</v-icon
                     >
-                    <div class="text-body-2">No participants connected</div>
+                    <div class="text-body-2 mb-1">No participants connected</div>
                     <div class="text-caption">
                       Waiting for devices to join...
                     </div>
                   </div>
 
-                  <!-- Data Iterator for Participants -->
-                  <v-data-iterator
-                    v-else
-                    :items="participants"
-                    item-value="id"
-                    hide-default-footer
-                    class="pa-0"
-                  >
-                    <template v-slot:default="{ items }">
-                      <v-row dense>
-                        <v-col
-                          v-for="participant in items"
-                          :key="participant.raw.id"
-                          cols="12"
-                          class="pb-2"
-                        >
-                          <v-card
-                            variant="outlined"
-                            :color="
-                              participant.raw.id === participantId
-                                ? 'teal-darken-4'
-                                : 'grey-darken-3'
-                            "
-                            class="participant-card"
-                            density="compact"
+                  <div v-else class="participants-list">
+                    <div
+                      v-for="participant in participants"
+                      :key="participant.id"
+                      class="participant-item"
+                      :class="{ 'participant-item-you': participant.id === participantId }"
+                    >
+                      <v-icon 
+                        :color="participant.role === 'controller' ? 'blue' : 'green'"
+                        size="20"
+                        class="mr-3"
+                      >
+                        {{ participant.role === "controller" ? "mdi-laptop" : "mdi-monitor" }}
+                      </v-icon>
+                      
+                      <div class="flex-grow-1">
+                        <div class="participant-name">
+                          {{ participant.role === "controller" ? "Controller" : "Teleprompter" }}
+                          <span
+                            v-if="participant.id === participantId"
+                            class="participant-you-badge"
                           >
-                            <v-card-text class="pa-3">
-                              <div class="d-flex align-center">
-                                <v-avatar
-                                  size="28"
-                                  :color="
-                                    participant.raw.role === 'controller'
-                                      ? 'primary'
-                                      : 'success'
-                                  "
-                                  class="mr-3"
-                                >
-                                  <v-icon size="16" color="white">{{
-                                    participant.raw.role === "controller"
-                                      ? "mdi-laptop"
-                                      : "mdi-cellphone"
-                                  }}</v-icon>
-                                </v-avatar>
-
-                                <div class="flex-grow-1">
-                                  <div class="text-body-2 font-weight-medium">
-                                    {{
-                                      participant.raw.role === "controller"
-                                        ? "Controller"
-                                        : "Teleprompter"
-                                    }}
-                                    <v-chip
-                                      v-if="
-                                        participant.raw.id === participantId
-                                      "
-                                      size="x-small"
-                                      color="teal"
-                                      variant="flat"
-                                      class="ml-2"
-                                    >
-                                      You
-                                    </v-chip>
-                                  </div>
-                                  <div
-                                    class="text-caption text-medium-emphasis"
-                                  >
-                                    {{ formatTime(participant.raw.joined_at) }}
-                                  </div>
-                                </div>
-                              </div>
-                            </v-card-text>
-                          </v-card>
-                        </v-col>
-                      </v-row>
-                    </template>
-                  </v-data-iterator>
+                            (You)
+                          </span>
+                        </div>
+                        <div class="participant-time">
+                          Joined {{ formatTime(participant.joined_at) }}
+                        </div>
+                      </div>
+                      
+                      <v-icon 
+                        size="16" 
+                        color="success"
+                      >
+                        mdi-circle
+                      </v-icon>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1021,16 +971,58 @@ Happy teleprompting! 🎬`,
 
 /* Participants Container */
 .participants-container {
+  min-height: 120px;
+  max-height: 300px;
+  overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
 }
 
-.participant-card {
-  transition: all 0.2s ease;
+.participants-list {
+  padding: 4px;
 }
 
-.participant-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+.participant-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 0.2s ease;
+}
+
+.participant-item:last-child {
+  border-bottom: none;
+}
+
+.participant-item:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.participant-item-you {
+  background-color: rgba(0, 128, 128, 0.1);
+}
+
+.participant-item-you:hover {
+  background-color: rgba(0, 128, 128, 0.15);
+}
+
+.participant-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.87);
+  margin-bottom: 2px;
+}
+
+.participant-you-badge {
+  color: rgb(var(--v-theme-teal));
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.participant-time {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Responsive Design */
