@@ -47,7 +47,7 @@
               </div>
 
               <!-- Script Editor Textarea -->
-              <div class="script-editor-container flex-grow-1 mb-4">
+              <div class="script-editor-container flex-grow-1 mb-2">
                 <v-textarea
                   v-model="scriptText"
                   variant="outlined"
@@ -59,24 +59,17 @@
               </div>
 
               <!-- Script Status Footer -->
-              <div class="script-status-footer pa-4 rounded bg-grey-darken-3">
+              <div class="script-status-footer pl-4 pr-4 pt-2 pb-2 bg-grey-darken-4">
                 <div class="d-flex align-center justify-space-between">
                   <div class="d-flex align-center gap-4">
-                    <v-chip
-                      size="small"
-                      color="success"
-                      variant="flat"
-                    >
-                      <v-icon start size="small">mdi-check-circle</v-icon>
-                      Synced
-                    </v-chip>
-                    <span class="text-caption text-medium-emphasis">
-                      Last update: {{ lastSyncTime }}
-                    </span>
                     <span class="text-caption text-medium-emphasis">
                       {{ characterCount }} characters · {{ wordCount }} words
                     </span>
                   </div>
+                  <v-spacer></v-spacer>
+                  <span class="text-caption text-medium-emphasis mr-8">
+                    Last update: {{ lastSyncTime }}
+                  </span>
                   <v-btn
                     variant="outlined"
                     size="small"
@@ -161,7 +154,10 @@
                 <div class="d-flex gap-3 mb-4">
                   <!-- Playback Speed -->
                   <div class="control-group flex-grow-1">
-                    <label class="text-caption text-medium-emphasis mb-1 d-block">Playback Speed</label>
+                    <label
+                      class="text-caption text-medium-emphasis mb-1 d-block"
+                      >Playback Speed</label
+                    >
                     <div class="d-flex align-center gap-2">
                       <v-btn
                         icon="mdi-minus"
@@ -188,7 +184,10 @@
 
                   <!-- Lines to Scroll -->
                   <div class="control-group flex-grow-1">
-                    <label class="text-caption text-medium-emphasis mb-1 d-block">Lines to scroll</label>
+                    <label
+                      class="text-caption text-medium-emphasis mb-1 d-block"
+                      >Lines to scroll</label
+                    >
                     <div class="d-flex align-center gap-2">
                       <v-btn
                         icon="mdi-minus"
@@ -223,7 +222,10 @@
                 <div class="d-flex gap-3 mb-4">
                   <!-- Text Width -->
                   <div class="control-group flex-grow-1">
-                    <label class="text-caption text-medium-emphasis mb-1 d-block">Text Width</label>
+                    <label
+                      class="text-caption text-medium-emphasis mb-1 d-block"
+                      >Text Width</label
+                    >
                     <div class="d-flex align-center gap-2">
                       <v-btn
                         icon="mdi-minus"
@@ -250,7 +252,10 @@
 
                   <!-- Font Size -->
                   <div class="control-group flex-grow-1">
-                    <label class="text-caption text-medium-emphasis mb-1 d-block">Font Size</label>
+                    <label
+                      class="text-caption text-medium-emphasis mb-1 d-block"
+                      >Font Size</label
+                    >
                     <div class="d-flex align-center gap-2">
                       <v-btn
                         icon="mdi-minus"
@@ -313,7 +318,9 @@
                     <v-icon size="48" class="mb-3 text-grey-darken-1"
                       >mdi-account-group</v-icon
                     >
-                    <div class="text-body-2 mb-1">No participants connected</div>
+                    <div class="text-body-2 mb-1">
+                      No participants connected
+                    </div>
                     <div class="text-caption">
                       Waiting for devices to join...
                     </div>
@@ -324,19 +331,32 @@
                       v-for="participant in participants"
                       :key="participant.id"
                       class="participant-item"
-                      :class="{ 'participant-item-you': participant.id === participantId }"
+                      :class="{
+                        'participant-item-you':
+                          participant.id === participantId,
+                      }"
                     >
-                      <v-icon 
-                        :color="participant.role === 'controller' ? 'blue' : 'green'"
+                      <v-icon
+                        :color="
+                          participant.role === 'controller' ? 'blue' : 'green'
+                        "
                         size="20"
                         class="mr-3"
                       >
-                        {{ participant.role === "controller" ? "mdi-laptop" : "mdi-monitor" }}
+                        {{
+                          participant.role === "controller"
+                            ? "mdi-laptop"
+                            : "mdi-monitor"
+                        }}
                       </v-icon>
-                      
+
                       <div class="flex-grow-1">
                         <div class="participant-name">
-                          {{ participant.role === "controller" ? "Controller" : "Teleprompter" }}
+                          {{
+                            participant.role === "controller"
+                              ? "Controller"
+                              : "Teleprompter"
+                          }}
                           <span
                             v-if="participant.id === participantId"
                             class="participant-you-badge"
@@ -348,13 +368,8 @@
                           Joined {{ formatTime(participant.joined_at) }}
                         </div>
                       </div>
-                      
-                      <v-icon 
-                        size="16" 
-                        color="success"
-                      >
-                        mdi-circle
-                      </v-icon>
+
+                      <v-icon size="16" color="success"> mdi-circle </v-icon>
                     </div>
                   </div>
                 </div>
