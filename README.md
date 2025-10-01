@@ -15,9 +15,9 @@ Multiple teleprompter clients are also supported to account for situations like 
     <td align="center"><b>Teleprompter Mode</b></td>
   </tr>
   <tr>
-    <td><img src="docs/landing.png" alt="Landing Page" width="300"/></td>
-    <td><img src="docs/controller.png" alt="Controller Mode" width="300"/></td>
-    <td><img src="docs/teleprompter.png" alt="Teleprompter Mode" width="300"/></td>
+    <td><img src=".img/landing.png" alt="Landing Page" width="300"/></td>
+    <td><img src=".img/controller.png" alt="Controller Mode" width="300"/></td>
+    <td><img src=".img/teleprompter.png" alt="Teleprompter Mode" width="300"/></td>
   </tr>
   <tr>
     <td align="center">Select your role to get started</td>

@@ -1,18 +1,8 @@
 ---
 name: Build and Push Docker Images
-permissions:
-  contents: read
-  packages: write
 
 on:
-  pull_request:
-    paths:
-      - '**/*.py'
-      - '**/*.js'
-      - '**/*.vue'
-      - '**/package.json'
-      - '**/requirements.txt'
-      - '**/Dockerfile'
+  pull_request: {}
   release: { types: [ created ] }
   workflow_dispatch:
     inputs:
@@ -24,6 +14,10 @@ on:
         description: 'Specific service to build (leave empty to build all services)'
         type: string
         required: false
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   generate-matrix:

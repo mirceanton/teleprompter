@@ -124,7 +124,7 @@ Manual testing is the primary validation method. After making changes, test the 
 │           ├── Landing.vue       # Mode selection page
 │           ├── Controller.vue    # Script editor and controls
 │           └── Teleprompter.vue  # Text display page
-├── docs/                         # Screenshots for README
+├── .img/                         # Screenshots for README
 ├── compose.yaml                  # Production Docker Compose (pre-built images + Redis)
 ├── compose.dev.yaml              # Development override (local builds)
 └── .github/
