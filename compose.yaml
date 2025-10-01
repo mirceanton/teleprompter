@@ -1,6 +1,7 @@
 ---
 services:
   backend:
+    # image: ghcr.io/mirceanton/teleprompter-backend:latest
     build: ./backend
     ports: [ "8001:8001" ]
     restart: unless-stopped
@@ -16,6 +17,7 @@ services:
       retries: 3
 
   frontend:
+    # image: ghcr.io/mirceanton/teleprompter-frontend:latest
     build: ./frontend
     ports: ["8000:80"]
     restart: unless-stopped
@@ -23,7 +25,7 @@ services:
       - ./frontend/public/config.json:/usr/share/nginx/html/config.json:ro
 
   redis:
-    image: redis:8.2.1-alpine
+    image: docker.io/redis:8.2.1-alpine
     ports: ["6379:6379"]
     restart: unless-stopped
     healthcheck:
