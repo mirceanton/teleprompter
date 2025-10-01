@@ -1,172 +1,63 @@
 # Remote Teleprompter
 
-A modern teleprompter application that enables real-time teleprompter control between devices. One device (computer) acts as a controller to edit scripts and manage playback, while another device (phone/tablet) displays the teleprompter text.
+A teleprompter application that enables real-time teleprompter control between devices. One device (computer) acts as a controller to edit scripts and manage playback, while one or more other devices (phones/tablets) display the teleprompter text.
 
-## Features
+This project has been made to facilitate recording videos for my YouTube channel where I am using my phone on a basic teleprompter in front of my camera and I need to control it from my computer which is recording everything via OBS. With this project, I can simply navigate to a URL on my phone and place it on the prompter and then manage everything from my computer, not having to touch the phone anymore until I'm done.
 
-- **Remote Control**: Control teleprompter from any device with a web browser
-- **Real-time Sync**: WebSocket-based communication for instant updates  
-- **Single Page Application**: Unified Vue.js frontend with configurable backend URL
-- **Responsive Design**: Works on desktop, tablets, and mobile devices
-- **Channel-based**: Multiple independent teleprompter sessions via named channels
-- **Mirror Support**: Horizontal and vertical mirroring for teleprompter setup flexibility
-- **Adjustable Settings**: Speed control, font size, and text width adjustment
+Multiple teleprompter clients are also supported to account for situations like multi-camera setups with multiple teleprompters.
 
-## Architecture
+## 📸 Screenshots
 
-The application uses a simplified architecture with:
+<table>
+  <tr>
+    <td align="center"><b>Landing Page</b></td>
+    <td align="center"><b>Controller Mode</b></td>
+    <td align="center"><b>Teleprompter Mode</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/landing.png" alt="Landing Page" width="300"/></td>
+    <td><img src="docs/controller.png" alt="Controller Mode" width="300"/></td>
+    <td><img src="docs/teleprompter.png" alt="Teleprompter Mode" width="300"/></td>
+  </tr>
+  <tr>
+    <td align="center">Select your role to get started</td>
+    <td align="center">Edit scripts and control playback</td>
+    <td align="center">Display the scrolling text</td>
+  </tr>
+</table>
 
-- **Backend Service** (`backend/`): FastAPI backend providing WebSocket and REST APIs
-- **Frontend Service** (`frontend/`): Unified Vue.js application with Vue Router for all pages (landing, controller, teleprompter)
+## 🎯 Requirements
 
-## Quick Start
+- Docker
+- Docker Compose
 
-### Prerequisites
-- Docker and Docker Compose
-- Node.js 18+ (for development)
-- Python 3.11+ (for backend development)
+## ⚙️ Configuration Options
 
-### Installation & Running
+### Configuring the Frontend
 
-```bash
-# Clone the repository
-git clone https://github.com/mirceanton/teleprompter.git
-cd teleprompter
+The frontend is a basic static site built using VueJS and then served via an NGINX container. Thus, it can't really take in environment variables to customize, for example, the URL at which the API is located. Thus, it loads the configuration at runtime via a `config.json` file.
 
-# Start all services using Docker Compose
-docker-compose up -d
+This file is located at `/usr/share/nginx/html/config.json`. Its main purpose right now is to point the frontend to the right URL for the backend API. Since this is a static site served by NGINX, this means that the code runs in your browser, not on the server. This is important because it essentially means `localhost` ain't cutting it. You need to provide the actual hostname and port at which the backend is running. For example:
+
+```json
+{
+  "backendUrl": "http://192.168.1.2:8001" // this is where the backend is found
+}
 ```
 
-The application will be available at:
-- **Main Application**: http://localhost:3000
-- **Backend API**: http://localhost:8001
+### Configuring the Backend
 
-### Configuration
+The backend uses a Redis instance to store all of the state information. Realistically speaking, if you're running a single replica for the backend this is not required and you can run it by itself. This starts coming in handy if you're running this in kubernetes, for example, and you are scaling out the deployment to 2 or more replicas.
 
-The frontend is configured using a `config.json` file at runtime, allowing you to use the same Docker image across different environments.
+To configure the connection between the backend and redis, these are the required environment variables:
 
-**For Docker deployments:**
-```bash
-# Create a custom config file
-echo '{"backendUrl":"http://my-backend:8001"}' > ./my-config.json
-
-# Mount the config file into the container
-docker run -p 3000:80 \
-  -v $(pwd)/my-config.json:/usr/share/nginx/html/config.json:ro \
-  teleprompter-frontend
+```env
+REDIS_HOST=...
+REDIS_PORT=...
+REDIS_DB=...
+REDIS_PASSWORD=...
 ```
 
-**For Docker Compose:**
-```yaml
-services:
-  frontend:
-    image: teleprompter-frontend
-    ports:
-      - "3000:80"
-    volumes:
-      - ./config.json:/usr/share/nginx/html/config.json:ro
-```
+## 📝 License
 
-**For Kubernetes:**
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: teleprompter-config
-data:
-  config.json: |
-    {
-      "backendUrl": "http://teleprompter-backend:8001"
-    }
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: teleprompter-frontend
-spec:
-  template:
-    spec:
-      containers:
-      - name: frontend
-        image: teleprompter-frontend
-        volumeMounts:
-        - name: config
-          mountPath: /usr/share/nginx/html/config.json
-          subPath: config.json
-          readOnly: true
-      volumes:
-      - name: config
-        configMap:
-          name: teleprompter-config
-```
-
-If no `config.json` file is provided, the frontend will use smart defaults with the backend URL set to the same host on port 8001.
-
-### Usage
-1. Open http://localhost:3000 in your web browser
-2. Enter a room ID or generate one
-3. Choose your role:
-   - **💻 Controller**: For editing scripts and controlling playback
-   - **📱 Teleprompter**: For full-screen text display
-4. Click "Join Room"
-5. In Controller mode: Edit your script and use the playback controls
-6. In Teleprompter mode: The text will display and scroll based on controller commands
-
-## API Endpoints
-
-The backend service provides the following endpoints:
-
-- **GET /api/health**: Health check endpoint
-- **WebSocket /api/ws/{channel}**: Real-time communication for teleprompter control
-
-## Technology Stack
-
-- **Backend**: FastAPI (Python) with WebSocket support
-- **Frontend**: Vue.js 3 with Vite for modern JavaScript tooling
-- **Communication**: WebSockets for real-time messaging
-- **Infrastructure**: Docker, Docker Compose, Nginx reverse proxy
-- **Styling**: Modern CSS with responsive design
-
-## Development
-
-### Making Changes
-
-Each service can be developed independently:
-
-1. **Backend changes**: 
-   - Navigate to `services/backend/`
-   - Edit `main.py` for API endpoints, WebSocket handling
-   - Edit `requirements.txt` for Python dependencies
-
-2. **Frontend services changes**:
-   - Navigate to `services/landing/`, `services/controller/`, or `services/teleprompter/`
-   - Edit Vue.js components in `src/`
-   - Edit `package.json` for Node.js dependencies
-
-### Development Workflow
-
-```bash
-# Start all services for development
-docker-compose up -d
-
-# For frontend development with hot reload
-cd services/controller  # or landing/teleprompter
-npm install
-npm run dev
-
-# For backend development
-cd services/backend
-pip install -r requirements.txt
-python main.py
-```
-
-### Testing
-After making changes:
-1. Rebuild affected services: `docker-compose build <service-name>`
-2. Restart services: `docker-compose restart`
-3. Test through the main proxy at http://localhost:3000
-4. Verify WebSocket communication between controller and teleprompter modes
-
-## License
-
-This project is licensed under the terms included in the LICENSE file.
+This code has been mostly AI generated and used as a playground/testbed for GitHub copilot. My manual intervention in here has been more or less minimal, mostly doing cleanup here and there. Thus, I take no "ownership" over this code. I did not write it, it is not "mine". Feel free to do whatever. As the [LICENSE](./LICENSE) states: "This is free and unencumbered software released into the public domain".
