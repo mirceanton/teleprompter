@@ -1,117 +1,228 @@
 # Remote Teleprompter
 
-Remote Teleprompter is a Python FastAPI web application that enables real-time teleprompter control between devices. One device (computer) acts as a controller to edit scripts and manage playback, while another device (phone/tablet) displays the teleprompter text. Communication happens via WebSockets for real-time synchronization.
+Remote Teleprompter is a multi-device teleprompter application with a FastAPI backend and Vue.js frontend. One device (computer) acts as a controller to edit scripts and manage playback, while one or more other devices (phones/tablets) display the teleprompter text. Communication happens via WebSockets for real-time synchronization between all connected clients.
 
 Always reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.
 
+## Architecture Overview
+
+This is a **split architecture** application:
+- **Backend**: FastAPI (Python) running on port 8000 (dev) or 8001 (Docker)
+- **Frontend**: Vue.js + Vite serving a static SPA on port 3000 (dev) or 8000 (Docker)
+- **Communication**: WebSockets for real-time bidirectional messaging
+- **State Management (Optional)**: Redis for multi-replica deployments (rarely needed)
+
 ## Working Effectively
 
-### Bootstrap and Run the Application
-- **Install Python dependencies**: `pip install -r requirements.txt` -- takes 30 seconds. NEVER CANCEL.
-- **Start the application**: `python3 main.py` -- starts in 2-3 seconds on http://0.0.0.0:8000
-- **Health check**: `curl http://localhost:8000/health` -- returns {"status":"healthy","active_channels":0}
-- **Stop the application**: Use Ctrl+C in the terminal running main.py
+### Development Workflow (Local - Hot Reloading)
 
-### Docker (Known Limitation)
-- **Docker build fails** in sandbox environments due to SSL certificate issues when installing Python packages
-- `docker build .` will fail with SSL certificate verification errors
-- Use direct Python execution instead: `python3 main.py`
+For active development with hot-reloading capabilities, run services locally **without Docker**:
+
+**Backend** (from `backend/` directory):
+```bash
+pip install -r requirements.txt
+python3 src/main.py
+```
+- Runs on **http://0.0.0.0:8000**
+- Auto-reloads on file changes (uvicorn watch)
+- No Redis required for local dev
+
+**Frontend** (from `frontend/` directory):
+```bash
+npm install
+npm run dev
+```
+- Runs on **http://localhost:3000**
+- Hot module replacement (HMR) enabled
+- Vite dev server with instant updates
+
+**Important**: When developing locally, the frontend (`config.json`) should point to `http://localhost:8000` for the backend API.
+
+### Docker Testing Workflow
+
+Before pushing to git, **always test with Docker** to ensure production build works:
+
+```bash
+docker compose -f compose.yaml -f compose.dev.yaml up --build
+```
+
+This command:
+- Builds both frontend and backend images locally
+- Runs with Redis for multi-instance testing
+- Maps ports: **frontend on 8000**, **backend on 8001**
+- Validates production build process
+
+### Production Deployment
+
+For production deployments (uses pre-built images from GHCR):
+
+```bash
+docker compose up -d
+```
+
+This pulls and runs the latest production images with Redis included by default.
 
 ## Validation
 
-### CRITICAL: Manual Functional Testing Required
-After making any changes, ALWAYS run through this complete validation scenario:
+### Manual Functional Testing
 
-1. **Start the application**: `python3 main.py`
-2. **Open browser**: Navigate to http://localhost:8000
-3. **Test Controller Mode**:
-   - Click "💻 Controller Mode" button
-   - Enter any channel name (e.g., "test-channel")
-   - Click "Connect to Channel"
-   - Verify status shows "Connected - CONTROLLER Mode"
-   - Verify script editor appears with default text
-   - Test controls: click "▶️ Start", "⏸️ Pause", "⏮️ Reset" buttons
-   - Modify text in script editor and click "🔄 Sync Text"
-   - Adjust speed slider and text width slider
-4. **Test Teleprompter Mode** (optional, in new browser tab):
-   - Open new tab to http://localhost:8000
-   - Click "📱 Teleprompter Mode" button
-   - Use same channel name as controller
-   - Click "Connect to Channel"
-   - Verify teleprompter display appears
-5. **Verify WebSocket Communication**:
-   - Check terminal output for WebSocket connection messages
-   - Look for messages like "Client connected to channel: [channel-name]"
-   - Verify control commands generate "Received [command] message" logs
+Manual testing is the primary validation method. After making changes, test the complete workflow:
+
+**Using Docker Compose** (recommended before pushing):
+1. Start services: `docker compose -f compose.yaml -f compose.dev.yaml up --build`
+2. Access frontend at **http://localhost:8000**
+3. Test all three pages:
+   - **Landing Page**: Verify both mode buttons are visible
+   - **Controller Mode**: Test script editing, playback controls (start/pause/reset), speed slider, text width
+   - **Teleprompter Mode**: Verify text display and scrolling synchronization
+4. Verify backend health at **http://localhost:8001/api/health**
+5. Check terminal logs for WebSocket connections and Redis connectivity
+
+**Using Local Development** (for quick iteration):
+1. Start backend: `cd backend && python3 src/main.py`
+2. Start frontend: `cd frontend && npm run dev`
+3. Access frontend at **http://localhost:3000**
+4. Test the same three pages as above
+5. Monitor terminal output in both backend and frontend terminals
+
+### Key Testing Scenarios
+- **Multi-device sync**: Open controller on one device, teleprompter on another with same channel name
+- **WebSocket communication**: Verify real-time updates when changing speed, text, or playback state
+- **Reconnection**: Test behavior when refreshing pages or losing connection
 
 ### No Automated Tests
 - **No test framework** is configured in this repository
-- **No linting tools** are configured
-- Manual functional testing is the primary validation method
-- Always test the complete user workflow above after making changes
+- **No linting tools** are configured (though code follows Python/JavaScript conventions)
+- Manual functional testing is required for all changes
 
 ## Common Tasks
 
 ### Repository Structure
 ```
-/home/runner/work/teleprompter/teleprompter/
-├── main.py                    # FastAPI backend with WebSocket handling
-├── requirements.txt           # Python dependencies (FastAPI, uvicorn, websockets)
-├── templates/
-│   └── index.html            # Main UI template with controller/teleprompter modes
-├── static/
-│   ├── css/
-│   │   └── style.css         # Application styling
-│   └── js/
-│       └── app.js           # Frontend JavaScript with WebSocket logic
-├── Dockerfile               # Docker configuration (build fails in sandbox)
-├── compose.yaml            # Docker Compose configuration
+/home/mircea/Workspace/apps/teleprompter/
+├── backend/
+│   ├── Dockerfile
+│   ├── requirements.txt           # Python dependencies
+│   └── src/
+│       ├── main.py               # FastAPI app, WebSocket endpoints, startup logic
+│       ├── connection_manager.py # WebSocket connection management
+│       └── redis_manager.py      # Redis pub/sub for multi-instance support
+├── frontend/
+│   ├── Dockerfile
+│   ├── package.json              # Node.js dependencies
+│   ├── vite.config.js            # Vite configuration
+│   ├── nginx.conf                # NGINX config for production
+│   ├── index.html                # HTML entry point
+│   ├── public/
+│   │   └── config.json          # Runtime config (backend URL)
+│   └── src/
+│       ├── main.js               # Vue app entry point
+│       ├── App.vue               # Root Vue component
+│       ├── utils/
+│       │   └── config.js        # Config loader utility
+│       └── views/
+│           ├── Landing.vue       # Mode selection page
+│           ├── Controller.vue    # Script editor and controls
+│           └── Teleprompter.vue  # Text display page
+├── docs/                         # Screenshots for README
+├── compose.yaml                  # Production Docker Compose (pre-built images + Redis)
+├── compose.dev.yaml              # Development override (local builds)
 └── .github/
+    ├── copilot-instructions.md
     └── workflows/
         ├── docker-build-push.yaml  # CI/CD for Docker images
         └── git-release.yaml         # Release automation
 ```
 
 ### Key Application Components
-- **FastAPI Backend** (`main.py`): Serves HTML template, static files, WebSocket endpoints
-- **WebSocket Communication**: Real-time messaging between controller and teleprompter modes
-- **Frontend JavaScript** (`static/js/app.js`): Handles UI interactions, WebSocket connections, mode switching
-- **HTML Template** (`templates/index.html`): Single-page application with both controller and teleprompter interfaces
+
+**Backend (FastAPI + Python)**:
+- `main.py`: FastAPI application, WebSocket endpoints (`/ws/{channel}`), health check, startup/shutdown logic
+- `connection_manager.py`: Manages WebSocket connections per channel, broadcasts messages
+- `redis_manager.py`: Optional Redis pub/sub for synchronizing state across multiple backend replicas
+
+**Frontend (Vue.js + Vite)**:
+- `Landing.vue`: Initial page where users select Controller or Teleprompter mode
+- `Controller.vue`: Script editor, playback controls (start/pause/reset), speed/width sliders
+- `Teleprompter.vue`: Full-screen text display that scrolls based on controller commands
+- `config.json`: Runtime configuration file (backend URL must be hostname/IP, not localhost)
+
+**Communication**:
+- WebSocket channels identified by user-provided channel names
+- Messages: `join`, `text`, `start`, `pause`, `reset`, `speed`, `width`, `mode`
+- Real-time bidirectional sync between all connected clients on same channel
 
 ### Making Changes
-1. **Backend changes**: Edit `main.py` for API endpoints, WebSocket handling, or server configuration
-2. **Frontend logic**: Edit `static/js/app.js` for UI behavior, WebSocket communication, or control logic  
-3. **UI styling**: Edit `static/css/style.css` for visual appearance
-4. **HTML structure**: Edit `templates/index.html` for layout or new UI elements
-5. **Dependencies**: Edit `requirements.txt` for new Python packages
+
+**Backend changes** (`backend/src/`):
+1. Edit `main.py` for API endpoints, WebSocket logic, startup/shutdown handlers
+2. Edit `connection_manager.py` for WebSocket connection handling and broadcasting
+3. Edit `redis_manager.py` for Redis pub/sub functionality
+4. Update `requirements.txt` for new Python packages
+5. **Restart required**: Stop backend (Ctrl+C) and run `python3 src/main.py` again
+
+**Frontend changes** (`frontend/src/`):
+1. Edit Vue components in `views/` for UI changes (Landing, Controller, Teleprompter)
+2. Edit `App.vue` for routing or global layout changes
+3. Edit `utils/config.js` for configuration loading logic
+4. Update `package.json` for new npm packages
+5. **Auto-reload**: Changes apply immediately via Vite HMR (just save the file)
+
+**Configuration changes**:
+- Backend: Environment variables or defaults in `redis_manager.py`
+- Frontend: `public/config.json` for runtime configuration (backend URL)
+- Docker: `compose.yaml` (production) or `compose.dev.yaml` (development overrides)
 
 ### Development Workflow
-1. Make your changes to the relevant files
-2. **ALWAYS restart the application** after backend changes: Stop with Ctrl+C, run `python3 main.py`
-3. **Frontend changes** take effect immediately (refresh browser)
-4. **Run complete functional validation** using the scenario above
-5. Check terminal logs for any WebSocket connection issues or errors
+1. Make changes to backend or frontend files
+2. **Backend**: Restart with Ctrl+C then `python3 src/main.py` (from `backend/` dir)
+3. **Frontend**: Changes auto-reload via Vite HMR (no restart needed)
+4. Test changes in browser (refresh if needed)
+5. **Before committing**: Test with Docker Compose to validate production build
+6. Check terminal logs for errors or WebSocket connection issues
 
 ### Debugging
-- **WebSocket issues**: Check browser developer console for connection errors
-- **Backend errors**: Monitor terminal output where `python3 main.py` is running
-- **Connection problems**: Verify both devices use the same channel name
-- **UI issues**: Use browser developer tools to inspect HTML/CSS/JavaScript
+- **WebSocket issues**: Check browser developer console (Network tab → WS) for connection errors
+- **Backend errors**: Monitor terminal where `python3 src/main.py` is running for stack traces
+- **Frontend errors**: Check browser console for JavaScript errors
+- **Connection problems**: Ensure both devices use the same channel name
+- **Port conflicts**: Backend uses 8000 (dev) or 8001 (Docker), frontend uses 3000 (dev) or 8000 (Docker)
+- **Redis errors**: Check if Redis is running (Docker only) or remove Redis dependency for single-instance deployments
+- **Config issues**: Verify `frontend/public/config.json` points to correct backend URL (use hostname/IP, not localhost for non-dev)
+
+### Important Configuration Notes
+
+**Frontend Backend URL**:
+- The frontend `config.json` must specify the backend URL using the **actual hostname or IP address**
+- **Do NOT use `localhost`** except for local development
+- This is because the frontend runs in the browser, so "localhost" refers to the client's machine, not the server
+- Example for production: `{"backendUrl": "http://192.168.1.100:8001"}`
+- Example for local dev: `{"backendUrl": "http://localhost:8000"}`
+
+**Redis (Optional)**:
+- Redis is only needed for multi-replica backend deployments (e.g., Kubernetes with 2+ replicas)
+- For 99.99% of use cases (single backend instance), Redis is **not required**
+- Local development: Run without Redis (just backend + frontend)
+- Docker testing: Includes Redis by default to validate multi-instance scenarios
+- To disable Redis: Remove `redis` service from `compose.yaml` and remove `depends_on`/`environment` from backend
 
 ## Time Expectations
 - **Dependency installation**: 30 seconds. NEVER CANCEL.
 - **Application startup**: 2-3 seconds. NEVER CANCEL.
 - **Functional testing**: 2-3 minutes for complete validation scenario
-- **Docker build**: FAILS in sandbox environments - do not attempt
+- **Docker build**: Works on standard machines; may fail in restricted sandbox environments
 
 ## Requirements
 - **Python 3.11+** (tested with Python 3.12.3)
-- **pip** for dependency management
+- **Node.js 18+** for frontend development
+- **pip** for Python dependency management
+- **npm** for JavaScript dependency management
+- **Docker & Docker Compose** for containerized testing and deployment
 - **Modern web browser** for functional testing
-- **Network access** for installing Python packages (pip install)
+- **Network access** for installing packages (pip/npm install)
 
 ## Known Limitations
-- **Docker build fails** in sandboxed environments due to SSL certificate verification
 - **No automated test suite** - rely on manual functional testing
 - **No linting configuration** - manual code review required
-- **Single-file backend** - all FastAPI logic in main.py
+- **Backend split across multiple files** - main.py, connection_manager.py, redis_manager.py
+- **Frontend config requires hostname/IP** - cannot use "localhost" for production deployments (frontend runs in browser)
