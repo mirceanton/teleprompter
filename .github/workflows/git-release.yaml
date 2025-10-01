@@ -4,7 +4,6 @@ permissions: { contents: read }
 
 on:
   schedule: [{ cron: "0 0 * * *" }]
-
   workflow_dispatch:
     inputs:
       dry-run:
@@ -12,14 +11,6 @@ on:
         default: false
         required: false
         type: boolean
-
-  push:
-    branches: ["main"]
-    paths:
-      - .github/workflows/git-release.yaml
-      - static/**
-      - templates/**
-      - main.py
 
 jobs:
   release:
