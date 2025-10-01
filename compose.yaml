@@ -1,8 +1,10 @@
 ---
+# Production configuration - uses pre-built images from GHCR
+# For single-instance deployments, you can remove the 'redis' service and
+# remove the 'depends_on' and 'environment' sections from the backend service
 services:
   backend:
-    # image: ghcr.io/mirceanton/teleprompter-backend:latest
-    build: ./backend
+    image: ghcr.io/mirceanton/teleprompter-backend:latest
     ports: [ "8001:8001" ]
     restart: unless-stopped
     depends_on:
@@ -17,8 +19,7 @@ services:
       retries: 3
 
   frontend:
-    # image: ghcr.io/mirceanton/teleprompter-frontend:latest
-    build: ./frontend
+    image: ghcr.io/mirceanton/teleprompter-frontend:latest
     ports: ["8000:80"]
     restart: unless-stopped
     volumes:

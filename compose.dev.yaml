@@ -1,0 +1,11 @@
+---
+# Development override - builds images locally instead of pulling from GHCR
+# Usage: docker compose -f compose.yaml -f compose.dev.yaml up --build
+services:
+  backend:
+    build: ./backend
+    image: teleprompter-backend:dev
+
+  frontend:
+    build: ./frontend
+    image: teleprompter-frontend:dev
