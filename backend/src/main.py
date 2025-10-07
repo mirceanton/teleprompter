@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from redis_manager import redis_manager
 from connection_manager import ConnectionManager
+from obs_manager import obs_manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -37,9 +38,21 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Redis not available: {e}. Running without Redis pub/sub.")
 
+    # Initialize OBS manager
+    async def obs_status_callback(status_message):
+        """Callback to broadcast OBS status updates"""
+        await connection_manager.broadcast_to_all_instances(status_message)
+
+    obs_manager.set_status_callback(obs_status_callback)
+    
+    # Try to connect to OBS if enabled
+    if obs_manager.is_enabled():
+        await obs_manager.connect()
+
     yield
 
     await redis_manager.disconnect()
+    await obs_manager.disconnect()
 
 
 # Initialize FastAPI application
@@ -68,6 +81,23 @@ class JoinRequest(BaseModel):
 class JoinResponse(BaseModel):
     success: bool
     message: str
+
+
+class OBSConfig(BaseModel):
+    host: str = "localhost"
+    port: int = 4455
+    password: str = ""
+    enabled: bool = False
+    start_delay: int = 0
+
+
+class OBSStatusResponse(BaseModel):
+    enabled: bool
+    connected: bool
+    recording: bool
+    host: str
+    port: int
+    start_delay: int
 
 
 # Initialize connection manager
@@ -100,6 +130,13 @@ async def websocket_endpoint(websocket: WebSocket):
             connection_update, exclude=websocket
         )
 
+        # Send current OBS status to the new client
+        obs_status = await obs_manager.get_status()
+        await websocket.send_text(json.dumps({
+            "type": "obs_status",
+            **obs_status
+        }))
+
         # Message handling loop
         while True:
             message_text = await websocket.receive_text()
@@ -107,6 +144,16 @@ async def websocket_endpoint(websocket: WebSocket):
             try:
                 message = json.loads(message_text)
                 message["_sender"] = "client"
+
+                # Handle OBS integration for teleprompter control
+                if message.get("type") == "start":
+                    # Start OBS recording when teleprompter starts
+                    if obs_manager.is_enabled() and obs_manager.is_connected():
+                        asyncio.create_task(obs_manager.start_recording_with_delay())
+                elif message.get("type") == "pause" or message.get("type") == "reset":
+                    # Stop OBS recording when teleprompter stops/resets
+                    if obs_manager.is_enabled() and obs_manager.is_connected() and obs_manager.is_recording():
+                        asyncio.create_task(obs_manager.stop_recording())
 
                 # Broadcast to all other clients across instances
                 await connection_manager.broadcast_to_all_instances(
@@ -143,6 +190,72 @@ async def health_check():
             "available": redis_manager.is_available(),
         },
     }
+
+
+@app.get("/api/obs/status", response_model=OBSStatusResponse)
+async def get_obs_status():
+    """Get current OBS status"""
+    try:
+        status = await obs_manager.get_status()
+        return OBSStatusResponse(**status)
+    except Exception as e:
+        logger.error(f"Error getting OBS status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get OBS status")
+
+
+@app.post("/api/obs/config")
+async def configure_obs(config: OBSConfig):
+    """Configure OBS connection settings"""
+    try:
+        # Update configuration
+        obs_manager.configure(
+            host=config.host,
+            port=config.port,
+            password=config.password,
+            enabled=config.enabled,
+            start_delay=config.start_delay,
+        )
+
+        # Try to connect if enabled
+        if config.enabled:
+            connected = await obs_manager.connect()
+            if not connected:
+                return {
+                    "success": False,
+                    "message": "OBS configuration saved but failed to connect"
+                }
+        else:
+            await obs_manager.disconnect()
+
+        return {"success": True, "message": "OBS configuration saved"}
+    except Exception as e:
+        logger.error(f"Error configuring OBS: {e}")
+        raise HTTPException(status_code=500, detail="Failed to configure OBS")
+
+
+@app.post("/api/obs/test-connection")
+async def test_obs_connection():
+    """Test OBS connection with current settings"""
+    try:
+        connected = await obs_manager.connect()
+        if connected:
+            status = await obs_manager.get_status()
+            return {
+                "success": True,
+                "message": "Successfully connected to OBS",
+                "status": status
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Failed to connect to OBS"
+            }
+    except Exception as e:
+        logger.error(f"Error testing OBS connection: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to connect to OBS: {str(e)}"
+        }
 
 
 if __name__ == "__main__":
