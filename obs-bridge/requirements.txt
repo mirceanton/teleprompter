@@ -1,0 +1,2 @@
+websockets==13.1
+obs-websocket-py==1.0

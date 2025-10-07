@@ -9,3 +9,7 @@ services:
   frontend:
     build: ./frontend
     image: teleprompter-frontend:dev
+
+  obs-bridge:
+    build: ./obs-bridge
+    image: teleprompter-obs-bridge:dev

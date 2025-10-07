@@ -36,6 +36,40 @@
             {{ teleprompterContent || "Waiting for text from controller..." }}
           </div>
         </div>
+
+        <!-- REC Indicator Badge -->
+        <div v-if="obsRecording" class="rec-indicator">
+          <div class="rec-dot"></div>
+          <span class="rec-text">REC</span>
+        </div>
+
+        <!-- Countdown Overlay (Default Mode) -->
+        <div v-if="showCountdown && !waitingForOBS" class="countdown-overlay">
+          <div class="countdown-circle">
+            <div class="countdown-number">{{ Math.ceil(countdownValue) }}</div>
+          </div>
+          <div class="countdown-text">Starting in...</div>
+          <div v-if="obsConnected && obsRecording" class="obs-status">
+            <v-icon color="success" size="24">mdi-check-circle</v-icon>
+            <span class="ml-2">OBS Ready</span>
+          </div>
+        </div>
+
+        <!-- Waiting for OBS Overlay (Strict Mode) -->
+        <div v-if="waitingForOBS" class="waiting-overlay">
+          <v-progress-circular
+            indeterminate
+            color="teal"
+            size="80"
+            width="6"
+            class="mb-4"
+          />
+          <div class="waiting-text">Waiting for recording to start...</div>
+          <div v-if="waitTimeout > 0 && waitTimeout <= 5" class="timeout-warning">
+            <v-icon color="warning" size="24">mdi-alert</v-icon>
+            <span class="ml-2">Aborting in {{ Math.ceil(waitTimeout) }}s...</span>
+          </div>
+        </div>
       </div>
     </v-main>
 
@@ -72,6 +106,16 @@ export default {
         text: "",
         color: "success",
       },
+      
+      // OBS Integration
+      obsConnected: false,
+      obsRecording: false,
+      showCountdown: false,
+      countdownValue: 0,
+      countdownInterval: null,
+      waitingForOBS: false,
+      waitTimeout: 30,
+      waitTimeoutInterval: null,
     };
   },
 
@@ -124,6 +168,14 @@ export default {
       this.onFullscreenChange
     );
     document.removeEventListener("MSFullscreenChange", this.onFullscreenChange);
+    
+    // Clean up OBS integration timers
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
+    if (this.waitTimeoutInterval) {
+      clearInterval(this.waitTimeoutInterval);
+    }
   },
 
   methods: {
@@ -177,7 +229,7 @@ export default {
           this.resetScrolling();
           break;
         case "start":
-          this.startScrolling();
+          this.handleStartMessage(message);
           break;
         case "pause":
           this.pauseScrolling();
@@ -206,6 +258,12 @@ export default {
           break;
         case "scroll_lines":
           this.scrollByLines(message.direction, message.lines, message.smooth);
+          break;
+        case "obs_status":
+          this.handleObsStatus(message);
+          break;
+        case "obs_recording_confirmed":
+          this.handleObsConfirmation();
           break;
       }
     },
@@ -358,6 +416,73 @@ export default {
       this.snackbar.color = color;
       this.snackbar.show = true;
     },
+
+    // OBS Integration methods
+    handleStartMessage(message) {
+      const countdown = message.countdown || 0;
+      const waitForOBS = message.waitForOBS || false;
+
+      if (waitForOBS) {
+        // Strict mode - wait for OBS confirmation
+        this.waitingForOBS = true;
+        this.waitTimeout = 30;
+        
+        // Start timeout countdown
+        this.waitTimeoutInterval = setInterval(() => {
+          this.waitTimeout -= 0.1;
+          if (this.waitTimeout <= 0) {
+            this.cancelWaitingForOBS();
+            this.showSnackbar("OBS confirmation timeout - starting anyway", "warning");
+          }
+        }, 100);
+      } else if (countdown > 0) {
+        // Default mode - show countdown
+        this.showCountdown = true;
+        this.countdownValue = countdown;
+        
+        // Update countdown every 100ms for smooth animation
+        this.countdownInterval = setInterval(() => {
+          this.countdownValue -= 0.1;
+          if (this.countdownValue <= 0) {
+            this.finishCountdown();
+          }
+        }, 100);
+      } else {
+        // No countdown, start immediately
+        this.startScrolling();
+      }
+    },
+
+    handleObsStatus(message) {
+      this.obsConnected = message.connected || false;
+      this.obsRecording = message.recording || false;
+    },
+
+    handleObsConfirmation() {
+      if (this.waitingForOBS) {
+        this.cancelWaitingForOBS();
+        this.startScrolling();
+      }
+    },
+
+    finishCountdown() {
+      if (this.countdownInterval) {
+        clearInterval(this.countdownInterval);
+        this.countdownInterval = null;
+      }
+      this.showCountdown = false;
+      this.countdownValue = 0;
+      this.startScrolling();
+    },
+
+    cancelWaitingForOBS() {
+      if (this.waitTimeoutInterval) {
+        clearInterval(this.waitTimeoutInterval);
+        this.waitTimeoutInterval = null;
+      }
+      this.waitingForOBS = false;
+      this.waitTimeout = 30;
+    },
   },
 };
 </script>
@@ -398,5 +523,132 @@ export default {
   display: inline-block;
   max-width: 100%;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* REC Indicator Badge */
+.rec-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  background: #d32f2f;
+  padding: 8px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.rec-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.rec-text {
+  color: #fff;
+  font-weight: bold;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+/* Countdown Overlay */
+.countdown-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.countdown-circle {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00897b, #26a69a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0, 137, 123, 0.4);
+  margin-bottom: 24px;
+}
+
+.countdown-number {
+  font-size: 80px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.countdown-text {
+  font-size: 24px;
+  color: #fff;
+  margin-top: 16px;
+}
+
+.obs-status {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  color: #4caf50;
+  font-size: 18px;
+}
+
+/* Waiting Overlay */
+.waiting-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.waiting-text {
+  font-size: 28px;
+  color: #fff;
+  margin-top: 24px;
+}
+
+.timeout-warning {
+  margin-top: 32px;
+  display: flex;
+  align-items: center;
+  color: #ffb300;
+  font-size: 20px;
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 </style>

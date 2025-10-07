@@ -307,6 +307,120 @@
                 </div>
               </div>
 
+              <!-- OBS Integration Section -->
+              <div class="control-section mb-8">
+                <h3 class="text-h6 font-weight-bold mb-6">OBS Integration</h3>
+                
+                <!-- Connection Status -->
+                <div class="mb-4">
+                  <label class="text-caption text-medium-emphasis mb-2 d-block">Connection Status</label>
+                  <v-chip
+                    :color="obsConnected ? 'success' : 'error'"
+                    variant="flat"
+                    size="small"
+                    prepend-icon="mdi-circle"
+                  >
+                    {{ obsConnected ? 'Connected' : 'Disconnected' }}
+                  </v-chip>
+                </div>
+
+                <!-- Recording Control Toggles -->
+                <div class="mb-4">
+                  <label class="text-caption text-medium-emphasis mb-2 d-block">Recording Control</label>
+                  <v-switch
+                    v-model="obsConfig.autoStart"
+                    label="Auto-start recording"
+                    color="teal"
+                    hide-details
+                    density="compact"
+                    @change="sendObsConfig"
+                  />
+                  <v-switch
+                    v-model="obsConfig.autoStop"
+                    label="Auto-stop recording"
+                    color="teal"
+                    hide-details
+                    density="compact"
+                    @change="sendObsConfig"
+                  />
+                  <v-switch
+                    v-model="obsConfig.autoPause"
+                    label="Auto-pause recording"
+                    color="teal"
+                    hide-details
+                    density="compact"
+                    @change="sendObsConfig"
+                  />
+                </div>
+
+                <!-- Recording Start Delay -->
+                <div class="mb-4">
+                  <label class="text-caption text-medium-emphasis mb-2 d-block">Recording Start Delay</label>
+                  <div class="d-flex align-center gap-2">
+                    <v-btn
+                      icon="mdi-minus"
+                      size="small"
+                      variant="outlined"
+                      @click="adjustCountdown(-0.5)"
+                    />
+                    <v-text-field
+                      :model-value="obsConfig.countdown.toFixed(1) + 's'"
+                      readonly
+                      variant="solo-filled"
+                      hide-details
+                      density="compact"
+                      class="text-center"
+                    />
+                    <v-btn
+                      icon="mdi-plus"
+                      size="small"
+                      variant="outlined"
+                      @click="adjustCountdown(0.5)"
+                    />
+                  </div>
+                </div>
+
+                <!-- Wait for Confirmation Mode -->
+                <div class="mb-4">
+                  <div class="d-flex align-center">
+                    <v-switch
+                      v-model="obsConfig.waitForOBS"
+                      label="Wait for OBS confirmation"
+                      color="teal"
+                      hide-details
+                      density="compact"
+                    />
+                    <v-tooltip location="top">
+                      <template v-slot:activator="{ props }">
+                        <v-icon
+                          v-bind="props"
+                          size="small"
+                          class="ml-2 text-medium-emphasis"
+                        >
+                          mdi-help-circle-outline
+                        </v-icon>
+                      </template>
+                      <span>If enabled, teleprompter won't start until OBS confirms recording has begun</span>
+                    </v-tooltip>
+                  </div>
+                </div>
+
+                <!-- Recording Status Indicator -->
+                <div v-if="obsRecording" class="mt-4">
+                  <v-alert
+                    type="error"
+                    variant="tonal"
+                    density="compact"
+                    prominent
+                  >
+                    <div class="d-flex align-center">
+                      <v-icon class="mr-2 pulse-animation">mdi-circle</v-icon>
+                      <span class="font-weight-bold">REC</span>
+                    </div>
+                  </v-alert>
+                </div>
+              </div>
+
               <!-- Room Participants Section -->
               <div class="control-section">
                 <h3 class="text-h6 font-weight-bold mb-6">Room Participants</h3>
@@ -474,6 +588,17 @@ Happy teleprompting! 🎬`,
 
       // Connection tracking
       lastConnectionCount: 0,
+
+      // OBS Integration
+      obsConnected: false,
+      obsRecording: false,
+      obsConfig: {
+        autoStart: false,
+        autoStop: false,
+        autoPause: false,
+        countdown: 3.0,
+        waitForOBS: false,
+      },
     };
   },
 
@@ -687,6 +812,9 @@ Happy teleprompting! 🎬`,
             (p) => p.id !== message.participant_id
           );
           break;
+        case "obs_status":
+          this.handleObsStatus(message);
+          break;
         default:
           console.log("Received message:", message);
       }
@@ -713,9 +841,17 @@ Happy teleprompting! 🎬`,
     // Playback control methods
     togglePlayback() {
       this.isPlaying = !this.isPlaying;
-      this.sendMessage({
+      const message = {
         type: this.isPlaying ? "start" : "pause",
-      });
+      };
+      
+      // Add OBS integration parameters when starting
+      if (this.isPlaying && this.obsConnected) {
+        message.countdown = this.obsConfig.countdown;
+        message.waitForOBS = this.obsConfig.waitForOBS;
+      }
+      
+      this.sendMessage(message);
     },
 
     resetScrolling() {
@@ -874,6 +1010,34 @@ Happy teleprompting! 🎬`,
       this.snackbar.text = text;
       this.snackbar.color = color;
       this.snackbar.show = true;
+    },
+
+    // OBS Integration methods
+    handleObsStatus(message) {
+      this.obsConnected = message.connected || false;
+      this.obsRecording = message.recording || false;
+      
+      const status = message.status;
+      if (status === "recording_failed" && message.error) {
+        this.showSnackbar(`OBS recording failed: ${message.error}`, "error");
+      } else if (status === "recording_started") {
+        this.showSnackbar("OBS recording started", "success");
+      } else if (status === "recording_stopped") {
+        this.showSnackbar("OBS recording stopped", "info");
+      }
+    },
+
+    sendObsConfig() {
+      this.sendMessage({
+        type: "obs_config",
+        autoStart: this.obsConfig.autoStart,
+        autoStop: this.obsConfig.autoStop,
+        autoPause: this.obsConfig.autoPause,
+      });
+    },
+
+    adjustCountdown(delta) {
+      this.obsConfig.countdown = Math.max(0, Math.min(10, this.obsConfig.countdown + delta));
     },
   },
 };
@@ -1086,6 +1250,19 @@ Happy teleprompting! 🎬`,
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.pulse-animation {
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
 .script-editor-section,

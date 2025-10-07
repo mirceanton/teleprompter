@@ -34,3 +34,14 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  obs-bridge:
+    image: ghcr.io/mirceanton/teleprompter-obs-bridge:latest
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_WS_URL=ws://backend:8001/api/ws
+      - OBS_HOST=host.docker.internal
+      - OBS_PORT=4455
+      - OBS_PASSWORD=${OBS_PASSWORD:-}
