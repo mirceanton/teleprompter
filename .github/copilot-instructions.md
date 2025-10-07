@@ -107,6 +107,11 @@ Manual testing is the primary validation method. After making changes, test the 
 │       ├── main.py               # FastAPI app, WebSocket endpoints, startup logic
 │       ├── connection_manager.py # WebSocket connection management
 │       └── redis_manager.py      # Redis pub/sub for multi-instance support
+├── obs-bridge/
+│   ├── Dockerfile
+│   ├── requirements.txt           # Python dependencies (websockets, obs-websocket-py)
+│   └── src/
+│       └── main.py               # OBS WebSocket bridge service
 ├── frontend/
 │   ├── Dockerfile
 │   ├── package.json              # Node.js dependencies
@@ -125,7 +130,7 @@ Manual testing is the primary validation method. After making changes, test the 
 │           ├── Controller.vue    # Script editor and controls
 │           └── Teleprompter.vue  # Text display page
 ├── .img/                         # Screenshots for README
-├── compose.yaml                  # Production Docker Compose (pre-built images + Redis)
+├── compose.yaml                  # Production Docker Compose (pre-built images + Redis + OBS bridge)
 ├── compose.dev.yaml              # Development override (local builds)
 └── .github/
     ├── copilot-instructions.md
@@ -137,20 +142,32 @@ Manual testing is the primary validation method. After making changes, test the 
 ### Key Application Components
 
 **Backend (FastAPI + Python)**:
-- `main.py`: FastAPI application, WebSocket endpoints (`/ws/{channel}`), health check, startup/shutdown logic
-- `connection_manager.py`: Manages WebSocket connections per channel, broadcasts messages
+- `main.py`: FastAPI application, WebSocket endpoints (`/api/ws`), health check, startup/shutdown logic
+- `connection_manager.py`: Manages WebSocket connections, broadcasts messages
 - `redis_manager.py`: Optional Redis pub/sub for synchronizing state across multiple backend replicas
+
+**OBS Bridge (Python + WebSockets)** (Optional):
+- `main.py`: Connects to both teleprompter backend and OBS Studio
+- Listens for teleprompter control messages (start, pause, reset)
+- Triggers OBS recording actions based on configuration
+- Broadcasts OBS status updates to all connected clients
+- Handles connection errors with exponential backoff retry logic
+- Supports OBS WebSocket protocol v5.x (OBS Studio 28+)
 
 **Frontend (Vue.js + Vite)**:
 - `Landing.vue`: Initial page where users select Controller or Teleprompter mode
-- `Controller.vue`: Script editor, playback controls (start/pause/reset), speed/width sliders
-- `Teleprompter.vue`: Full-screen text display that scrolls based on controller commands
+- `Controller.vue`: Script editor, playback controls (start/pause/reset), speed/width sliders, OBS integration panel
+- `Teleprompter.vue`: Full-screen text display that scrolls based on controller commands, countdown overlays, REC indicator
 - `config.json`: Runtime configuration file (backend URL must be hostname/IP, not localhost)
 
 **Communication**:
-- WebSocket channels identified by user-provided channel names
-- Messages: `join`, `text`, `start`, `pause`, `reset`, `speed`, `width`, `mode`
-- Real-time bidirectional sync between all connected clients on same channel
+- WebSocket channels for real-time bidirectional sync between all connected clients
+- Core message types: `text`, `start`, `pause`, `reset`, `speed`, `width`, `mode`, `font_size`, `mirror`, `go_to_beginning`, `go_to_end`, `scroll_lines`
+- OBS integration message types:
+  - `obs_config`: Controller sends OBS configuration (autoStart, autoStop, autoPause)
+  - `obs_status`: OBS bridge broadcasts connection and recording status to all clients
+  - `obs_recording_confirmed`: OBS bridge confirms recording started (for wait-for-OBS mode)
+  - Enhanced `start` message: Can include `countdown` (seconds) and `waitForOBS` (boolean) fields
 
 ### Making Changes
 
@@ -161,6 +178,12 @@ Manual testing is the primary validation method. After making changes, test the 
 4. Update `requirements.txt` for new Python packages
 5. **Restart required**: Stop backend (Ctrl+C) and run `python3 src/main.py` again
 
+**OBS Bridge changes** (`obs-bridge/src/`):
+1. Edit `main.py` for OBS WebSocket connection logic and message handling
+2. Update `requirements.txt` for new Python packages
+3. **Restart required**: Stop service (Ctrl+C) and run `python3 src/main.py` again
+4. **Optional service**: System works without obs-bridge if OBS integration not needed
+
 **Frontend changes** (`frontend/src/`):
 1. Edit Vue components in `views/` for UI changes (Landing, Controller, Teleprompter)
 2. Edit `App.vue` for routing or global layout changes
@@ -170,25 +193,29 @@ Manual testing is the primary validation method. After making changes, test the 
 
 **Configuration changes**:
 - Backend: Environment variables or defaults in `redis_manager.py`
+- OBS Bridge: Environment variables (BACKEND_WS_URL, OBS_HOST, OBS_PORT, OBS_PASSWORD)
 - Frontend: `public/config.json` for runtime configuration (backend URL)
 - Docker: `compose.yaml` (production) or `compose.dev.yaml` (development overrides)
 
 ### Development Workflow
-1. Make changes to backend or frontend files
+1. Make changes to backend, obs-bridge, or frontend files
 2. **Backend**: Restart with Ctrl+C then `python3 src/main.py` (from `backend/` dir)
-3. **Frontend**: Changes auto-reload via Vite HMR (no restart needed)
-4. Test changes in browser (refresh if needed)
-5. **Before committing**: Test with Docker Compose to validate production build
-6. Check terminal logs for errors or WebSocket connection issues
+3. **OBS Bridge**: Restart with Ctrl+C then `python3 src/main.py` (from `obs-bridge/` dir)
+4. **Frontend**: Changes auto-reload via Vite HMR (no restart needed)
+5. Test changes in browser (refresh if needed)
+6. **Before committing**: Test with Docker Compose to validate production build
+7. Check terminal logs for errors or WebSocket connection issues
 
 ### Debugging
 - **WebSocket issues**: Check browser developer console (Network tab → WS) for connection errors
 - **Backend errors**: Monitor terminal where `python3 src/main.py` is running for stack traces
 - **Frontend errors**: Check browser console for JavaScript errors
+- **OBS connection issues**: Check obs-bridge terminal logs for connection errors to OBS or backend
 - **Connection problems**: Ensure both devices use the same channel name
 - **Port conflicts**: Backend uses 8000 (dev) or 8001 (Docker), frontend uses 3000 (dev) or 8000 (Docker)
 - **Redis errors**: Check if Redis is running (Docker only) or remove Redis dependency for single-instance deployments
 - **Config issues**: Verify `frontend/public/config.json` points to correct backend URL (use hostname/IP, not localhost for non-dev)
+- **OBS not responding**: Verify obs-websocket plugin is installed and WebSocket server is enabled in OBS
 
 ### Important Configuration Notes
 
@@ -205,6 +232,14 @@ Manual testing is the primary validation method. After making changes, test the 
 - Local development: Run without Redis (just backend + frontend)
 - Docker testing: Includes Redis by default to validate multi-instance scenarios
 - To disable Redis: Remove `redis` service from `compose.yaml` and remove `depends_on`/`environment` from backend
+
+**OBS Bridge (Optional)**:
+- The obs-bridge service is only needed if you want automatic OBS recording control
+- System works perfectly fine without it - simply don't start the obs-bridge service
+- Local development: Start obs-bridge separately with `cd obs-bridge && python3 src/main.py`
+- Docker testing: obs-bridge included by default but can be removed from `compose.yaml`
+- Requires obs-websocket plugin (v5.x) installed in OBS Studio
+- Uses `host.docker.internal` to reach OBS running on host machine when in Docker
 
 ## Time Expectations
 - **Dependency installation**: 30 seconds. NEVER CANCEL.
