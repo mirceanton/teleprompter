@@ -133,6 +133,101 @@ async def health_check():
         },
     }
 
+@app.get("/api/live")
+async def live_check():
+    """Liveness check endpoint"""
+    return {"status": "alive"}
+
+# Playback control endpoints
+@app.post("/api/playback/start")
+async def start_playback():
+    """Start playback """
+    try:
+        message = {"type": "start"}
+        await connection_manager.broadcast_to_all_instances(message)
+        logger.info("Playback started via API")
+        return {"success": True, "message": "Playback started"}
+    except Exception as e:
+        logger.error(f"Error starting playback: {e}")
+        raise HTTPException(status_code=500, detail="Failed to start playback")
+
+
+@app.post("/api/playback/stop")
+async def stop_playback():
+    """Stop playback """
+    try:
+        message = {"type": "pause"}
+        await connection_manager.broadcast_to_all_instances(message)
+        logger.info("Playback stopped via API")
+        return {"success": True, "message": "Playback stopped"}
+    except Exception as e:
+        logger.error(f"Error stopping playback: {e}")
+        raise HTTPException(status_code=500, detail="Failed to stop playback")
+
+@app.post("/api/playback/scroll/back/{lines}")
+@app.post("/api/playback/scroll/back")
+@app.post("/api/playback/scroll/bwd/{lines}")
+@app.post("/api/playback/scroll/bwd")
+@app.post("/api/playback/scroll/b/{lines}")
+@app.post("/api/playback/scroll/b/")
+async def scroll_back(lines: int = 5):
+    """Scroll back by specified number of lines (default: 5)"""
+    try:
+        message = { "type": "scroll_lines", "direction": "backward", "lines": lines, "smooth": True }
+        await connection_manager.broadcast_to_all_instances(message)
+        logger.info(f"Scrolling back {lines} line(s) via API")
+        return {"success": True, "message": f"Scrolled back {lines} line(s)"}
+    except Exception as e:
+        logger.error(f"Error scrolling back: {e}")
+        raise HTTPException(status_code=500, detail="Failed to scroll back")
+
+@app.post("/api/playback/scroll/forward/{lines}")
+@app.post("/api/playback/scroll/forward")
+@app.post("/api/playback/scroll/fwd/{lines}")
+@app.post("/api/playback/scroll/fwd")
+@app.post("/api/playback/scroll/f/{lines}")
+@app.post("/api/playback/scroll/f/")
+async def scroll_forward(lines: int = 5):
+    """Scroll forward by specified number of lines (default: 5)"""
+    try:
+        message = { "type": "scroll_lines", "direction": "forward", "lines": lines, "smooth": True }
+        await connection_manager.broadcast_to_all_instances(message)
+        logger.info(f"Scrolling forward {lines} line(s) via API")
+        return {"success": True, "message": f"Scrolled forward {lines} line(s)"}
+    except Exception as e:
+        logger.error(f"Error scrolling forward: {e}")
+        raise HTTPException(status_code=500, detail="Failed to scroll forward")
+
+
+@app.post("/api/playback/scroll/top")
+@app.post("/api/playback/scroll/start")
+@app.post("/api/playback/scroll/beginning")
+async def scroll_to_top():
+    """Scroll to the top of the script"""
+    try:
+        message = {"type": "go_to_beginning"}
+        await connection_manager.broadcast_to_all_instances(message)
+        logger.info("Scrolling to top via API")
+        return {"success": True, "message": "Scrolled to top"}
+    except Exception as e:
+        logger.error(f"Error scrolling to top: {e}")
+        raise HTTPException(status_code=500, detail="Failed to scroll to top")
+
+
+@app.post("/api/playback/scroll/bottom")
+@app.post("/api/playback/scroll/end")
+@app.post("/api/playback/scroll/finish")
+async def scroll_to_end():
+    """Scroll to the end of the script"""
+    try:
+        message = {"type": "go_to_end"}
+        await connection_manager.broadcast_to_all_instances(message)
+        logger.info("Scrolling to end via API")
+        return {"success": True, "message": "Scrolled to end"}
+    except Exception as e:
+        logger.error(f"Error scrolling to end: {e}")
+        raise HTTPException(status_code=500, detail="Failed to scroll to end")
+
 
 if __name__ == "__main__":
     import uvicorn
