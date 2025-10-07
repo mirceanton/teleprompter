@@ -34,9 +34,9 @@ class ConnectionManager:
         """Get the number of active connections on this instance"""
         return len(self.active_connections)
 
-    async def broadcast_to_local(self, message_str: str, exclude: WebSocket = None):
+    async def broadcast_to_websockets(self, message_str: str, exclude: WebSocket = None):
         """
-        Broadcast message to all local connections.
+        Broadcast message to all WebSocket clients connected to this backend instance.
 
         Args:
             message_str: JSON string to broadcast
@@ -61,11 +61,29 @@ class ConnectionManager:
         for conn in disconnected:
             self.active_connections.discard(conn)
 
-    async def broadcast_to_all_instances(
+    async def broadcast_to_redis(self, message_dict: dict):
+        """
+        Broadcast message to Redis pub/sub for other backend instances.
+
+        Args:
+            message_dict: Message dictionary to broadcast
+        """
+        # Mark message with Redis source flag to avoid message loops
+        redis_message = {
+            **message_dict,
+            "_redis_source": True,
+        }
+        await redis_manager.publish_message("teleprompter", redis_message)
+
+    async def broadcast_to_all(
         self, message_dict: dict, exclude: WebSocket = None
     ):
         """
-        Broadcast message to all instances via Redis and local connections.
+        Broadcast message to all clients across all backend instances.
+        
+        This method orchestrates both:
+        1. WebSocket broadcasting to clients on this instance
+        2. Redis pub/sub to reach clients on other backend instances
 
         Args:
             message_dict: Message dictionary to broadcast
@@ -73,19 +91,17 @@ class ConnectionManager:
         """
         message_str = json.dumps(message_dict)
 
-        # Broadcast to local connections first
-        await self.broadcast_to_local(message_str, exclude)
+        # Broadcast to WebSocket clients on this instance
+        await self.broadcast_to_websockets(message_str, exclude)
 
-        # Publish to Redis for other instances
-        redis_message = {
-            **message_dict,
-            "_redis_source": True,  # Mark to avoid message loops
-        }
-        await redis_manager.publish_message("teleprompter", redis_message)
+        # Publish to Redis for other backend instances
+        await self.broadcast_to_redis(message_dict)
 
     async def handle_redis_message(self, message: dict):
         """
         Handle messages received from Redis Pub/Sub.
+        
+        Relays messages from other backend instances to WebSocket clients on this instance.
 
         Args:
             message: Message dictionary from Redis
@@ -99,8 +115,8 @@ class ConnectionManager:
                 }
                 message_str = json.dumps(clean_message)
 
-                # Broadcast to local connections only
-                await self.broadcast_to_local(message_str)
+                # Broadcast to WebSocket clients on this instance
+                await self.broadcast_to_websockets(message_str)
 
         except Exception as e:
             logger.error(f"Error handling Redis message: {e}")

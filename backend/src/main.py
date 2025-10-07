@@ -83,7 +83,7 @@ async def websocket_endpoint(websocket: WebSocket):
             "type": "connection_update",
             "connection_count": connection_manager.get_connection_count(),
         }
-        await connection_manager.broadcast_to_all_instances(
+        await connection_manager.broadcast_to_all(
             connection_update, exclude=websocket
         )
 
@@ -96,7 +96,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 message["_sender"] = "client"
 
                 # Broadcast to all other clients across instances
-                await connection_manager.broadcast_to_all_instances(
+                await connection_manager.broadcast_to_all(
                     message, exclude=websocket
                 )
                 logger.info(f"Broadcast message: {message.get('type', 'unknown')}")
@@ -112,7 +112,7 @@ async def websocket_endpoint(websocket: WebSocket):
             "type": "connection_update",
             "connection_count": connection_manager.get_connection_count(),
         }
-        await connection_manager.broadcast_to_all_instances(connection_update)
+        await connection_manager.broadcast_to_all(connection_update)
 
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
@@ -140,7 +140,7 @@ async def start_playback():
     """Start playback """
     try:
         message = {"type": "start"}
-        await connection_manager.broadcast_to_all_instances(message)
+        await connection_manager.broadcast_to_all(message)
         logger.info("Playback started via API")
         return {"success": True, "message": "Playback started"}
     except Exception as e:
@@ -153,7 +153,7 @@ async def stop_playback():
     """Stop playback """
     try:
         message = {"type": "pause"}
-        await connection_manager.broadcast_to_all_instances(message)
+        await connection_manager.broadcast_to_all(message)
         logger.info("Playback stopped via API")
         return {"success": True, "message": "Playback stopped"}
     except Exception as e:
@@ -170,7 +170,7 @@ async def scroll_back(lines: int = 5):
     """Scroll back by specified number of lines (default: 5)"""
     try:
         message = { "type": "scroll_lines", "direction": "backward", "lines": lines, "smooth": True }
-        await connection_manager.broadcast_to_all_instances(message)
+        await connection_manager.broadcast_to_all(message)
         logger.info(f"Scrolling back {lines} line(s) via API")
         return {"success": True, "message": f"Scrolled back {lines} line(s)"}
     except Exception as e:
@@ -187,7 +187,7 @@ async def scroll_forward(lines: int = 5):
     """Scroll forward by specified number of lines (default: 5)"""
     try:
         message = { "type": "scroll_lines", "direction": "forward", "lines": lines, "smooth": True }
-        await connection_manager.broadcast_to_all_instances(message)
+        await connection_manager.broadcast_to_all(message)
         logger.info(f"Scrolling forward {lines} line(s) via API")
         return {"success": True, "message": f"Scrolled forward {lines} line(s)"}
     except Exception as e:
@@ -202,7 +202,7 @@ async def scroll_to_top():
     """Scroll to the top of the script"""
     try:
         message = {"type": "go_to_beginning"}
-        await connection_manager.broadcast_to_all_instances(message)
+        await connection_manager.broadcast_to_all(message)
         logger.info("Scrolling to top via API")
         return {"success": True, "message": "Scrolled to top"}
     except Exception as e:
@@ -217,7 +217,7 @@ async def scroll_to_end():
     """Scroll to the end of the script"""
     try:
         message = {"type": "go_to_end"}
-        await connection_manager.broadcast_to_all_instances(message)
+        await connection_manager.broadcast_to_all(message)
         logger.info("Scrolling to end via API")
         return {"success": True, "message": "Scrolled to end"}
     except Exception as e:
