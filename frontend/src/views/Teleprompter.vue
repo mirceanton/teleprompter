@@ -23,6 +23,14 @@
         :class="{ fullscreen: isFullscreen }"
         @click="enterFullscreen"
       >
+        <!-- OBS Recording Indicator -->
+        <div v-if="obsRecording" class="obs-recording-indicator">
+          <v-icon color="error" size="20" class="recording-icon">
+            mdi-record-circle
+          </v-icon>
+          <span class="recording-text">REC</span>
+        </div>
+
         <div
           ref="teleprompterText"
           class="teleprompter-text"
@@ -67,6 +75,7 @@ export default {
       horizontalMirror: false,
       verticalMirror: false,
       isFullscreen: false,
+      obsRecording: false,
       snackbar: {
         show: false,
         text: "",
@@ -206,6 +215,10 @@ export default {
           break;
         case "scroll_lines":
           this.scrollByLines(message.direction, message.lines, message.smooth);
+          break;
+        case "obs_status":
+          // Update OBS recording status
+          this.obsRecording = message.recording || false;
           break;
       }
     },
@@ -379,6 +392,41 @@ export default {
   width: 100vw;
   height: 100vh;
   z-index: 9999;
+}
+
+.obs-recording-indicator {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 8px 16px;
+  border-radius: 20px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.recording-icon {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.recording-text {
+  margin-left: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #f44336;
+  letter-spacing: 1px;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .teleprompter-text {

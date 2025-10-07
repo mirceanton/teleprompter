@@ -9,6 +9,14 @@
           <div class="text-h5 font-weight-bold">Teleprompter</div>
         </div>
         <v-spacer></v-spacer>
+        <v-btn
+          prepend-icon="mdi-cog"
+          variant="outlined"
+          class="mr-2"
+          @click="openOBSSettings"
+        >
+          OBS Settings
+        </v-btn>
         <v-btn prepend-icon="mdi-logout" @click="exitTeleprompter">
           Leave Room
         </v-btn>
@@ -374,6 +382,40 @@
                   </div>
                 </div>
               </div>
+
+              <!-- OBS Status Section -->
+              <div class="control-section mt-8" v-if="obsStatus.enabled">
+                <h3 class="text-h6 font-weight-bold mb-6">OBS Recording</h3>
+                <div class="obs-status-container">
+                  <div class="d-flex align-center pa-4">
+                    <v-icon
+                      :color="obsStatus.recording ? 'error' : 'grey'"
+                      size="24"
+                      class="mr-3"
+                    >
+                      {{ obsStatus.recording ? "mdi-record-circle" : "mdi-record-circle-outline" }}
+                    </v-icon>
+                    <div class="flex-grow-1">
+                      <div class="text-body-2 font-weight-medium">
+                        {{ obsStatus.recording ? "Recording Active" : "Ready to Record" }}
+                      </div>
+                      <div class="text-caption text-medium-emphasis">
+                        {{
+                          obsStatus.connected
+                            ? `Connected to ${obsStatus.host}:${obsStatus.port}`
+                            : "Not connected"
+                        }}
+                      </div>
+                    </div>
+                    <v-icon
+                      :color="obsStatus.connected ? 'success' : 'grey'"
+                      size="16"
+                    >
+                      mdi-circle
+                    </v-icon>
+                  </div>
+                </div>
+              </div>
             </div>
           </v-col>
         </v-row>
@@ -474,6 +516,16 @@ Happy teleprompting! 🎬`,
 
       // Connection tracking
       lastConnectionCount: 0,
+
+      // OBS status
+      obsStatus: {
+        enabled: false,
+        connected: false,
+        recording: false,
+        host: "localhost",
+        port: 4455,
+        start_delay: 0,
+      },
     };
   },
 
@@ -553,6 +605,10 @@ Happy teleprompting! 🎬`,
 
     exitTeleprompter() {
       this.$router.push("/");
+    },
+
+    openOBSSettings() {
+      this.$router.push("/obs-settings");
     },
 
     // Undo/Redo functionality
@@ -686,6 +742,17 @@ Happy teleprompting! 🎬`,
           this.participants = this.participants.filter(
             (p) => p.id !== message.participant_id
           );
+          break;
+        case "obs_status":
+          // Update OBS status from server
+          this.obsStatus = {
+            enabled: message.enabled || false,
+            connected: message.connected || false,
+            recording: message.recording || false,
+            host: message.host || "localhost",
+            port: message.port || 4455,
+            start_delay: message.start_delay || 0,
+          };
           break;
         default:
           console.log("Received message:", message);
@@ -989,6 +1056,13 @@ Happy teleprompting! 🎬`,
   min-height: 120px;
   max-height: 300px;
   overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* OBS Status Container */
+.obs-status-container {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.2);

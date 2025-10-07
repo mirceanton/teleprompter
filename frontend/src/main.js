@@ -12,6 +12,7 @@ import { config } from "./utils/config.js";
 import Landing from "./views/Landing.vue";
 import Controller from "./views/Controller.vue";
 import Teleprompter from "./views/Teleprompter.vue";
+import OBSSettings from "./views/OBSSettings.vue";
 
 // Create router
 const router = createRouter({
@@ -31,6 +32,11 @@ const router = createRouter({
       path: "/teleprompter",
       name: "Teleprompter",
       component: Teleprompter,
+    },
+    {
+      path: "/obs-settings",
+      name: "OBSSettings",
+      component: OBSSettings,
     },
   ],
 });
