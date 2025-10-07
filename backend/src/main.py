@@ -73,17 +73,6 @@ class JoinResponse(BaseModel):
 # Initialize connection manager
 connection_manager = ConnectionManager()
 
-
-@app.post("/api/join", response_model=JoinResponse)
-async def join_teleprompter(request: JoinRequest):
-    """Join the teleprompter (no room management needed)"""
-    try:
-        return JoinResponse(success=True, message="Ready to connect via WebSocket")
-    except Exception as e:
-        logger.error(f"Error in join endpoint: {e}")
-        raise HTTPException(status_code=500, detail="Failed to join")
-
-
 @app.websocket("/api/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time communication"""

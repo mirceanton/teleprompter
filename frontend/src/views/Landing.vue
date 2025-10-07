@@ -137,28 +137,6 @@ export default {
       try {
         const apiUrl = config.getApiUrl();
 
-        // Join as controller (simplified API)
-        const response = await fetch(`${apiUrl}/api/join`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            role: "controller",
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to join as controller");
-        }
-
-        const joinData = await response.json();
-
-        if (!joinData.success) {
-          this.showSnackbar(joinData.message, "error");
-          return;
-        }
-
         // Store minimal credentials in session storage
         sessionStorage.setItem(
           "teleprompter_credentials",
@@ -186,28 +164,6 @@ export default {
       this.loading = true;
       try {
         const apiUrl = config.getApiUrl();
-
-        // Join as teleprompter (simplified API)
-        const response = await fetch(`${apiUrl}/api/join`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            role: "teleprompter",
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to join as teleprompter");
-        }
-
-        const joinData = await response.json();
-
-        if (!joinData.success) {
-          this.showSnackbar(joinData.message, "error");
-          return;
-        }
 
         // Store minimal credentials in session storage
         sessionStorage.setItem(
