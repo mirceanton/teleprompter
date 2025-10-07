@@ -12,6 +12,12 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      # Optional OBS integration configuration
+      # Uncomment and configure to enable OBS WebSocket integration
+      # - OBS_HOST=192.168.1.100
+      # - OBS_PORT=4455
+      # - OBS_PASSWORD=your_obs_password
+      # - OBS_START_DELAY=3
     healthcheck:
       test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8001/api/health')"]
       interval: 30s

@@ -69,6 +69,45 @@ This file is located at `/usr/share/nginx/html/config.json`. Its main purpose ri
 | `REDIS_PORT`         | Port number on which Redis is listening                               |    No    | `6379`        |
 | `REDIS_PASSWORD`     | Password for authenticating with Redis (if authentication is enabled) |    No    | N/A           |
 | `REDIS_DB`           | Redis database number to use (0-15)                                   |    No    | `0`           |
+| `OBS_HOST`           | Hostname or IP address of the OBS WebSocket server                    |    No    | `localhost`   |
+| `OBS_PORT`           | Port number on which OBS WebSocket is listening                       |    No    | `4455`        |
+| `OBS_PASSWORD`       | Password for authenticating with OBS WebSocket                        |    No    | N/A           |
+| `OBS_START_DELAY`    | Delay in seconds before starting teleprompter after OBS starts        |    No    | `0`           |
+
+### OBS Integration
+
+The Remote Teleprompter can integrate with OBS Studio to automatically control recording:
+
+- **Automatic Recording**: When you start the teleprompter, OBS can automatically start recording
+- **Configurable Delay**: Set a delay between OBS recording start and teleprompter start
+- **Automatic Stop**: When the teleprompter reaches the end or is stopped, OBS recording stops
+- **Visual Indicator**: A recording indicator appears on the teleprompter display when OBS is recording
+
+#### Setting Up OBS Integration
+
+1. **Enable OBS WebSocket**:
+   - Open OBS Studio
+   - Go to **Tools → WebSocket Server Settings**
+   - Check **"Enable WebSocket server"**
+   - Note the **Server Port** (default: 4455)
+   - Optionally set a password for security
+   - Click **Apply** and **OK**
+
+2. **Configure in Teleprompter**:
+   - Open the Controller view
+   - Click **OBS Settings** button in the top bar
+   - Enter your OBS host, port, and password (if set)
+   - Enable OBS Integration toggle
+   - Set the desired start delay (optional)
+   - Click **Test Connection** to verify
+   - Click **Save Settings**
+
+3. **Alternative: Environment Variables**:
+   - Set the environment variables listed above in your Docker Compose file or system environment
+   - The backend will automatically connect to OBS on startup if configured
+
+> [!NOTE]
+> **OBS Integration is Optional**: The teleprompter works perfectly without OBS integration. This feature is designed for users who want automated recording control synchronized with their teleprompter sessions.
 
 ## 📝 License
 
