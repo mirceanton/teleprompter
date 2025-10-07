@@ -24,18 +24,16 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handles startup and shutdown events for the FastAPI application"""
-    try:
-        await redis_manager.connect()
+    # Connect to Redis (required)
+    await redis_manager.connect()
 
-        # Register the connection manager's message handler with Redis
-        redis_manager.set_message_handler(connection_manager.handle_redis_message)
+    # Register the connection manager's message handler with Redis
+    redis_manager.set_message_handler(connection_manager.handle_redis_message)
 
-        # Start the Redis message listener in the background
-        listener_task = asyncio.create_task(redis_manager.start_message_listener())
-        app.state.redis_listener_task = listener_task
-        logger.info("Redis Pub/Sub enabled")
-    except Exception as e:
-        logger.warning(f"Redis not available: {e}. Running without Redis pub/sub.")
+    # Start the Redis message listener in the background
+    listener_task = asyncio.create_task(redis_manager.start_message_listener())
+    app.state.redis_listener_task = listener_task
+    logger.info("Redis Pub/Sub enabled")
 
     yield
 
@@ -124,13 +122,11 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
+    redis_health = await redis_manager.health_check()
     return {
         "status": "healthy",
         "active_connections": connection_manager.get_connection_count(),
-        "redis": {
-            "status": "connected" if redis_manager.is_connected else "disconnected",
-            "available": redis_manager.is_available(),
-        },
+        "redis": redis_health,
     }
 
 @app.get("/api/live")

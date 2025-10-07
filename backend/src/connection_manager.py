@@ -76,13 +76,12 @@ class ConnectionManager:
         # Broadcast to local connections first
         await self.broadcast_to_local(message_str, exclude)
 
-        # Publish to Redis for other instances (if available)
-        if redis_manager.is_available():
-            redis_message = {
-                **message_dict,
-                "_redis_source": True,  # Mark to avoid message loops
-            }
-            await redis_manager.publish_message("teleprompter", redis_message)
+        # Publish to Redis for other instances
+        redis_message = {
+            **message_dict,
+            "_redis_source": True,  # Mark to avoid message loops
+        }
+        await redis_manager.publish_message("teleprompter", redis_message)
 
     async def handle_redis_message(self, message: dict):
         """

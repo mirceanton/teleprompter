@@ -10,7 +10,7 @@ This is a **split architecture** application:
 - **Backend**: FastAPI (Python) running on port 8000 (dev) or 8001 (Docker)
 - **Frontend**: Vue.js + Vite serving a static SPA on port 3000 (dev) or 8000 (Docker)
 - **Communication**: WebSockets for real-time bidirectional messaging
-- **State Management (Optional)**: Redis for multi-replica deployments (rarely needed)
+- **State Management**: Redis (required) for multi-instance synchronization via pub/sub
 
 ## Working Effectively
 
@@ -25,7 +25,7 @@ python3 src/main.py
 ```
 - Runs on **http://0.0.0.0:8000**
 - Auto-reloads on file changes (uvicorn watch)
-- No Redis required for local dev
+- **Requires Redis running**: Start Redis with `docker run -d -p 6379:6379 redis:alpine` or use Docker Compose
 
 **Frontend** (from `frontend/` directory):
 ```bash
@@ -199,12 +199,12 @@ Manual testing is the primary validation method. After making changes, test the 
 - Example for production: `{"backendUrl": "http://192.168.1.100:8001"}`
 - Example for local dev: `{"backendUrl": "http://localhost:8000"}`
 
-**Redis (Optional)**:
-- Redis is only needed for multi-replica backend deployments (e.g., Kubernetes with 2+ replicas)
-- For 99.99% of use cases (single backend instance), Redis is **not required**
-- Local development: Run without Redis (just backend + frontend)
-- Docker testing: Includes Redis by default to validate multi-instance scenarios
-- To disable Redis: Remove `redis` service from `compose.yaml` and remove `depends_on`/`environment` from backend
+**Redis (Required)**:
+- Redis is **required** for the backend to function
+- Used for WebSocket message broadcasting across all connected clients
+- Local development: Start Redis with `docker run -d -p 6379:6379 redis:alpine`
+- Docker testing: Redis is included by default in compose files
+- Default connection: `localhost:6379` (configurable via environment variables)
 
 ## Time Expectations
 - **Dependency installation**: 30 seconds. NEVER CANCEL.
@@ -215,6 +215,7 @@ Manual testing is the primary validation method. After making changes, test the 
 ## Requirements
 - **Python 3.11+** (tested with Python 3.12.3)
 - **Node.js 18+** for frontend development
+- **Redis** (required for backend operation)
 - **pip** for Python dependency management
 - **npm** for JavaScript dependency management
 - **Docker & Docker Compose** for containerized testing and deployment

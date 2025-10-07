@@ -28,7 +28,7 @@ class RedisManager:
         self.redis_db = int(os.getenv("REDIS_DB", "0"))
         self.redis_password = os.getenv("REDIS_PASSWORD")
 
-    async def connect(self) -> bool:
+    async def connect(self):
         """Initialize Redis connection"""
         try:
             # Connect using individual parameters
@@ -48,7 +48,6 @@ class RedisManager:
             self.pubsub = self.redis_client.pubsub()
             self.is_connected = True
             logger.info("Redis connection established successfully")
-            return True
 
         except (ConnectionError, TimeoutError) as e:
             logger.error(f"Redis connection failed: {e}")
@@ -77,30 +76,26 @@ class RedisManager:
         """Get Redis channel name for a teleprompter channel"""
         return f"room:{channel}"
 
-    async def publish_message(self, channel: str, message: dict) -> bool:
+    async def publish_message(self, channel: str, message: dict):
         """
         Publish a message to a Redis channel.
 
         Args:
             channel: Teleprompter channel name
             message: Message dictionary to publish
-
-        Returns:
-            True if successful, False otherwise
         """
         if not self.redis_client:
             logger.error("Redis client not initialized. Cannot publish message.")
-            return False
+            raise RuntimeError("Redis client not initialized")
 
         try:
             redis_channel = self.get_channel_name(channel)
             message_json = json.dumps(message)
             await self.redis_client.publish(redis_channel, message_json)
-            return True
 
         except Exception as e:
             logger.error(f"Error publishing message to Redis: {e}")
-            return False
+            raise
 
     def set_message_handler(self, handler: Callable[[dict], Awaitable[None]]):
         """
@@ -113,13 +108,14 @@ class RedisManager:
         logger.info("Redis message handler registered")
 
     async def start_message_listener(self):
-        """Start the Redis message listener loop"""
+        """Start the Redis message listener loop (required)"""
         if not self.is_connected:
-            logger.warning("Cannot start message listener: Redis not connected")
-            return
+            logger.error("Cannot start message listener: Redis not connected")
+            raise RuntimeError("Redis not connected")
 
         if not self.message_handler:
-            logger.warning("No message handler set. Messages will be ignored.")
+            logger.error("No message handler set")
+            raise RuntimeError("Message handler not set")
 
         logger.info("Starting Redis message listener")
 
@@ -138,6 +134,7 @@ class RedisManager:
         except Exception as e:
             logger.error(f"Error in Redis message listener: {e}")
             logger.exception("Full traceback:")
+            raise
 
     async def _handle_pattern_message(self, redis_message):
         """Handle incoming Redis pattern messages"""
@@ -170,24 +167,19 @@ class RedisManager:
             logger.error(f"Error handling Redis pattern message: {e}")
             logger.exception("Full traceback:")
 
-    def is_available(self) -> bool:
-        """Check if Redis is available"""
-        return self.is_connected
-
     async def health_check(self) -> dict:
         """Health check for Redis connection"""
         if not self.is_connected:
-            return {"status": "disconnected", "available": False}
+            return {"status": "disconnected"}
 
         try:
             await self.redis_client.ping()
             return {
                 "status": "healthy",
-                "available": True,
                 "handler_registered": self.message_handler is not None,
             }
         except Exception as e:
-            return {"status": "error", "available": False, "error": str(e)}
+            return {"status": "error", "error": str(e)}
 
 
 # Global Redis manager instance

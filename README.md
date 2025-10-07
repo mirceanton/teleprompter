@@ -39,10 +39,6 @@ This project provides an example Docker Compose configuration via [`compose.yaml
 - a container for the backend application, using the `ghcr.io/mirceanton/teleprompter-backend:latest` image
 - a container for a Redis, using the `docker.io/redis` image
 
-> [!NOTE]
-> **About Redis:**
->
-> Redis is used to synchronize state across multiple backend instances when running in a scaled/load-balanced environment (e.g., Kubernetes deployments with multiple replicas). If you're running a single backend instance (e.g. most if not all docker compose scenarios), Redis is **optional** and can be removed. To run without Redis, simply delete the `redis` service section and remove the `depends_on` and `environment` sections from the backend service in `compose.yaml`.
 
 If you prefer to build the images locally instead of using the prebuilt ones, you can apply the `-f compose.dev.yaml` overlay to your command.
 
