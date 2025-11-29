@@ -56,6 +56,7 @@
 <script>
 import { config } from "@/utils/config.js";
 import { marked } from "marked";
+import DOMPurify from "dompurify";
 
 export default {
   name: "Teleprompter",
@@ -64,6 +65,7 @@ export default {
     return {
       ws: null,
       teleprompterContent: "",
+      cachedRenderedContent: "",
       isScrolling: false,
       scrollPosition: 0,
       scrollSpeed: 1.0,
@@ -101,10 +103,16 @@ export default {
     },
 
     renderedContent() {
-      if (!this.teleprompterContent) {
-        return "Waiting for text from controller...";
-      }
-      return marked(this.teleprompterContent);
+      return this.cachedRenderedContent;
+    },
+  },
+
+  watch: {
+    teleprompterContent: {
+      handler(newContent) {
+        this.updateRenderedContent(newContent);
+      },
+      immediate: true,
     },
   },
 
@@ -374,6 +382,15 @@ export default {
       this.snackbar.text = text;
       this.snackbar.color = color;
       this.snackbar.show = true;
+    },
+
+    updateRenderedContent(content) {
+      if (!content) {
+        this.cachedRenderedContent = "Waiting for text from controller...";
+        return;
+      }
+      const rawHtml = marked(content);
+      this.cachedRenderedContent = DOMPurify.sanitize(rawHtml);
     },
   },
 };
