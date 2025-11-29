@@ -402,7 +402,8 @@ export default {
         this.cachedRenderedContent = DOMPurify.sanitize(rawHtml);
       } catch (error) {
         console.error("Error parsing markdown:", error);
-        this.cachedRenderedContent = content;
+        // Sanitize fallback content to prevent XSS
+        this.cachedRenderedContent = DOMPurify.sanitize(content);
       }
     },
   },
