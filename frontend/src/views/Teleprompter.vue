@@ -35,7 +35,7 @@
           <div
             v-if="markdownEnabled"
             class="teleprompter-content markdown-content"
-            v-html="renderedContent"
+            v-html="cachedRenderedContent"
           ></div>
           <div v-else class="teleprompter-content">
             {{ teleprompterContent || "Waiting for text from controller..." }}
@@ -101,18 +101,23 @@ export default {
 
       return transforms.join(" ");
     },
-
-    renderedContent() {
-      return this.cachedRenderedContent;
-    },
   },
 
   watch: {
     teleprompterContent: {
       handler(newContent) {
-        this.updateRenderedContent(newContent);
+        if (this.markdownEnabled) {
+          this.updateRenderedContent(newContent);
+        }
       },
       immediate: true,
+    },
+    markdownEnabled: {
+      handler(enabled) {
+        if (enabled) {
+          this.updateRenderedContent(this.teleprompterContent);
+        }
+      },
     },
   },
 
