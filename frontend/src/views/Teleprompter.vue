@@ -38,7 +38,7 @@
             v-html="cachedRenderedContent"
           ></div>
           <div v-else class="teleprompter-content">
-            {{ teleprompterContent || "Waiting for text from controller..." }}
+            {{ teleprompterContent || defaultMessage }}
           </div>
         </div>
       </div>
@@ -66,6 +66,7 @@ export default {
       ws: null,
       teleprompterContent: "",
       cachedRenderedContent: "",
+      defaultMessage: "Waiting for text from controller...",
       isScrolling: false,
       scrollPosition: 0,
       scrollSpeed: 1.0,
@@ -393,7 +394,7 @@ export default {
 
     updateRenderedContent(content) {
       if (!content) {
-        this.cachedRenderedContent = "Waiting for text from controller...";
+        this.cachedRenderedContent = this.defaultMessage;
         return;
       }
       try {
