@@ -116,6 +116,8 @@ export default {
       handler(enabled) {
         if (enabled) {
           this.updateRenderedContent(this.teleprompterContent);
+        } else {
+          this.cachedRenderedContent = "";
         }
       },
     },
@@ -394,8 +396,13 @@ export default {
         this.cachedRenderedContent = "Waiting for text from controller...";
         return;
       }
-      const rawHtml = marked(content);
-      this.cachedRenderedContent = DOMPurify.sanitize(rawHtml);
+      try {
+        const rawHtml = marked(content);
+        this.cachedRenderedContent = DOMPurify.sanitize(rawHtml);
+      } catch (error) {
+        console.error("Error parsing markdown:", error);
+        this.cachedRenderedContent = content;
+      }
     },
   },
 };
