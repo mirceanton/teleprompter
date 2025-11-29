@@ -32,7 +32,12 @@
             transform: teleprompterTransform,
           }"
         >
-          <div class="teleprompter-content">
+          <div
+            v-if="markdownEnabled"
+            class="teleprompter-content markdown-content"
+            v-html="renderedContent"
+          ></div>
+          <div v-else class="teleprompter-content">
             {{ teleprompterContent || "Waiting for text from controller..." }}
           </div>
         </div>
@@ -50,6 +55,7 @@
 
 <script>
 import { config } from "@/utils/config.js";
+import { marked } from "marked";
 
 export default {
   name: "Teleprompter",
@@ -67,6 +73,7 @@ export default {
       horizontalMirror: false,
       verticalMirror: false,
       isFullscreen: false,
+      markdownEnabled: false,
       snackbar: {
         show: false,
         text: "",
@@ -91,6 +98,13 @@ export default {
       }
 
       return transforms.join(" ");
+    },
+
+    renderedContent() {
+      if (!this.teleprompterContent) {
+        return "Waiting for text from controller...";
+      }
+      return marked(this.teleprompterContent);
     },
   },
 
@@ -197,6 +211,9 @@ export default {
         case "mirror":
           this.horizontalMirror = message.horizontal;
           this.verticalMirror = message.vertical;
+          break;
+        case "markdown":
+          this.markdownEnabled = message.enabled;
           break;
         case "go_to_beginning":
           this.resetScrolling();
@@ -398,5 +415,78 @@ export default {
   display: inline-block;
   max-width: 100%;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Markdown content styles */
+.markdown-content {
+  white-space: normal;
+  text-align: left;
+}
+
+.markdown-content :deep(h1),
+.markdown-content :deep(h2),
+.markdown-content :deep(h3),
+.markdown-content :deep(h4),
+.markdown-content :deep(h5),
+.markdown-content :deep(h6) {
+  margin-top: 0.5em;
+  margin-bottom: 0.3em;
+  font-weight: bold;
+  line-height: 1.4;
+}
+
+.markdown-content :deep(h1) {
+  font-size: 1.5em;
+}
+
+.markdown-content :deep(h2) {
+  font-size: 1.3em;
+}
+
+.markdown-content :deep(h3) {
+  font-size: 1.1em;
+}
+
+.markdown-content :deep(p) {
+  margin-bottom: 0.8em;
+}
+
+.markdown-content :deep(ul),
+.markdown-content :deep(ol) {
+  margin-left: 1.5em;
+  margin-bottom: 0.8em;
+}
+
+.markdown-content :deep(li) {
+  margin-bottom: 0.3em;
+}
+
+.markdown-content :deep(strong) {
+  font-weight: bold;
+}
+
+.markdown-content :deep(em) {
+  font-style: italic;
+}
+
+.markdown-content :deep(code) {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.markdown-content :deep(blockquote) {
+  border-left: 3px solid rgba(255, 255, 255, 0.5);
+  padding-left: 1em;
+  margin-left: 0;
+  margin-bottom: 0.8em;
+  font-style: italic;
+}
+
+.markdown-content :deep(hr) {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  margin: 1em 0;
 }
 </style>
