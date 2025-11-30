@@ -85,7 +85,7 @@
 
           <!-- Right Sidebar - Controls -->
           <v-col cols="12" lg="4" xl="3" class="sidebar">
-            <div class="controls-sidebar pa-6">
+            <div class="controls-sidebar pa-6 d-flex flex-column">
               <!-- Playback Controls Section -->
               <div class="control-section mb-8">
                 <h3 class="text-h6 font-weight-bold mb-6">Playback Controls</h3>
@@ -194,10 +194,39 @@
                 </div>
               </div>
 
-              <!-- Teleprompters Section (Per-Prompter Settings) -->
-              <div class="control-section">
-                <h3 class="text-h6 font-weight-bold mb-6">Teleprompters</h3>
+              <!-- Other Participants Section -->
+              <div v-if="participants.filter(p => p.role === 'controller').length > 0" class="control-section mt-8">
+                <h3 class="text-h6 font-weight-bold mb-6">Controllers</h3>
                 <div class="participants-container">
+                  <div class="participants-list">
+                    <div
+                      v-for="participant in participants.filter(p => p.role === 'controller')"
+                      :key="participant.id"
+                      class="participant-item"
+                      :class="{ 'participant-item-you': participant.id === participantId }"
+                    >
+                      <v-icon color="blue" size="20" class="mr-3">mdi-laptop</v-icon>
+                      <div class="flex-grow-1">
+                        <div class="participant-name">
+                          Controller
+                          <span v-if="participant.id === participantId" class="participant-you-badge">
+                            (You)
+                          </span>
+                        </div>
+                        <div class="participant-time">
+                          Joined {{ formatTime(participant.joined_at) }}
+                        </div>
+                      </div>
+                      <v-icon size="16" color="success">mdi-circle</v-icon>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Teleprompters Section (Per-Prompter Settings) -->
+              <div class="control-section flex-grow-1 d-flex flex-column">
+                <h3 class="text-h6 font-weight-bold mb-6">Teleprompters</h3>
+                <div class="participants-container flex-grow-1">
                   <div
                     v-if="teleprompterParticipants.length === 0"
                     class="text-center text-medium-emphasis pa-6"
@@ -380,35 +409,6 @@
                           </div>
                         </div>
                       </v-expand-transition>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Other Participants Section -->
-              <div v-if="participants.filter(p => p.role === 'controller').length > 0" class="control-section mt-8">
-                <h3 class="text-h6 font-weight-bold mb-6">Controllers</h3>
-                <div class="participants-container">
-                  <div class="participants-list">
-                    <div
-                      v-for="participant in participants.filter(p => p.role === 'controller')"
-                      :key="participant.id"
-                      class="participant-item"
-                      :class="{ 'participant-item-you': participant.id === participantId }"
-                    >
-                      <v-icon color="blue" size="20" class="mr-3">mdi-laptop</v-icon>
-                      <div class="flex-grow-1">
-                        <div class="participant-name">
-                          Controller
-                          <span v-if="participant.id === participantId" class="participant-you-badge">
-                            (You)
-                          </span>
-                        </div>
-                        <div class="participant-time">
-                          Joined {{ formatTime(participant.joined_at) }}
-                        </div>
-                      </div>
-                      <v-icon size="16" color="success">mdi-circle</v-icon>
                     </div>
                   </div>
                 </div>
@@ -1153,7 +1153,7 @@ Happy teleprompting! 🎬`,
 
 .controls-sidebar {
   height: 100%;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 /* Control Sections */
@@ -1204,7 +1204,6 @@ Happy teleprompting! 🎬`,
 /* Participants Container */
 .participants-container {
   min-height: 120px;
-  max-height: 500px;
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
