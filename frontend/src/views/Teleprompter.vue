@@ -35,9 +35,10 @@
           <div
             v-if="markdownEnabled"
             class="teleprompter-content markdown-content"
+            :style="{ transform: contentMirrorTransform }"
             v-html="cachedRenderedContent"
           ></div>
-          <div v-else class="teleprompter-content">
+          <div v-else class="teleprompter-content" :style="{ transform: contentMirrorTransform }">
             {{ teleprompterContent || defaultMessage }}
           </div>
         </div>
@@ -75,7 +76,6 @@ export default {
       fontSize: 2.5,
       textWidth: 100,
       horizontalMirror: false,
-      verticalMirror: false,
       linesPerStep: 5,
       isFullscreen: false,
       markdownEnabled: false,
@@ -94,15 +94,14 @@ export default {
         `translateY(${this.scrollPosition}px)`,
       ];
 
-      if (this.horizontalMirror) {
-        transforms.push("scaleX(-1)");
-      }
-
-      if (this.verticalMirror) {
-        transforms.push("scaleY(-1)");
-      }
-
       return transforms.join(" ");
+    },
+    
+    contentMirrorTransform() {
+      if (this.horizontalMirror) {
+        return "scaleX(-1)";
+      }
+      return "none";
     },
   },
 
@@ -233,7 +232,6 @@ export default {
           break;
         case "mirror":
           this.horizontalMirror = message.horizontal;
-          this.verticalMirror = message.vertical;
           break;
         case "markdown":
           this.markdownEnabled = message.enabled;
@@ -293,15 +291,9 @@ export default {
         // Allow scrolling from start (0) to beyond end (-textHeight) with buffer
         // Buffer allows text to scroll slightly past for a cleaner finish
         const buffer = containerHeight * 0.5;
-        const scrollLimit = this.verticalMirror
-          ? textHeight + buffer
-          : -(textHeight + buffer);
+        const scrollLimit = -(textHeight + buffer);
 
-        const isOutOfBounds = this.verticalMirror
-          ? this.scrollPosition > scrollLimit
-          : this.scrollPosition < scrollLimit;
-
-        if (isOutOfBounds) {
+        if (this.scrollPosition < scrollLimit) {
           this.resetScrolling();
           return;
         }
@@ -319,7 +311,7 @@ export default {
         // Text bottom is at: containerHeight/2 + scrollPosition + textHeight
         // We want text bottom at center: containerHeight/2
         // Therefore: scrollPosition = -textHeight
-        const targetPosition = this.verticalMirror ? textHeight : -textHeight;
+        const targetPosition = -textHeight;
 
         // Smoothly animate to end
         this.animateToPosition(targetPosition);

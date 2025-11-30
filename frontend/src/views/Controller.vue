@@ -330,15 +330,6 @@
                             </label>
                             <div class="d-flex gap-2">
                               <v-btn
-                                :color="getPrompterSettings(participant.id).verticalMirror ? 'teal' : 'grey-darken-2'"
-                                :variant="getPrompterSettings(participant.id).verticalMirror ? 'flat' : 'outlined'"
-                                size="small"
-                                class="flex-grow-1"
-                                @click="togglePrompterVerticalMirror(participant.id)"
-                              >
-                                Vertical
-                              </v-btn>
-                              <v-btn
                                 :color="getPrompterSettings(participant.id).horizontalMirror ? 'teal' : 'grey-darken-2'"
                                 :variant="getPrompterSettings(participant.id).horizontalMirror ? 'flat' : 'outlined'"
                                 size="small"
@@ -432,7 +423,6 @@ Happy teleprompting! 🎬`,
       textWidth: 100,
       fontSize: 2.5,
       horizontalMirror: false,
-      verticalMirror: false,
       linesPerStep: 5,
       markdownEnabled: false,
 
@@ -715,7 +705,6 @@ Happy teleprompting! 🎬`,
             textWidth: this.textWidth,
             fontSize: this.fontSize,
             horizontalMirror: this.horizontalMirror,
-            verticalMirror: this.verticalMirror,
             linesPerStep: this.linesPerStep,
           };
         }
@@ -835,16 +824,11 @@ Happy teleprompting! 🎬`,
       this.updateMirror();
     },
 
-    toggleVerticalMirror() {
-      this.verticalMirror = !this.verticalMirror;
-      this.updateMirror();
-    },
-
     updateMirror() {
       this.sendMessage({
         type: "mirror",
         horizontal: this.horizontalMirror,
-        vertical: this.verticalMirror,
+        vertical: false,
       });
     },
 
@@ -864,7 +848,6 @@ Happy teleprompting! 🎬`,
           textWidth: this.textWidth,
           fontSize: this.fontSize,
           horizontalMirror: this.horizontalMirror,
-          verticalMirror: this.verticalMirror,
           linesPerStep: this.linesPerStep,
         };
       }
@@ -891,7 +874,7 @@ Happy teleprompting! 🎬`,
       this.sendMessage({
         type: "mirror",
         horizontal: settings.horizontalMirror,
-        vertical: settings.verticalMirror,
+        vertical: false,
         target_id: participantId,
       });
       this.sendMessage({
@@ -947,18 +930,7 @@ Happy teleprompting! 🎬`,
       this.sendMessage({
         type: "mirror",
         horizontal: settings.horizontalMirror,
-        vertical: settings.verticalMirror,
-        target_id: participantId,
-      });
-    },
-
-    togglePrompterVerticalMirror(participantId) {
-      const settings = this.getPrompterSettings(participantId);
-      settings.verticalMirror = !settings.verticalMirror;
-      this.sendMessage({
-        type: "mirror",
-        horizontal: settings.horizontalMirror,
-        vertical: settings.verticalMirror,
+        vertical: false,
         target_id: participantId,
       });
     },
