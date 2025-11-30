@@ -754,10 +754,12 @@ Happy teleprompting! 🎬`,
 
     goToBeginning() {
       this.currentScrollPosition = 0;
+      this.isPlaying = false;
       this.sendMessage({ type: "go_to_beginning" });
     },
 
     goToEnd() {
+      this.isPlaying = false;
       this.sendMessage({ type: "go_to_end" });
     },
 
