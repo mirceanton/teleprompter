@@ -372,7 +372,6 @@
 
 <script>
 import { config } from "@/utils/config.js";
-import QRCode from "qrcode";
 
 export default {
   name: "Controller",
@@ -397,7 +396,6 @@ export default {
       showRoomInfoDialog: false,
       editableRoomName: "",
       showSecret: false,
-      qrCodeDataUrl: null,
 
       // UI state for new design
       showDrawer: false,
@@ -518,7 +516,6 @@ Happy teleprompting! 🎬`,
   async mounted() {
     await this.initializeRoom();
     this.updateLastSyncTime();
-    this.generateQRCode();
 
     // Initialize undo stack with current script content
     this.lastScriptValue = this.scriptText;
@@ -1008,14 +1005,6 @@ Happy teleprompting! 🎬`,
     updateLastSyncTime() {
       const now = new Date();
       this.lastSyncTime = now.toLocaleTimeString();
-    },
-
-    async generateQRCode() {
-      try {
-        this.qrCodeDataUrl = await QRCode.toDataURL(this.joinUrl);
-      } catch (error) {
-        console.error("Error generating QR code:", error);
-      }
     },
 
     formatTime(timestamp) {
