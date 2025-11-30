@@ -150,17 +150,17 @@
                   </v-btn>
                 </div>
 
-                <!-- Markdown Toggle (global) -->
-                <div class="d-flex gap-2 mt-4">
+                <!-- Markdown Toggle -->
+                <div class="d-flex">
                   <v-btn
                     :color="markdownEnabled ? 'teal' : 'grey-darken-2'"
-                    :variant="markdownEnabled ? 'flat' : 'outlined'"
-                    size="small"
-                    class="flex-grow-1"
-                    prepend-icon="mdi-language-markdown"
+                    :variant='outlined'
+                    size="medium"
+                    class="flex-grow-1 pt-2 pb-2"
+                    :prepend-icon="markdownEnabled ? 'mdi-language-markdown' : 'mdi-format-text'"
                     @click="toggleMarkdown"
                   >
-                    {{ markdownEnabled ? 'Markdown Enabled' : 'Plain Text' }}
+                    {{ markdownEnabled ? 'Markdown' : 'Plain Text' }}
                   </v-btn>
                 </div>
               </div>
