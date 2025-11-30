@@ -64,6 +64,7 @@ export default {
   data() {
     return {
       ws: null,
+      participantId: null,  // Unique ID for this teleprompter instance
       teleprompterContent: "",
       cachedRenderedContent: "",
       defaultMessage: "Waiting for text from controller...",
@@ -75,6 +76,7 @@ export default {
       textWidth: 100,
       horizontalMirror: false,
       verticalMirror: false,
+      linesPerStep: 5,
       isFullscreen: false,
       markdownEnabled: false,
       snackbar: {
@@ -177,7 +179,6 @@ export default {
       this.ws.onopen = () => {
         console.log("WebSocket connected");
         this.showSnackbar("Connected to teleprompter channel", "success");
-        this.sendMessage({ type: "mode", mode: "teleprompter" });
       };
 
       this.ws.onmessage = (event) => {
@@ -202,6 +203,12 @@ export default {
 
     handleMessage(message) {
       switch (message.type) {
+        case "welcome":
+          // Store our participant ID and send mode
+          this.participantId = message.participant_id;
+          console.log("Assigned participant ID:", this.participantId);
+          this.sendMessage({ type: "mode", mode: "teleprompter" });
+          break;
         case "text":
           this.teleprompterContent = message.content;
           this.resetScrolling();
@@ -230,6 +237,9 @@ export default {
           break;
         case "markdown":
           this.markdownEnabled = message.enabled;
+          break;
+        case "lines_per_step":
+          this.linesPerStep = message.value;
           break;
         case "go_to_beginning":
           this.resetScrolling();

@@ -85,7 +85,7 @@
 
           <!-- Right Sidebar - Controls -->
           <v-col cols="12" lg="4" xl="3" class="sidebar">
-            <div class="controls-sidebar pa-6">
+            <div class="controls-sidebar pa-6 d-flex flex-column">
               <!-- Playback Controls Section -->
               <div class="control-section mb-8">
                 <h3 class="text-h6 font-weight-bold mb-6">Playback Controls</h3>
@@ -150,240 +150,207 @@
                   </v-btn>
                 </div>
 
-                <!-- Speed Controls Row -->
-                <div class="d-flex gap-3 mb-4">
-                  <!-- Playback Speed -->
-                  <div class="control-group flex-grow-1">
-                    <label
-                      class="text-caption text-medium-emphasis mb-1 d-block"
-                      >Playback Speed</label
-                    >
-                    <div class="d-flex align-center gap-2">
-                      <v-btn
-                        icon="mdi-minus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustSpeed(-0.1)"
-                      />
-                      <v-text-field
-                        :model-value="scrollSpeed.toFixed(1) + 'x'"
-                        readonly
-                        variant="solo-filled"
-                        hide-details
-                        density="compact"
-                        class="text-center"
-                      />
-                      <v-btn
-                        icon="mdi-plus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustSpeed(0.1)"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Lines to Scroll -->
-                  <div class="control-group flex-grow-1">
-                    <label
-                      class="text-caption text-medium-emphasis mb-1 d-block"
-                      >Lines to scroll</label
-                    >
-                    <div class="d-flex align-center gap-2">
-                      <v-btn
-                        icon="mdi-minus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustLinesPerStep(-1)"
-                      />
-                      <v-text-field
-                        :model-value="linesPerStep"
-                        readonly
-                        variant="solo-filled"
-                        hide-details
-                        density="compact"
-                        class="text-center"
-                      />
-                      <v-btn
-                        icon="mdi-plus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustLinesPerStep(1)"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Text Settings Section -->
-              <div class="control-section mb-8">
-                <h3 class="text-h6 font-weight-bold mb-6">Text Settings</h3>
-
-                <!-- Text Formatting Row -->
-                <div class="d-flex gap-3 mb-4">
-                  <!-- Text Width -->
-                  <div class="control-group flex-grow-1">
-                    <label
-                      class="text-caption text-medium-emphasis mb-1 d-block"
-                      >Text Width</label
-                    >
-                    <div class="d-flex align-center gap-2">
-                      <v-btn
-                        icon="mdi-minus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustWidth(-5)"
-                      />
-                      <v-text-field
-                        :model-value="textWidth + '%'"
-                        readonly
-                        variant="solo-filled"
-                        hide-details
-                        density="compact"
-                        class="text-center"
-                      />
-                      <v-btn
-                        icon="mdi-plus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustWidth(5)"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Font Size -->
-                  <div class="control-group flex-grow-1">
-                    <label
-                      class="text-caption text-medium-emphasis mb-1 d-block"
-                      >Font Size</label
-                    >
-                    <div class="d-flex align-center gap-2">
-                      <v-btn
-                        icon="mdi-minus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustFontSize(-0.1)"
-                      />
-                      <v-text-field
-                        :model-value="fontSize.toFixed(1) + 'em'"
-                        readonly
-                        variant="solo-filled"
-                        hide-details
-                        density="compact"
-                        class="text-center"
-                      />
-                      <v-btn
-                        icon="mdi-plus"
-                        size="small"
-                        variant="outlined"
-                        @click="adjustFontSize(0.1)"
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 <!-- Markdown Toggle -->
-                <div class="d-flex gap-2 mt-4">
+                <div class="d-flex">
                   <v-btn
                     :color="markdownEnabled ? 'teal' : 'grey-darken-2'"
-                    :variant="markdownEnabled ? 'flat' : 'outlined'"
-                    size="small"
-                    class="flex-grow-1"
-                    prepend-icon="mdi-language-markdown"
+                    :variant='outlined'
+                    size="medium"
+                    class="flex-grow-1 pt-2 pb-2"
+                    :prepend-icon="markdownEnabled ? 'mdi-language-markdown' : 'mdi-format-text'"
                     @click="toggleMarkdown"
                   >
-                    {{ markdownEnabled ? 'Markdown Enabled' : 'Plain Text' }}
+                    {{ markdownEnabled ? 'Markdown' : 'Plain Text' }}
                   </v-btn>
                 </div>
               </div>
 
-              <!-- Mirroring Section -->
-              <div class="control-section mb-8">
-                <h3 class="text-h6 font-weight-bold mb-6">Mirroring</h3>
-                <div class="d-flex gap-2">
-                  <v-btn
-                    :color="verticalMirror ? 'teal' : 'grey-darken-2'"
-                    :variant="verticalMirror ? 'flat' : 'outlined'"
-                    size="small"
-                    class="flex-grow-1 mr-2 ml-2"
-                    @click="toggleVerticalMirror"
-                  >
-                    Vertical
-                  </v-btn>
-                  <v-btn
-                    :color="horizontalMirror ? 'teal' : 'grey-darken-2'"
-                    :variant="horizontalMirror ? 'flat' : 'outlined'"
-                    size="small"
-                    class="flex-grow-1 mr-2 ml-2"
-                    @click="toggleHorizontalMirror"
-                  >
-                    Horizontal
-                  </v-btn>
-                </div>
-              </div>
-
-              <!-- Room Participants Section -->
-              <div class="control-section">
-                <h3 class="text-h6 font-weight-bold mb-6">Room Participants</h3>
-                <div class="participants-container">
+              <!-- Teleprompters Section (Per-Prompter Settings) -->
+              <div class="control-section flex-grow-1 d-flex flex-column">
+                <h3 class="text-h6 font-weight-bold mb-6">Teleprompters</h3>
+                <div class="participants-container flex-grow-1">
                   <div
-                    v-if="participants.length === 0"
+                    v-if="teleprompterParticipants.length === 0"
                     class="text-center text-medium-emphasis pa-6"
                   >
-                    <v-icon size="48" class="mb-3 text-grey-darken-1"
-                      >mdi-account-group</v-icon
-                    >
-                    <div class="text-body-2 mb-1">
-                      No participants connected
-                    </div>
-                    <div class="text-caption">
-                      Waiting for devices to join...
-                    </div>
+                    <v-icon size="48" class="mb-3 text-grey-darken-1">mdi-monitor</v-icon>
+                    <div class="text-body-2 mb-1">No teleprompters connected</div>
+                    <div class="text-caption">Waiting for devices to join...</div>
                   </div>
 
-                  <div v-else class="participants-list">
+                  <div v-else class="prompter-list">
                     <div
-                      v-for="participant in participants"
+                      v-for="participant in teleprompterParticipants"
                       :key="participant.id"
-                      class="participant-item"
-                      :class="{
-                        'participant-item-you':
-                          participant.id === participantId,
-                      }"
+                      class="prompter-card"
                     >
-                      <v-icon
-                        :color="
-                          participant.role === 'controller' ? 'blue' : 'green'
-                        "
-                        size="20"
-                        class="mr-3"
+                      <!-- Prompter Header (Collapsible) -->
+                      <div
+                        class="prompter-header d-flex align-center pa-3"
+                        @click="togglePrompterExpanded(participant.id)"
                       >
-                        {{
-                          participant.role === "controller"
-                            ? "mdi-laptop"
-                            : "mdi-monitor"
-                        }}
-                      </v-icon>
-
-                      <div class="flex-grow-1">
-                        <div class="participant-name">
-                          {{
-                            participant.role === "controller"
-                              ? "Controller"
-                              : "Teleprompter"
-                          }}
-                          <span
-                            v-if="participant.id === participantId"
-                            class="participant-you-badge"
-                          >
-                            (You)
-                          </span>
+                        <v-icon color="green" size="20" class="mr-3">mdi-monitor</v-icon>
+                        <div class="flex-grow-1">
+                          <div class="prompter-name">
+                            Teleprompter #{{ getPrompterIndex(participant.id) }}
+                          </div>
+                          <div class="prompter-time text-caption text-medium-emphasis">
+                            Joined {{ formatTime(participant.joined_at) }}
+                          </div>
                         </div>
-                        <div class="participant-time">
-                          Joined {{ formatTime(participant.joined_at) }}
-                        </div>
+                        <v-icon size="16" color="success" class="mr-2">mdi-circle</v-icon>
+                        <v-icon size="20">
+                          {{ isPrompterExpanded(participant.id) ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
+                        </v-icon>
                       </div>
 
-                      <v-icon size="16" color="success"> mdi-circle </v-icon>
+                      <!-- Prompter Settings (Expandable) -->
+                      <v-expand-transition>
+                        <div v-show="isPrompterExpanded(participant.id)" class="prompter-settings pa-3">
+                          <!-- Speed -->
+                          <div class="control-group mb-3">
+                            <label class="text-caption text-medium-emphasis mb-1 d-block">
+                              Playback Speed
+                            </label>
+                            <div class="d-flex align-center gap-2">
+                              <v-btn
+                                icon="mdi-minus"
+                                size="x-small"
+                                variant="outlined"
+                                @click="adjustPrompterSpeed(participant.id, -0.1)"
+                              />
+                              <v-text-field
+                                :model-value="getPrompterSettings(participant.id).scrollSpeed.toFixed(1) + 'x'"
+                                readonly
+                                variant="solo-filled"
+                                hide-details
+                                density="compact"
+                                class="text-center"
+                              />
+                              <v-btn
+                                icon="mdi-plus"
+                                size="x-small"
+                                variant="outlined"
+                                @click="adjustPrompterSpeed(participant.id, 0.1)"
+                              />
+                            </div>
+                          </div>
+
+                          <!-- Lines per Step -->
+                          <div class="control-group mb-3">
+                            <label class="text-caption text-medium-emphasis mb-1 d-block">
+                              Lines to Scroll
+                            </label>
+                            <div class="d-flex align-center gap-2">
+                              <v-btn
+                                icon="mdi-minus"
+                                size="x-small"
+                                variant="outlined"
+                                @click="adjustPrompterLinesPerStep(participant.id, -1)"
+                              />
+                              <v-text-field
+                                :model-value="getPrompterSettings(participant.id).linesPerStep"
+                                readonly
+                                variant="solo-filled"
+                                hide-details
+                                density="compact"
+                                class="text-center"
+                              />
+                              <v-btn
+                                icon="mdi-plus"
+                                size="x-small"
+                                variant="outlined"
+                                @click="adjustPrompterLinesPerStep(participant.id, 1)"
+                              />
+                            </div>
+                          </div>
+
+                          <!-- Text Width -->
+                          <div class="control-group mb-3">
+                            <label class="text-caption text-medium-emphasis mb-1 d-block">
+                              Text Width
+                            </label>
+                            <div class="d-flex align-center gap-2">
+                              <v-btn
+                                icon="mdi-minus"
+                                size="x-small"
+                                variant="outlined"
+                                @click="adjustPrompterWidth(participant.id, -5)"
+                              />
+                              <v-text-field
+                                :model-value="getPrompterSettings(participant.id).textWidth + '%'"
+                                readonly
+                                variant="solo-filled"
+                                hide-details
+                                density="compact"
+                                class="text-center"
+                              />
+                              <v-btn
+                                icon="mdi-plus"
+                                size="x-small"
+                                variant="outlined"
+                                @click="adjustPrompterWidth(participant.id, 5)"
+                              />
+                            </div>
+                          </div>
+
+                          <!-- Font Size -->
+                          <div class="control-group mb-3">
+                            <label class="text-caption text-medium-emphasis mb-1 d-block">
+                              Font Size
+                            </label>
+                            <div class="d-flex align-center gap-2">
+                              <v-btn
+                                icon="mdi-minus"
+                                size="x-small"
+                                variant="outlined"
+                                @click="adjustPrompterFontSize(participant.id, -0.1)"
+                              />
+                              <v-text-field
+                                :model-value="getPrompterSettings(participant.id).fontSize.toFixed(1) + 'em'"
+                                readonly
+                                variant="solo-filled"
+                                hide-details
+                                density="compact"
+                                class="text-center"
+                              />
+                              <v-btn
+                                icon="mdi-plus"
+                                size="x-small"
+                                variant="outlined"
+                                @click="adjustPrompterFontSize(participant.id, 0.1)"
+                              />
+                            </div>
+                          </div>
+
+                          <!-- Mirroring -->
+                          <div class="control-group">
+                            <label class="text-caption text-medium-emphasis mb-1 d-block">
+                              Mirroring
+                            </label>
+                            <div class="d-flex gap-2">
+                              <v-btn
+                                :color="getPrompterSettings(participant.id).verticalMirror ? 'teal' : 'grey-darken-2'"
+                                :variant="getPrompterSettings(participant.id).verticalMirror ? 'flat' : 'outlined'"
+                                size="small"
+                                class="flex-grow-1"
+                                @click="togglePrompterVerticalMirror(participant.id)"
+                              >
+                                Vertical
+                              </v-btn>
+                              <v-btn
+                                :color="getPrompterSettings(participant.id).horizontalMirror ? 'teal' : 'grey-darken-2'"
+                                :variant="getPrompterSettings(participant.id).horizontalMirror ? 'flat' : 'outlined'"
+                                size="small"
+                                class="flex-grow-1"
+                                @click="togglePrompterHorizontalMirror(participant.id)"
+                              >
+                                Horizontal
+                              </v-btn>
+                            </div>
+                          </div>
+                        </div>
+                      </v-expand-transition>
                     </div>
                   </div>
                 </div>
@@ -405,7 +372,6 @@
 
 <script>
 import { config } from "@/utils/config.js";
-import QRCode from "qrcode";
 
 export default {
   name: "Controller",
@@ -423,15 +389,18 @@ export default {
         count: 0,
       },
 
+      // Per-prompter settings (keyed by participant ID)
+      prompterSettings: {},
+
       // Room management UI
       showRoomInfoDialog: false,
       editableRoomName: "",
       showSecret: false,
-      qrCodeDataUrl: null,
 
       // UI state for new design
       showDrawer: false,
       lastSyncTime: "Never",
+      expandedPrompters: {},  // Track which prompter settings are expanded
 
       // Script content
       scriptText: `# Welcome to Remote Teleprompter!
@@ -458,7 +427,7 @@ This application supports multiple teleprompter devices connected to the same ch
 
 Happy teleprompting! 🎬`,
 
-      // Control settings
+      // Global control settings (affects all prompters when changed in global section)
       scrollSpeed: 1.0,
       textWidth: 100,
       fontSize: 2.5,
@@ -538,12 +507,15 @@ Happy teleprompting! 🎬`,
       if (trimmed === "") return 0;
       return trimmed.split(/\s+/).length;
     },
+
+    teleprompterParticipants() {
+      return this.participants.filter(p => p.role === 'teleprompter');
+    },
   },
 
   async mounted() {
     await this.initializeRoom();
     this.updateLastSyncTime();
-    this.generateQRCode();
 
     // Initialize undo stack with current script content
     this.lastScriptValue = this.scriptText;
@@ -671,19 +643,39 @@ Happy teleprompting! 🎬`,
 
     handleWebSocketMessage(message) {
       switch (message.type) {
+        case "welcome":
+          // Store our participant ID and send mode
+          this.participantId = message.participant_id;
+          console.log("Assigned participant ID:", this.participantId);
+          this.sendMessage({ type: "mode", mode: "controller" });
+          break;
         case "connection_update":
-          // Simple connection count update - create mock participants
-          this.updateParticipantsList(message.connection_count || 0);
+          // Update participants from server
+          if (message.participants) {
+            this.participants = message.participants;
+            this.initializePrompterSettings();
+          }
           // Auto-sync script when new participant joins (increased count)
           if (message.connection_count > this.lastConnectionCount) {
             setTimeout(() => {
               this.syncText();
+              this.syncAllSettings();
             }, 1000); // Small delay to ensure connection is ready
           }
           this.lastConnectionCount = message.connection_count || 0;
           break;
+        case "participants_update":
+          this.participants = message.participants || [];
+          this.initializePrompterSettings();
+          // Sync text and settings when new teleprompter joins
+          setTimeout(() => {
+            this.syncText();
+            this.syncAllSettings();
+          }, 500);
+          break;
         case "participants_list":
           this.participants = message.participants || [];
+          this.initializePrompterSettings();
           break;
         case "participant_joined":
           if (
@@ -691,32 +683,53 @@ Happy teleprompting! 🎬`,
             !this.participants.find((p) => p.id === message.participant.id)
           ) {
             this.participants.push(message.participant);
+            this.initializePrompterSettings();
             // Auto-sync script when new participant joins
             setTimeout(() => {
               this.syncText();
+              this.syncAllSettings();
             }, 1000);
           }
           break;
         case "participant_left":
-          this.participants = this.participants.filter(
+          this.participants = message.participants || this.participants.filter(
             (p) => p.id !== message.participant_id
           );
+          // Clean up settings for the disconnected participant
+          if (message.participant_id) {
+            delete this.prompterSettings[message.participant_id];
+            delete this.expandedPrompters[message.participant_id];
+          }
           break;
         default:
           console.log("Received message:", message);
       }
     },
 
-    updateParticipantsList(connectionCount) {
-      // Create mock participants based on connection count for demo purposes
-      this.participants = [];
-      for (let i = 0; i < connectionCount; i++) {
-        this.participants.push({
-          id: `participant_${i}`,
-          role: i === 0 ? "controller" : "teleprompter",
-          joined_at: new Date().toISOString(),
-        });
-      }
+    initializePrompterSettings() {
+      // Initialize settings for any new teleprompter participants
+      this.teleprompterParticipants.forEach((participant) => {
+        if (!this.prompterSettings[participant.id]) {
+          this.prompterSettings[participant.id] = {
+            scrollSpeed: this.scrollSpeed,
+            textWidth: this.textWidth,
+            fontSize: this.fontSize,
+            horizontalMirror: this.horizontalMirror,
+            verticalMirror: this.verticalMirror,
+            linesPerStep: this.linesPerStep,
+          };
+        }
+      });
+    },
+
+    syncAllSettings() {
+      // Send current settings to all teleprompter participants
+      this.teleprompterParticipants.forEach((participant) => {
+        const settings = this.prompterSettings[participant.id];
+        if (settings) {
+          this.sendPrompterSettings(participant.id, settings);
+        }
+      });
     },
 
     sendMessage(message) {
@@ -841,6 +854,126 @@ Happy teleprompting! 🎬`,
       });
     },
 
+    // Per-prompter settings methods
+    getPrompterSettings(participantId) {
+      if (!this.prompterSettings[participantId]) {
+        this.prompterSettings[participantId] = {
+          scrollSpeed: this.scrollSpeed,
+          textWidth: this.textWidth,
+          fontSize: this.fontSize,
+          horizontalMirror: this.horizontalMirror,
+          verticalMirror: this.verticalMirror,
+          linesPerStep: this.linesPerStep,
+        };
+      }
+      return this.prompterSettings[participantId];
+    },
+
+    sendPrompterSettings(participantId, settings) {
+      // Send all settings to the specific prompter
+      this.sendMessage({
+        type: "speed",
+        value: settings.scrollSpeed,
+        target_id: participantId,
+      });
+      this.sendMessage({
+        type: "width",
+        value: settings.textWidth,
+        target_id: participantId,
+      });
+      this.sendMessage({
+        type: "font_size",
+        value: settings.fontSize,
+        target_id: participantId,
+      });
+      this.sendMessage({
+        type: "mirror",
+        horizontal: settings.horizontalMirror,
+        vertical: settings.verticalMirror,
+        target_id: participantId,
+      });
+      this.sendMessage({
+        type: "lines_per_step",
+        value: settings.linesPerStep,
+        target_id: participantId,
+      });
+    },
+
+    adjustPrompterSpeed(participantId, delta) {
+      const settings = this.getPrompterSettings(participantId);
+      settings.scrollSpeed = Math.max(0.1, Math.min(5.0, settings.scrollSpeed + delta));
+      this.sendMessage({
+        type: "speed",
+        value: settings.scrollSpeed,
+        target_id: participantId,
+      });
+    },
+
+    adjustPrompterFontSize(participantId, delta) {
+      const settings = this.getPrompterSettings(participantId);
+      settings.fontSize = Math.max(0.5, Math.min(5.0, settings.fontSize + delta));
+      this.sendMessage({
+        type: "font_size",
+        value: settings.fontSize,
+        target_id: participantId,
+      });
+    },
+
+    adjustPrompterWidth(participantId, delta) {
+      const settings = this.getPrompterSettings(participantId);
+      settings.textWidth = Math.max(20, Math.min(100, settings.textWidth + delta));
+      this.sendMessage({
+        type: "width",
+        value: settings.textWidth,
+        target_id: participantId,
+      });
+    },
+
+    adjustPrompterLinesPerStep(participantId, delta) {
+      const settings = this.getPrompterSettings(participantId);
+      settings.linesPerStep = Math.max(1, Math.min(20, settings.linesPerStep + delta));
+      this.sendMessage({
+        type: "lines_per_step",
+        value: settings.linesPerStep,
+        target_id: participantId,
+      });
+    },
+
+    togglePrompterHorizontalMirror(participantId) {
+      const settings = this.getPrompterSettings(participantId);
+      settings.horizontalMirror = !settings.horizontalMirror;
+      this.sendMessage({
+        type: "mirror",
+        horizontal: settings.horizontalMirror,
+        vertical: settings.verticalMirror,
+        target_id: participantId,
+      });
+    },
+
+    togglePrompterVerticalMirror(participantId) {
+      const settings = this.getPrompterSettings(participantId);
+      settings.verticalMirror = !settings.verticalMirror;
+      this.sendMessage({
+        type: "mirror",
+        horizontal: settings.horizontalMirror,
+        vertical: settings.verticalMirror,
+        target_id: participantId,
+      });
+    },
+
+    togglePrompterExpanded(participantId) {
+      this.expandedPrompters[participantId] = !this.expandedPrompters[participantId];
+    },
+
+    isPrompterExpanded(participantId) {
+      return !!this.expandedPrompters[participantId];
+    },
+
+    getPrompterIndex(participantId) {
+      const index = this.teleprompterParticipants.findIndex(p => p.id === participantId);
+      return index + 1;
+    },
+
     // Script management
     debouncedSyncText() {
       if (!this.isUndoRedoOperation) {
@@ -872,14 +1005,6 @@ Happy teleprompting! 🎬`,
     updateLastSyncTime() {
       const now = new Date();
       this.lastSyncTime = now.toLocaleTimeString();
-    },
-
-    async generateQRCode() {
-      try {
-        this.qrCodeDataUrl = await QRCode.toDataURL(this.joinUrl);
-      } catch (error) {
-        console.error("Error generating QR code:", error);
-      }
     },
 
     formatTime(timestamp) {
@@ -959,7 +1084,7 @@ Happy teleprompting! 🎬`,
 
 .controls-sidebar {
   height: 100%;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 /* Control Sections */
@@ -1010,7 +1135,6 @@ Happy teleprompting! 🎬`,
 /* Participants Container */
 .participants-container {
   min-height: 120px;
-  max-height: 300px;
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
@@ -1061,6 +1185,53 @@ Happy teleprompting! 🎬`,
 .participant-time {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.5);
+}
+
+/* Prompter Card Styles */
+.prompter-list {
+  padding: 0;
+}
+
+.prompter-card {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background-color 0.2s ease;
+}
+
+.prompter-card:last-child {
+  border-bottom: none;
+}
+
+.prompter-header {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.prompter-header:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.prompter-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+.prompter-time {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.prompter-settings {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.prompter-settings .control-group {
+  margin-bottom: 0.75rem;
+}
+
+.prompter-settings .control-group:last-child {
+  margin-bottom: 0;
 }
 
 /* Responsive Design */

@@ -75,13 +75,21 @@ connection_manager = ConnectionManager()
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time communication"""
 
-    await connection_manager.connect(websocket)
+    participant_id = await connection_manager.connect(websocket)
 
     try:
+        # Send welcome message with participant ID
+        welcome_message = {
+            "type": "welcome",
+            "participant_id": participant_id,
+        }
+        await websocket.send_text(json.dumps(welcome_message))
+
         # Send connection update to all clients
         connection_update = {
             "type": "connection_update",
             "connection_count": connection_manager.get_connection_count(),
+            "participants": connection_manager.get_all_participants(),
         }
         await connection_manager.broadcast_to_all(
             connection_update, exclude=websocket
@@ -93,26 +101,49 @@ async def websocket_endpoint(websocket: WebSocket):
 
             try:
                 message = json.loads(message_text)
-                message["_sender"] = "client"
+                message_type = message.get("type")
+                
+                # Handle mode message to set participant role
+                if message_type == "mode":
+                    role = message.get("mode")
+                    connection_manager.set_participant_role(websocket, role)
+                    
+                    # Broadcast updated participants list
+                    participants_update = {
+                        "type": "participants_update",
+                        "participants": connection_manager.get_all_participants(),
+                    }
+                    await connection_manager.broadcast_to_all(participants_update)
+                    continue
 
-                # Broadcast to all other clients across instances
-                await connection_manager.broadcast_to_all(
-                    message, exclude=websocket
-                )
-                logger.info(f"Broadcast message: {message.get('type', 'unknown')}")
+                # Handle targeted settings messages (per-prompter)
+                target_id = message.get("target_id")
+                if target_id:
+                    # Send to specific participant only
+                    await connection_manager.send_to_participant(target_id, message)
+                    logger.info(f"Sent targeted message type '{message_type}' to participant {target_id}")
+                else:
+                    # Broadcast to all other clients across instances
+                    message["_sender"] = "client"
+                    await connection_manager.broadcast_to_all(
+                        message, exclude=websocket
+                    )
+                    logger.info(f"Broadcast message: {message_type}")
 
             except json.JSONDecodeError:
                 logger.error(f"Invalid JSON received: {message_text}")
 
     except WebSocketDisconnect:
-        connection_manager.disconnect(websocket)
+        disconnected_id = connection_manager.disconnect(websocket)
 
-        # Notify remaining clients about updated connection count
-        connection_update = {
-            "type": "connection_update",
+        # Notify remaining clients about participant leaving
+        disconnect_update = {
+            "type": "participant_left",
+            "participant_id": disconnected_id,
             "connection_count": connection_manager.get_connection_count(),
+            "participants": connection_manager.get_all_participants(),
         }
-        await connection_manager.broadcast_to_all(connection_update)
+        await connection_manager.broadcast_to_all(disconnect_update)
 
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
