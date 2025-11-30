@@ -280,6 +280,20 @@
                     </div>
                   </div>
                 </div>
+
+                <!-- Markdown Toggle -->
+                <div class="d-flex gap-2 mt-4">
+                  <v-btn
+                    :color="markdownEnabled ? 'teal' : 'grey-darken-2'"
+                    :variant="markdownEnabled ? 'flat' : 'outlined'"
+                    size="small"
+                    class="flex-grow-1"
+                    prepend-icon="mdi-language-markdown"
+                    @click="toggleMarkdown"
+                  >
+                    {{ markdownEnabled ? 'Markdown Enabled' : 'Plain Text' }}
+                  </v-btn>
+                </div>
               </div>
 
               <!-- Mirroring Section -->
@@ -451,6 +465,7 @@ Happy teleprompting! 🎬`,
       horizontalMirror: false,
       verticalMirror: false,
       linesPerStep: 5,
+      markdownEnabled: false,
 
       // Navigation settings
       isPlaying: false,
@@ -815,6 +830,14 @@ Happy teleprompting! 🎬`,
         type: "mirror",
         horizontal: this.horizontalMirror,
         vertical: this.verticalMirror,
+      });
+    },
+
+    toggleMarkdown() {
+      this.markdownEnabled = !this.markdownEnabled;
+      this.sendMessage({
+        type: "markdown",
+        enabled: this.markdownEnabled,
       });
     },
 
