@@ -150,35 +150,6 @@
                   </v-btn>
                 </div>
 
-                <!-- Lines to Scroll (global) -->
-                <div class="control-group mb-4">
-                  <label class="text-caption text-medium-emphasis mb-1 d-block">
-                    Lines to scroll (global)
-                  </label>
-                  <div class="d-flex align-center gap-2">
-                    <v-btn
-                      icon="mdi-minus"
-                      size="small"
-                      variant="outlined"
-                      @click="adjustLinesPerStep(-1)"
-                    />
-                    <v-text-field
-                      :model-value="linesPerStep"
-                      readonly
-                      variant="solo-filled"
-                      hide-details
-                      density="compact"
-                      class="text-center"
-                    />
-                    <v-btn
-                      icon="mdi-plus"
-                      size="small"
-                      variant="outlined"
-                      @click="adjustLinesPerStep(1)"
-                    />
-                  </div>
-                </div>
-
                 <!-- Markdown Toggle (global) -->
                 <div class="d-flex gap-2 mt-4">
                   <v-btn
