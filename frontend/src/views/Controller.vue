@@ -165,35 +165,6 @@
                 </div>
               </div>
 
-              <!-- Other Participants Section -->
-              <div v-if="participants.filter(p => p.role === 'controller').length > 0" class="control-section mt-8">
-                <h3 class="text-h6 font-weight-bold mb-6">Controllers</h3>
-                <div class="participants-container">
-                  <div class="participants-list">
-                    <div
-                      v-for="participant in participants.filter(p => p.role === 'controller')"
-                      :key="participant.id"
-                      class="participant-item"
-                      :class="{ 'participant-item-you': participant.id === participantId }"
-                    >
-                      <v-icon color="blue" size="20" class="mr-3">mdi-laptop</v-icon>
-                      <div class="flex-grow-1">
-                        <div class="participant-name">
-                          Controller
-                          <span v-if="participant.id === participantId" class="participant-you-badge">
-                            (You)
-                          </span>
-                        </div>
-                        <div class="participant-time">
-                          Joined {{ formatTime(participant.joined_at) }}
-                        </div>
-                      </div>
-                      <v-icon size="16" color="success">mdi-circle</v-icon>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <!-- Teleprompters Section (Per-Prompter Settings) -->
               <div class="control-section flex-grow-1 d-flex flex-column">
                 <h3 class="text-h6 font-weight-bold mb-6">Teleprompters</h3>
