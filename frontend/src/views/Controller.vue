@@ -209,7 +209,7 @@
                         <div v-show="isPrompterExpanded(participant.id)" class="prompter-settings pa-3">
                           <!-- Speed -->
                           <div class="control-group mb-3">
-                            <label class="text-caption text-medium-emphasis mb-1 d-block">
+                            <label class="text-caption text-medium-emphasis mb-1 d-block ml-10">
                               Playback Speed
                             </label>
                             <div class="d-flex align-center gap-2">
@@ -217,6 +217,7 @@
                                 icon="mdi-minus"
                                 size="x-small"
                                 variant="outlined"
+                                color="secondary"
                                 @click="adjustPrompterSpeed(participant.id, -0.1)"
                               />
                               <v-text-field
@@ -225,12 +226,13 @@
                                 variant="solo-filled"
                                 hide-details
                                 density="compact"
-                                class="text-center"
+                                class="text-center ml-2 mr-2"
                               />
                               <v-btn
                                 icon="mdi-plus"
                                 size="x-small"
                                 variant="outlined"
+                                color="secondary"
                                 @click="adjustPrompterSpeed(participant.id, 0.1)"
                               />
                             </div>
@@ -238,7 +240,7 @@
 
                           <!-- Lines per Step -->
                           <div class="control-group mb-3">
-                            <label class="text-caption text-medium-emphasis mb-1 d-block">
+                            <label class="text-caption text-medium-emphasis mb-1 d-block ml-10">
                               Lines to Scroll
                             </label>
                             <div class="d-flex align-center gap-2">
@@ -246,6 +248,7 @@
                                 icon="mdi-minus"
                                 size="x-small"
                                 variant="outlined"
+                                color="secondary"
                                 @click="adjustPrompterLinesPerStep(participant.id, -1)"
                               />
                               <v-text-field
@@ -254,12 +257,13 @@
                                 variant="solo-filled"
                                 hide-details
                                 density="compact"
-                                class="text-center"
+                                class="text-center ml-2 mr-2"
                               />
                               <v-btn
                                 icon="mdi-plus"
                                 size="x-small"
                                 variant="outlined"
+                                color="secondary"
                                 @click="adjustPrompterLinesPerStep(participant.id, 1)"
                               />
                             </div>
@@ -267,7 +271,7 @@
 
                           <!-- Text Width -->
                           <div class="control-group mb-3">
-                            <label class="text-caption text-medium-emphasis mb-1 d-block">
+                            <label class="text-caption text-medium-emphasis mb-1 d-block ml-10">
                               Text Width
                             </label>
                             <div class="d-flex align-center gap-2">
@@ -275,6 +279,7 @@
                                 icon="mdi-minus"
                                 size="x-small"
                                 variant="outlined"
+                                color="secondary"
                                 @click="adjustPrompterWidth(participant.id, -5)"
                               />
                               <v-text-field
@@ -283,12 +288,13 @@
                                 variant="solo-filled"
                                 hide-details
                                 density="compact"
-                                class="text-center"
+                                class="text-center ml-2 mr-2"
                               />
                               <v-btn
                                 icon="mdi-plus"
                                 size="x-small"
                                 variant="outlined"
+                                color="secondary"
                                 @click="adjustPrompterWidth(participant.id, 5)"
                               />
                             </div>
@@ -296,7 +302,7 @@
 
                           <!-- Font Size -->
                           <div class="control-group mb-3">
-                            <label class="text-caption text-medium-emphasis mb-1 d-block">
+                            <label class="text-caption text-medium-emphasis mb-1 d-block ml-10">
                               Font Size
                             </label>
                             <div class="d-flex align-center gap-2">
@@ -304,6 +310,7 @@
                                 icon="mdi-minus"
                                 size="x-small"
                                 variant="outlined"
+                                color="secondary"
                                 @click="adjustPrompterFontSize(participant.id, -0.1)"
                               />
                               <v-text-field
@@ -312,31 +319,29 @@
                                 variant="solo-filled"
                                 hide-details
                                 density="compact"
-                                class="text-center"
+                                class="text-center ml-2 mr-2"
                               />
                               <v-btn
                                 icon="mdi-plus"
                                 size="x-small"
                                 variant="outlined"
+                                color="secondary"
                                 @click="adjustPrompterFontSize(participant.id, 0.1)"
                               />
                             </div>
                           </div>
 
                           <!-- Mirroring -->
-                          <div class="control-group">
-                            <label class="text-caption text-medium-emphasis mb-1 d-block">
-                              Mirroring
-                            </label>
+                          <div class="control-group mt-4">
                             <div class="d-flex gap-2">
                               <v-btn
                                 :color="getPrompterSettings(participant.id).horizontalMirror ? 'teal' : 'grey-darken-2'"
                                 :variant="getPrompterSettings(participant.id).horizontalMirror ? 'flat' : 'outlined'"
-                                size="small"
-                                class="flex-grow-1"
+                                size="medium"
+                                class="flex-grow-1 pt-2 pb-2"
                                 @click="togglePrompterHorizontalMirror(participant.id)"
                               >
-                                Horizontal
+                                Horizontal Mirroring
                               </v-btn>
                             </div>
                           </div>
