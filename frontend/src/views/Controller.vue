@@ -696,6 +696,23 @@ Happy teleprompting! 🎬`,
             delete this.expandedPrompters[message.participant_id];
           }
           break;
+        case "start":
+          // Update play state when playback is started via API or other controller
+          this.isPlaying = true;
+          break;
+        case "pause":
+          // Update play state when playback is paused via API or other controller
+          this.isPlaying = false;
+          break;
+        case "go_to_beginning":
+          // Update play state when scrolling to beginning via API
+          this.isPlaying = false;
+          this.currentScrollPosition = 0;
+          break;
+        case "go_to_end":
+          // Update play state when scrolling to end via API
+          this.isPlaying = false;
+          break;
         default:
           console.log("Received message:", message);
       }
