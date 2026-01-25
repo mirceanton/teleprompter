@@ -410,12 +410,14 @@ export default {
           // Listen for wake lock release (e.g., if user switches tabs)
           this.wakeLock.addEventListener("release", () => {
             console.log("Wake Lock released");
+            this.wakeLock = null;
           });
         } else {
           console.log("Wake Lock API not supported");
         }
       } catch (err) {
         console.error(`Failed to activate Wake Lock: ${err.name}, ${err.message}`);
+        this.wakeLock = null;
       }
     },
 
