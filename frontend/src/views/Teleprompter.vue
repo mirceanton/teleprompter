@@ -79,6 +79,7 @@ export default {
       linesPerStep: 5,
       isFullscreen: false,
       markdownEnabled: false,
+      wakeLock: null,  // Wake Lock API reference
       snackbar: {
         show: false,
         text: "",
@@ -144,6 +145,9 @@ export default {
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
     }
+
+    // Release wake lock when component unmounts
+    this.releaseWakeLock();
 
     document.removeEventListener("fullscreenchange", this.onFullscreenChange);
     document.removeEventListener(
@@ -386,6 +390,46 @@ export default {
         document.mozFullScreenElement ||
         document.msFullscreenElement
       );
+
+      // Manage wake lock based on fullscreen state
+      if (this.isFullscreen) {
+        this.requestWakeLock();
+      } else {
+        this.releaseWakeLock();
+      }
+    },
+
+    async requestWakeLock() {
+      try {
+        // Check if Wake Lock API is supported
+        if ("wakeLock" in navigator) {
+          this.wakeLock = await navigator.wakeLock.request("screen");
+          console.log("Wake Lock activated");
+          this.showSnackbar("Screen will stay awake", "info");
+
+          // Listen for wake lock release (e.g., if user switches tabs)
+          this.wakeLock.addEventListener("release", () => {
+            console.log("Wake Lock released");
+          });
+        } else {
+          console.log("Wake Lock API not supported");
+        }
+      } catch (err) {
+        console.error(`Failed to activate Wake Lock: ${err.name}, ${err.message}`);
+      }
+    },
+
+    releaseWakeLock() {
+      if (this.wakeLock !== null) {
+        this.wakeLock.release()
+          .then(() => {
+            this.wakeLock = null;
+            console.log("Wake Lock released manually");
+          })
+          .catch((err) => {
+            console.error(`Failed to release Wake Lock: ${err.name}, ${err.message}`);
+          });
+      }
     },
 
     showSnackbar(text, color = "success") {
