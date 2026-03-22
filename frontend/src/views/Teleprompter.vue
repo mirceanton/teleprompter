@@ -85,6 +85,9 @@ export default {
         text: "",
         color: "success",
       },
+      reconnectDelay: 1000,
+      reconnectTimer: null,
+      isUnmounting: false,
     };
   },
 
@@ -139,6 +142,8 @@ export default {
   },
 
   beforeUnmount() {
+    this.isUnmounting = true;
+    clearTimeout(this.reconnectTimer);
     if (this.ws) {
       this.ws.close();
     }
@@ -180,6 +185,7 @@ export default {
 
     setupWebSocketHandlers() {
       this.ws.onopen = () => {
+        this.reconnectDelay = 1000;
         console.log("WebSocket connected");
         this.showSnackbar("Connected to teleprompter channel", "success");
       };
@@ -195,13 +201,23 @@ export default {
 
       this.ws.onerror = (error) => {
         console.error("WebSocket error:", error);
-        this.showSnackbar("Connection error", "error");
+        // onerror is always followed by onclose — let onclose drive reconnect
       };
 
       this.ws.onclose = () => {
         console.log("WebSocket disconnected");
-        this.showSnackbar("Disconnected from server", "warning");
+        if (this.isUnmounting) return;
+        this.showSnackbar("Disconnected — reconnecting...", "warning");
+        this.scheduleReconnect();
       };
+    },
+
+    scheduleReconnect() {
+      this.reconnectTimer = setTimeout(() => {
+        if (this.isUnmounting) return;
+        this.connect();
+      }, this.reconnectDelay);
+      this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
     },
 
     handleMessage(message) {

@@ -453,6 +453,11 @@ Happy teleprompting! 🎬`,
 
       // Connection tracking
       lastConnectionCount: 0,
+
+      // Auto-reconnect state
+      reconnectDelay: 1000,
+      reconnectTimer: null,
+      isUnmounting: false,
     };
   },
 
@@ -517,6 +522,8 @@ Happy teleprompting! 🎬`,
   },
 
   beforeUnmount() {
+    this.isUnmounting = true;
+    clearTimeout(this.reconnectTimer);
     if (this.ws) {
       this.ws.close();
     }
@@ -526,7 +533,6 @@ Happy teleprompting! 🎬`,
     async initializeRoom() {
       try {
         await this.connectWebSocket();
-        this.showSnackbar("Connected to teleprompter server", "success");
       } catch (error) {
         console.error("Failed to initialize connection:", error);
         this.showSnackbar("Failed to connect to server", "error");
@@ -613,7 +619,9 @@ Happy teleprompting! 🎬`,
       this.ws = new WebSocket(wsFullUrl);
 
       this.ws.onopen = () => {
+        this.reconnectDelay = 1000;
         console.log("WebSocket connected");
+        this.showSnackbar("Connected to teleprompter server", "success");
       };
 
       this.ws.onmessage = (event) => {
@@ -627,13 +635,23 @@ Happy teleprompting! 🎬`,
 
       this.ws.onerror = (error) => {
         console.error("WebSocket error:", error);
-        this.showSnackbar("Connection error", "error");
+        // onerror is always followed by onclose — let onclose drive reconnect
       };
 
       this.ws.onclose = () => {
         console.log("WebSocket disconnected");
-        this.showSnackbar("Disconnected from server", "warning");
+        if (this.isUnmounting) return;
+        this.showSnackbar("Disconnected — reconnecting...", "warning");
+        this.scheduleReconnect();
       };
+    },
+
+    scheduleReconnect() {
+      this.reconnectTimer = setTimeout(() => {
+        if (this.isUnmounting) return;
+        this.connectWebSocket();
+      }, this.reconnectDelay);
+      this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
     },
 
     handleWebSocketMessage(message) {
