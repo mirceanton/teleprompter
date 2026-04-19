@@ -1,0 +1,32 @@
+{{template "base" .}}
+
+{{define "content"}}
+<div class="min-vh-100 d-flex flex-column align-items-center justify-content-center px-3">
+  <div class="text-center mb-5">
+    <i class="bi bi-camera-video-fill text-teal" style="font-size:3.5rem"></i>
+    <h1 class="display-5 fw-bold mt-3 mb-2">Teleprompter</h1>
+    <p class="text-muted fs-5">Choose your mode to get started</p>
+  </div>
+
+  <div class="row g-4" style="max-width:680px;width:100%">
+    <div class="col-md-6">
+      <a href="/controller" class="card h-100 text-decoration-none card-hover border-secondary bg-dark">
+        <div class="card-body text-center p-5">
+          <i class="bi bi-laptop text-teal mb-3 d-block" style="font-size:2.8rem"></i>
+          <h3 class="fw-bold mb-2">Controller</h3>
+          <p class="text-muted mb-0">Edit and control the teleprompter script from your computer</p>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-6">
+      <a href="/teleprompter" class="card h-100 text-decoration-none card-hover border-secondary bg-dark">
+        <div class="card-body text-center p-5">
+          <i class="bi bi-display text-teal mb-3 d-block" style="font-size:2.8rem"></i>
+          <h3 class="fw-bold mb-2">Teleprompter</h3>
+          <p class="text-muted mb-0">Display the scrolling script on a phone or tablet</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+{{end}}

@@ -1,0 +1,374 @@
+{{template "base" .}}
+
+{{define "content"}}
+<style>
+  body { background: #000; overflow: hidden; }
+  #tp-container {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    color: #fff;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  #tp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    text-align: center;
+    line-height: 1.8;
+    font-family: 'Roboto', Arial, sans-serif;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    padding: 0 20px;
+    box-sizing: border-box;
+  }
+  #tp-content {
+    display: inline-block;
+    max-width: 100%;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+  }
+  .markdown-content { white-space: normal; text-align: left; }
+  .markdown-content h1 { font-size: 1.5em; margin: 0.5em 0 0.3em; font-weight: bold; }
+  .markdown-content h2 { font-size: 1.3em; margin: 0.5em 0 0.3em; font-weight: bold; }
+  .markdown-content h3 { font-size: 1.1em; margin: 0.5em 0 0.3em; font-weight: bold; }
+  .markdown-content p  { margin-bottom: 0.8em; }
+  .markdown-content ul, .markdown-content ol { margin-left: 1.5em; margin-bottom: 0.8em; }
+  .markdown-content li  { margin-bottom: 0.3em; }
+  .markdown-content strong { font-weight: bold; }
+  .markdown-content em { font-style: italic; }
+  .markdown-content code { background: rgba(255,255,255,.1); padding: .1em .3em; border-radius: 3px; font-family: monospace; }
+  .markdown-content blockquote { border-left: 3px solid rgba(255,255,255,.5); padding-left: 1em; margin: 0 0 0.8em; font-style: italic; }
+  .markdown-content hr { border: none; border-top: 1px solid rgba(255,255,255,.3); margin: 1em 0; }
+  #tp-hint {
+    position: fixed;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    color: rgba(255,255,255,0.5);
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    pointer-events: none;
+    transition: opacity 0.5s;
+  }
+  #tp-status {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    background: rgba(0,0,0,0.6);
+    transition: opacity 0.5s;
+  }
+</style>
+
+<div id="tp-container" onclick="enterFullscreen()">
+  <div id="tp-text">
+    <div id="tp-content">Waiting for text from controller…</div>
+  </div>
+</div>
+
+<div id="tp-hint">Tap to enter fullscreen</div>
+<div id="tp-status" style="color:#aaa">
+  <i class="bi bi-wifi-off me-1" id="status-icon"></i><span id="status-text">Connecting…</span>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" style="z-index:9999"></div>
+{{end}}
+
+{{define "scripts"}}
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.5/dist/purify.min.js"></script>
+<script>
+const tp = {
+  ws: null,
+  participantId: null,
+  content: '',
+  scrollPos: 0,
+  isScrolling: false,
+  animId: null,
+  scrollSpeed: 1.0,
+  fontSize: 2.5,
+  textWidth: 100,
+  horizontalMirror: false,
+  linesPerStep: 5,
+  markdownEnabled: false,
+  wakeLock: null,
+  reconnectDelay: 1000,
+  reconnectTimer: null,
+};
+
+// ── DOM refs ──────────────────────────────────────────────
+const $container = () => document.getElementById('tp-container');
+const $text      = () => document.getElementById('tp-text');
+const $content   = () => document.getElementById('tp-content');
+const $hint      = () => document.getElementById('tp-hint');
+const $status    = () => document.getElementById('tp-status');
+
+// ── Init ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  connect();
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+  applyStyles();
+  // hide hint after 4s
+  setTimeout(() => { const h = $hint(); if (h) h.style.opacity = '0'; }, 4000);
+});
+
+// ── WebSocket ──────────────────────────────────────────────
+function wsUrl() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${location.host}/api/ws`;
+}
+
+function connect() {
+  tp.ws = new WebSocket(wsUrl());
+
+  tp.ws.onopen = () => {
+    tp.reconnectDelay = 1000;
+    setStatus(true);
+    showToast('Connected', 'success');
+  };
+
+  tp.ws.onmessage = (e) => {
+    try { handleMessage(JSON.parse(e.data)); } catch {}
+  };
+
+  tp.ws.onclose = () => {
+    setStatus(false);
+    showToast('Disconnected — reconnecting…', 'warning');
+    tp.reconnectTimer = setTimeout(() => connect(), tp.reconnectDelay);
+    tp.reconnectDelay = Math.min(tp.reconnectDelay * 2, 30000);
+  };
+}
+
+function sendMsg(obj) {
+  if (tp.ws && tp.ws.readyState === WebSocket.OPEN) {
+    tp.ws.send(JSON.stringify(obj));
+  }
+}
+
+function handleMessage(msg) {
+  switch (msg.type) {
+    case 'welcome':
+      tp.participantId = msg.participant_id;
+      sendMsg({ type: 'mode', mode: 'teleprompter' });
+      break;
+    case 'text':
+      tp.content = msg.content || '';
+      renderContent();
+      resetScrolling();
+      break;
+    case 'start':
+      startScrolling();
+      break;
+    case 'pause':
+      pauseScrolling();
+      break;
+    case 'reset':
+      resetScrolling();
+      break;
+    case 'speed':
+      tp.scrollSpeed = msg.value;
+      break;
+    case 'font_size':
+      tp.fontSize = msg.value;
+      applyStyles();
+      break;
+    case 'width':
+      tp.textWidth = msg.value;
+      applyStyles();
+      break;
+    case 'mirror':
+      tp.horizontalMirror = msg.horizontal;
+      applyStyles();
+      break;
+    case 'markdown':
+      tp.markdownEnabled = msg.enabled;
+      renderContent();
+      break;
+    case 'lines_per_step':
+      tp.linesPerStep = msg.value;
+      break;
+    case 'go_to_beginning':
+      pauseScrolling();
+      resetScrolling();
+      break;
+    case 'go_to_end':
+      pauseScrolling();
+      goToEnd();
+      break;
+    case 'scroll_lines':
+      scrollByLines(msg.direction, msg.lines, msg.smooth);
+      break;
+  }
+}
+
+// ── Content rendering ─────────────────────────────────────
+function renderContent() {
+  const el = $content();
+  if (!el) return;
+  if (!tp.content) {
+    el.className = '';
+    el.textContent = 'Waiting for text from controller…';
+    return;
+  }
+  if (tp.markdownEnabled) {
+    const raw = marked.parse(tp.content);
+    el.className = 'markdown-content';
+    el.innerHTML = DOMPurify.sanitize(raw);
+  } else {
+    el.className = '';
+    el.textContent = tp.content;
+  }
+}
+
+// ── Scrolling ─────────────────────────────────────────────
+function applyStyles() {
+  const el = $text();
+  if (!el) return;
+  const mirror = tp.horizontalMirror ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%)';
+  el.style.fontSize  = tp.fontSize + 'em';
+  el.style.maxWidth  = tp.textWidth + '%';
+  el.style.transform = `${mirror} translateY(${tp.scrollPos}px)`;
+}
+
+function updateTranslate() {
+  const el = $text();
+  if (!el) return;
+  const mirror = tp.horizontalMirror ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%)';
+  el.style.transform = `${mirror} translateY(${tp.scrollPos}px)`;
+}
+
+function startScrolling() {
+  tp.isScrolling = true;
+  scrollFrame();
+}
+
+function pauseScrolling() {
+  tp.isScrolling = false;
+  if (tp.animId) { cancelAnimationFrame(tp.animId); tp.animId = null; }
+}
+
+function resetScrolling() {
+  pauseScrolling();
+  animateTo(0);
+}
+
+function scrollFrame() {
+  if (!tp.isScrolling) return;
+  const speed = tp.scrollSpeed * 0.5 * -1;
+  tp.scrollPos += speed;
+
+  const textEl = $text();
+  const contEl = $container();
+  if (textEl && contEl) {
+    const textH = textEl.scrollHeight;
+    const contH = contEl.clientHeight;
+    const limit = -(textH + contH * 0.5);
+    if (tp.scrollPos < limit) {
+      resetScrolling();
+      return;
+    }
+  }
+
+  updateTranslate();
+  tp.animId = requestAnimationFrame(scrollFrame);
+}
+
+function goToEnd() {
+  const textEl = $text();
+  if (textEl) animateTo(-textEl.scrollHeight);
+}
+
+function scrollByLines(direction, lines, smooth) {
+  const lineH = tp.fontSize * 16 * 1.8;
+  const delta = lines * lineH;
+  const target = direction === 'backward'
+    ? tp.scrollPos + delta
+    : tp.scrollPos - delta;
+  if (smooth) animateTo(target);
+  else { tp.scrollPos = target; updateTranslate(); }
+}
+
+function animateTo(target) {
+  const start = tp.scrollPos;
+  const dist  = target - start;
+  const dur   = 500;
+  const t0    = performance.now();
+  function step(now) {
+    const p = Math.min((now - t0) / dur, 1);
+    const e = p < 0.5 ? 4*p*p*p : 1 - Math.pow(-2*p+2, 3)/2;
+    tp.scrollPos = start + dist * e;
+    updateTranslate();
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ── Fullscreen & Wake Lock ─────────────────────────────────
+function enterFullscreen() {
+  const el = $container();
+  const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+  if (fn) fn.call(el);
+}
+
+function onFullscreenChange() {
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const hint = $hint();
+  if (hint) hint.style.opacity = isFs ? '0' : '1';
+  if (isFs) requestWakeLock(); else releaseWakeLock();
+}
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      tp.wakeLock = await navigator.wakeLock.request('screen');
+      tp.wakeLock.addEventListener('release', () => { tp.wakeLock = null; });
+    }
+  } catch {}
+}
+
+function releaseWakeLock() {
+  if (tp.wakeLock) { tp.wakeLock.release().catch(() => {}); tp.wakeLock = null; }
+}
+
+// ── UI helpers ────────────────────────────────────────────
+function setStatus(connected) {
+  const icon = document.getElementById('status-icon');
+  const text = document.getElementById('status-text');
+  if (connected) {
+    if (icon) { icon.className = 'bi bi-wifi me-1'; }
+    if (text) { text.textContent = 'Connected'; }
+    if ($status()) $status().style.color = '#4db6ac';
+  } else {
+    if (icon) { icon.className = 'bi bi-wifi-off me-1'; }
+    if (text) { text.textContent = 'Disconnected'; }
+    if ($status()) $status().style.color = '#aaa';
+  }
+  // fade status out after 3s
+  setTimeout(() => { if ($status()) $status().style.opacity = '0'; }, 3000);
+  if ($status()) $status().style.opacity = '1';
+}
+
+function showToast(text, type) {
+  const colors = { success:'#009688', warning:'#ff9800', error:'#f44336' };
+  const id = 'toast-' + Date.now();
+  document.getElementById('toast-container').insertAdjacentHTML('beforeend', `
+    <div id="${id}" class="toast align-items-center border-0 show"
+         style="background:${colors[type]||colors.success};color:#fff">
+      <div class="d-flex">
+        <div class="toast-body">${text}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                onclick="document.getElementById('${id}').remove()"></button>
+      </div>
+    </div>`);
+  setTimeout(() => { const el = document.getElementById(id); if (el) el.remove(); }, 3000);
+}
+</script>
+{{end}}

@@ -1,36 +1,13 @@
 ---
-# Production configuration - uses pre-built images from GHCR
-# For single-instance deployments, you can remove the 'redis' service and
-# remove the 'depends_on' and 'environment' sections from the backend service
 services:
-  backend:
-    image: ghcr.io/mirceanton/teleprompter-backend:latest
-    ports: [ "8001:8001" ]
+  teleprompter:
+    image: ghcr.io/mirceanton/teleprompter:latest
+    ports: ["8080:8080"]
     restart: unless-stopped
-    depends_on:
-      - redis
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - PORT=8080
     healthcheck:
-      test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8001/api/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  frontend:
-    image: ghcr.io/mirceanton/teleprompter-frontend:latest
-    ports: ["8000:80"]
-    restart: unless-stopped
-    volumes:
-      - ./frontend/public/config.json:/usr/share/nginx/html/config.json:ro
-
-  redis:
-    image: docker.io/redis:8.2.1-alpine
-    ports: ["6379:6379"]
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/live || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

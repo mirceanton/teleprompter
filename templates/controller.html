@@ -1,0 +1,699 @@
+{{template "base" .}}
+
+{{define "content"}}
+<style>
+  .controller-layout {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .controller-body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+  .script-pane {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    background: rgba(30,30,30,0.8);
+  }
+  #script-textarea {
+    flex: 1;
+    resize: none;
+    font-family: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', monospace;
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: #e0e0e0;
+    background: #1a1a1a;
+    border-color: #444;
+    min-height: 0;
+  }
+  #script-textarea:focus { border-color: var(--tp-teal); box-shadow: 0 0 0 0.2rem rgba(0,150,136,.25); }
+  .sidebar {
+    width: 380px;
+    min-width: 380px;
+    border-left: 1px solid #333;
+    background: #1e1e1e;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-inner {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem 1.5rem;
+  }
+  .prompter-item { border-bottom: 1px solid #333; }
+  .prompter-item:last-child { border-bottom: none; }
+  .prompter-header {
+    cursor: pointer;
+    padding: 0.75rem;
+    display: flex;
+    align-items: center;
+    transition: background 0.15s;
+  }
+  .prompter-header:hover { background: rgba(255,255,255,0.04); }
+  .prompter-settings {
+    padding: 0.75rem;
+    background: rgba(0,0,0,0.25);
+    border-top: 1px solid #2a2a2a;
+    display: none;
+  }
+  .value-badge {
+    min-width: 70px;
+    text-align: center;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .play-btn {
+    width: 88px; height: 88px;
+    border-radius: 50%;
+    font-size: 1.8rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .play-btn:hover { transform: scale(1.08); }
+  .ctrl-btn {
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s;
+  }
+  .ctrl-btn:hover { transform: scale(1.1); }
+  .ctrl-btn-lg { width: 60px; height: 60px; font-size: 1.1rem; }
+  .ctrl-btn-sm { width: 44px; height: 44px; }
+  .prompter-empty {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: #666;
+  }
+</style>
+
+<div class="controller-layout">
+  <!-- Navbar -->
+  <nav class="navbar navbar-dark bg-dark border-bottom border-secondary" style="min-height:60px">
+    <div class="container-fluid px-3">
+      <span class="navbar-brand fw-bold mb-0">
+        <i class="bi bi-camera-video-fill text-teal me-2"></i>Teleprompter
+      </span>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge rounded-pill" id="conn-badge" style="background:#333;color:#aaa;font-size:0.75rem">
+          <i class="bi bi-wifi-off me-1"></i>Disconnected
+        </span>
+        <a href="/" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-box-arrow-left me-1"></i>Leave Room
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="controller-body">
+    <!-- Script Editor -->
+    <div class="script-pane">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0">Script Editor</h6>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary btn-sm" onclick="undoScript()" title="Ctrl+Z">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Undo
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="redoScript()" title="Ctrl+Y">
+            <i class="bi bi-arrow-clockwise me-1"></i>Redo
+          </button>
+        </div>
+      </div>
+
+      <textarea id="script-textarea" class="form-control mb-2"
+                oninput="onScriptInput(event)"
+                onkeydown="onScriptKeyDown(event)"></textarea>
+
+      <div class="d-flex justify-content-between align-items-center small text-muted px-1">
+        <span id="word-count">0 chars · 0 words</span>
+        <div class="d-flex align-items-center gap-3">
+          <span id="last-sync-time">Last sync: Never</span>
+          <button class="btn btn-outline-secondary btn-sm" onclick="syncNow()" title="Ctrl+S">
+            <i class="bi bi-arrow-repeat me-1"></i>Sync now
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-inner">
+        <!-- Playback Controls -->
+        <div class="mb-4">
+          <h6 class="fw-bold mb-3">Playback Controls</h6>
+          <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
+            <button class="btn btn-teal ctrl-btn ctrl-btn-sm" onclick="goToBeginning()" title="Go to beginning">
+              <i class="bi bi-skip-start-fill"></i>
+            </button>
+            <button class="btn btn-teal ctrl-btn ctrl-btn-lg" onclick="scrollBack()" title="Scroll back">
+              <i class="bi bi-skip-backward-fill"></i>
+            </button>
+            <button id="play-btn" class="btn btn-success play-btn" onclick="togglePlay()">
+              <i class="bi bi-play-fill" id="play-icon"></i>
+            </button>
+            <button class="btn btn-teal ctrl-btn ctrl-btn-lg" onclick="scrollFwd()" title="Scroll forward">
+              <i class="bi bi-skip-forward-fill"></i>
+            </button>
+            <button class="btn btn-teal ctrl-btn ctrl-btn-sm" onclick="goToEnd()" title="Go to end">
+              <i class="bi bi-skip-end-fill"></i>
+            </button>
+          </div>
+          <button id="markdown-btn" class="btn btn-outline-secondary w-100"
+                  onclick="toggleMarkdown()">
+            <i class="bi bi-file-text me-1" id="markdown-icon"></i><span id="markdown-label">Plain Text</span>
+          </button>
+        </div>
+
+        <!-- Connected Teleprompters -->
+        <div>
+          <h6 class="fw-bold mb-3">Connected Teleprompters</h6>
+          <div id="prompter-list" class="border border-secondary rounded overflow-hidden">
+            <div class="prompter-empty" id="prompter-empty">
+              <i class="bi bi-display d-block mb-2" style="font-size:2rem;opacity:0.3"></i>
+              <div>No teleprompters connected</div>
+              <small class="text-muted">Waiting for devices to join...</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" style="z-index:9999"></div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+const DEFAULT_SCRIPT = `# Welcome to Remote Teleprompter!
+
+This is your teleprompter script. Edit this text on your computer, and it will appear on your phone's screen.
+
+Use the controls to start, pause, and navigate through your script with smooth scrolling.
+
+Instructions:
+1. Open /teleprompter on your phone or tablet
+2. Use the playback controls to start scrolling
+3. Adjust per-device settings using the teleprompter list
+
+Features:
+- Play/Pause controls for smooth teleprompter operation
+- Scroll forward/backward by customizable number of lines
+- Jump to beginning or end of script instantly
+- Adjustable text size, width, and scrolling speed
+- Mirror settings for camera setups
+
+Multi-Camera Support:
+This application supports multiple teleprompter devices, perfect for multi-camera setups.
+
+Happy teleprompting!`;
+
+const state = {
+  ws: null,
+  participantId: null,
+  participants: [],
+  prompterSettings: {},
+  expandedPrompters: {},
+  isPlaying: false,
+  markdownEnabled: false,
+  reconnectDelay: 1000,
+  reconnectTimer: null,
+  syncTimeout: null,
+  undoStack: [],
+  redoStack: [],
+  lastScriptValue: '',
+  isUndoRedo: false,
+};
+
+// ── Bootstrap ──────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('script-textarea');
+  ta.value = DEFAULT_SCRIPT;
+  state.lastScriptValue = DEFAULT_SCRIPT;
+  updateWordCount();
+  connect();
+});
+
+// ── WebSocket ──────────────────────────────────────────────
+function wsUrl() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${location.host}/api/ws`;
+}
+
+function connect() {
+  state.ws = new WebSocket(wsUrl());
+
+  state.ws.onopen = () => {
+    state.reconnectDelay = 1000;
+    setConnBadge(true);
+    showToast('Connected to teleprompter server', 'success');
+  };
+
+  state.ws.onmessage = (e) => {
+    try { handleMessage(JSON.parse(e.data)); } catch {}
+  };
+
+  state.ws.onclose = () => {
+    setConnBadge(false);
+    state.reconnectTimer = setTimeout(() => connect(), state.reconnectDelay);
+    state.reconnectDelay = Math.min(state.reconnectDelay * 2, 30000);
+    showToast('Disconnected — reconnecting…', 'warning');
+  };
+}
+
+function sendMsg(obj) {
+  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+    state.ws.send(JSON.stringify(obj));
+  }
+}
+
+function handleMessage(msg) {
+  switch (msg.type) {
+    case 'welcome':
+      state.participantId = msg.participant_id;
+      sendMsg({ type: 'mode', mode: 'controller' });
+      break;
+    case 'connection_update':
+      updateParticipants(msg.participants || []);
+      if ((msg.connection_count || 0) > state.participants.length) {
+        setTimeout(() => { syncText(); syncAllSettings(); }, 1000);
+      }
+      break;
+    case 'participants_update':
+      syncOnNewPrompters(msg.participants || []);
+      break;
+    case 'participants_list':
+      updateParticipants(msg.participants || []);
+      break;
+    case 'participant_left':
+      handleParticipantLeft(msg.participant_id, msg.participants);
+      break;
+    case 'start':
+      setPlaying(true);
+      break;
+    case 'pause':
+      setPlaying(false);
+      break;
+    case 'go_to_beginning':
+      setPlaying(false);
+      break;
+    case 'go_to_end':
+      setPlaying(false);
+      break;
+  }
+}
+
+// ── Participants ───────────────────────────────────────────
+function updateParticipants(list) {
+  state.participants = list;
+  initPrompterSettings();
+  renderPrompterList();
+}
+
+function syncOnNewPrompters(list) {
+  const oldIds = new Set(
+    state.participants.filter(p => p.role === 'teleprompter').map(p => p.id)
+  );
+  state.participants = list;
+  initPrompterSettings();
+  renderPrompterList();
+  const hasNew = list.some(p => p.role === 'teleprompter' && !oldIds.has(p.id));
+  if (hasNew) {
+    setTimeout(() => { syncText(); syncAllSettings(); }, 500);
+  }
+}
+
+function handleParticipantLeft(id, list) {
+  if (list) {
+    state.participants = list;
+  } else {
+    state.participants = state.participants.filter(p => p.id !== id);
+  }
+  delete state.prompterSettings[id];
+  delete state.expandedPrompters[id];
+  renderPrompterList();
+}
+
+function teleprompters() {
+  return state.participants.filter(p => p.role === 'teleprompter');
+}
+
+function initPrompterSettings() {
+  teleprompters().forEach(p => {
+    if (!state.prompterSettings[p.id]) {
+      state.prompterSettings[p.id] = {
+        scrollSpeed: 1.0,
+        textWidth: 100,
+        fontSize: 2.5,
+        horizontalMirror: false,
+        linesPerStep: 5,
+      };
+    }
+  });
+}
+
+function getSettings(id) {
+  if (!state.prompterSettings[id]) {
+    state.prompterSettings[id] = {
+      scrollSpeed: 1.0, textWidth: 100, fontSize: 2.5,
+      horizontalMirror: false, linesPerStep: 5,
+    };
+  }
+  return state.prompterSettings[id];
+}
+
+// ── Prompter List DOM ──────────────────────────────────────
+function renderPrompterList() {
+  const list = teleprompters();
+  const container = document.getElementById('prompter-list');
+  const empty = document.getElementById('prompter-empty');
+
+  if (list.length === 0) {
+    if (empty) empty.style.display = '';
+    // remove all prompter-item elements
+    container.querySelectorAll('.prompter-item').forEach(el => el.remove());
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  // track existing item ids
+  const existingIds = new Set(
+    [...container.querySelectorAll('.prompter-item')].map(el => el.dataset.id)
+  );
+  const newIds = new Set(list.map(p => p.id));
+
+  // remove departed
+  container.querySelectorAll('.prompter-item').forEach(el => {
+    if (!newIds.has(el.dataset.id)) el.remove();
+  });
+
+  // add new
+  list.forEach((p, i) => {
+    if (!existingIds.has(p.id)) {
+      container.insertAdjacentHTML('beforeend', buildPrompterHTML(p, i));
+    } else {
+      // update index label
+      const lbl = container.querySelector(`[data-id="${p.id}"] .prompter-name`);
+      if (lbl) lbl.textContent = `Teleprompter #${i + 1}`;
+    }
+  });
+
+  // restore expanded state
+  list.forEach(p => {
+    if (state.expandedPrompters[p.id]) {
+      const el = document.getElementById(`ps-${p.id}`);
+      if (el) el.style.display = 'block';
+      const chev = document.getElementById(`chev-${p.id}`);
+      if (chev) chev.className = 'bi bi-chevron-up';
+    }
+    // update setting display values
+    updateSettingDisplays(p.id);
+  });
+}
+
+function buildPrompterHTML(p, i) {
+  const t = new Date(p.joined_at).toLocaleTimeString();
+  const s = getSettings(p.id);
+  return `
+  <div class="prompter-item" data-id="${p.id}">
+    <div class="prompter-header" onclick="togglePrompter('${p.id}')">
+      <i class="bi bi-display text-success me-2"></i>
+      <div class="flex-grow-1">
+        <div class="prompter-name fw-medium" style="font-size:.875rem">Teleprompter #${i + 1}</div>
+        <small class="text-muted">Joined ${t}</small>
+      </div>
+      <i class="bi bi-circle-fill text-success me-2" style="font-size:.5rem"></i>
+      <i class="bi bi-chevron-down" id="chev-${p.id}"></i>
+    </div>
+    <div class="prompter-settings" id="ps-${p.id}">
+      <!-- Speed -->
+      <div class="mb-2">
+        <label class="form-label small text-muted mb-1">Playback Speed</label>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-outline-secondary btn-sm" onclick="adjustSetting('${p.id}','scrollSpeed',-0.1)">-</button>
+          <span class="value-badge flex-grow-1" id="speed-${p.id}">${s.scrollSpeed.toFixed(1)}x</span>
+          <button class="btn btn-outline-secondary btn-sm" onclick="adjustSetting('${p.id}','scrollSpeed',0.1)">+</button>
+        </div>
+      </div>
+      <!-- Lines per step -->
+      <div class="mb-2">
+        <label class="form-label small text-muted mb-1">Lines to Scroll</label>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-outline-secondary btn-sm" onclick="adjustSetting('${p.id}','linesPerStep',-1)">-</button>
+          <span class="value-badge flex-grow-1" id="lines-${p.id}">${s.linesPerStep}</span>
+          <button class="btn btn-outline-secondary btn-sm" onclick="adjustSetting('${p.id}','linesPerStep',1)">+</button>
+        </div>
+      </div>
+      <!-- Text Width -->
+      <div class="mb-2">
+        <label class="form-label small text-muted mb-1">Text Width</label>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-outline-secondary btn-sm" onclick="adjustSetting('${p.id}','textWidth',-5)">-</button>
+          <span class="value-badge flex-grow-1" id="width-${p.id}">${s.textWidth}%</span>
+          <button class="btn btn-outline-secondary btn-sm" onclick="adjustSetting('${p.id}','textWidth',5)">+</button>
+        </div>
+      </div>
+      <!-- Font Size -->
+      <div class="mb-3">
+        <label class="form-label small text-muted mb-1">Font Size</label>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-outline-secondary btn-sm" onclick="adjustSetting('${p.id}','fontSize',-0.1)">-</button>
+          <span class="value-badge flex-grow-1" id="font-${p.id}">${s.fontSize.toFixed(1)}em</span>
+          <button class="btn btn-outline-secondary btn-sm" onclick="adjustSetting('${p.id}','fontSize',0.1)">+</button>
+        </div>
+      </div>
+      <!-- Mirror -->
+      <button id="mirror-btn-${p.id}"
+              class="btn w-100 ${s.horizontalMirror ? 'btn-teal' : 'btn-outline-secondary'}"
+              onclick="toggleMirror('${p.id}')">
+        Horizontal Mirroring
+      </button>
+    </div>
+  </div>`;
+}
+
+function togglePrompter(id) {
+  const el = document.getElementById(`ps-${id}`);
+  const chev = document.getElementById(`chev-${id}`);
+  state.expandedPrompters[id] = !state.expandedPrompters[id];
+  if (el) el.style.display = state.expandedPrompters[id] ? 'block' : 'none';
+  if (chev) chev.className = state.expandedPrompters[id] ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+}
+
+function updateSettingDisplays(id) {
+  const s = state.prompterSettings[id];
+  if (!s) return;
+  const q = (sel) => document.getElementById(sel);
+  if (q(`speed-${id}`)) q(`speed-${id}`).textContent = s.scrollSpeed.toFixed(1) + 'x';
+  if (q(`lines-${id}`)) q(`lines-${id}`).textContent = s.linesPerStep;
+  if (q(`width-${id}`)) q(`width-${id}`).textContent = s.textWidth + '%';
+  if (q(`font-${id}`)) q(`font-${id}`).textContent = s.fontSize.toFixed(1) + 'em';
+  const mb = q(`mirror-btn-${id}`);
+  if (mb) {
+    mb.className = `btn w-100 ${s.horizontalMirror ? 'btn-teal' : 'btn-outline-secondary'}`;
+  }
+}
+
+// ── Per-prompter setting adjustments ──────────────────────
+const SETTING_BOUNDS = {
+  scrollSpeed: [0.1, 5.0],
+  textWidth:   [20, 100],
+  fontSize:    [0.5, 5.0],
+  linesPerStep:[1, 20],
+};
+
+function adjustSetting(id, key, delta) {
+  const s = getSettings(id);
+  const [min, max] = SETTING_BOUNDS[key];
+  s[key] = Math.max(min, Math.min(max, +(s[key] + delta).toFixed(1)));
+  updateSettingDisplays(id);
+
+  const msgMap = {
+    scrollSpeed:  () => sendMsg({ type: 'speed',        value: s.scrollSpeed,  target_id: id }),
+    textWidth:    () => sendMsg({ type: 'width',         value: s.textWidth,    target_id: id }),
+    fontSize:     () => sendMsg({ type: 'font_size',     value: s.fontSize,     target_id: id }),
+    linesPerStep: () => sendMsg({ type: 'lines_per_step',value: s.linesPerStep, target_id: id }),
+  };
+  if (msgMap[key]) msgMap[key]();
+}
+
+function toggleMirror(id) {
+  const s = getSettings(id);
+  s.horizontalMirror = !s.horizontalMirror;
+  updateSettingDisplays(id);
+  sendMsg({ type: 'mirror', horizontal: s.horizontalMirror, vertical: false, target_id: id });
+}
+
+function syncAllSettings() {
+  teleprompters().forEach(p => {
+    const s = state.prompterSettings[p.id];
+    if (!s) return;
+    sendMsg({ type: 'speed',         value: s.scrollSpeed,  target_id: p.id });
+    sendMsg({ type: 'width',         value: s.textWidth,    target_id: p.id });
+    sendMsg({ type: 'font_size',     value: s.fontSize,     target_id: p.id });
+    sendMsg({ type: 'mirror',        horizontal: s.horizontalMirror, vertical: false, target_id: p.id });
+    sendMsg({ type: 'lines_per_step',value: s.linesPerStep, target_id: p.id });
+  });
+}
+
+// ── Playback Controls ─────────────────────────────────────
+function togglePlay() {
+  state.isPlaying = !state.isPlaying;
+  setPlaying(state.isPlaying);
+  sendMsg({ type: state.isPlaying ? 'start' : 'pause' });
+}
+
+function setPlaying(val) {
+  state.isPlaying = val;
+  const btn = document.getElementById('play-btn');
+  const icon = document.getElementById('play-icon');
+  if (btn) btn.className = `btn ${val ? 'btn-danger' : 'btn-success'} play-btn`;
+  if (icon) icon.className = `bi ${val ? 'bi-pause-fill' : 'bi-play-fill'}`;
+}
+
+function goToBeginning() {
+  setPlaying(false);
+  sendMsg({ type: 'go_to_beginning' });
+}
+
+function goToEnd() {
+  setPlaying(false);
+  sendMsg({ type: 'go_to_end' });
+}
+
+function scrollBack() {
+  sendMsg({ type: 'scroll_lines', direction: 'backward', lines: 5, smooth: true });
+}
+
+function scrollFwd() {
+  sendMsg({ type: 'scroll_lines', direction: 'forward', lines: 5, smooth: true });
+}
+
+function toggleMarkdown() {
+  state.markdownEnabled = !state.markdownEnabled;
+  const btn = document.getElementById('markdown-btn');
+  const icon = document.getElementById('markdown-icon');
+  const lbl = document.getElementById('markdown-label');
+  if (state.markdownEnabled) {
+    btn.className = 'btn btn-teal w-100';
+    icon.className = 'bi bi-markdown me-1';
+    lbl.textContent = 'Markdown';
+  } else {
+    btn.className = 'btn btn-outline-secondary w-100';
+    icon.className = 'bi bi-file-text me-1';
+    lbl.textContent = 'Plain Text';
+  }
+  sendMsg({ type: 'markdown', enabled: state.markdownEnabled });
+}
+
+// ── Script / Sync ─────────────────────────────────────────
+function onScriptInput(e) {
+  if (!state.isUndoRedo) saveToUndoStack();
+  updateWordCount();
+  clearTimeout(state.syncTimeout);
+  state.syncTimeout = setTimeout(syncText, 500);
+}
+
+function onScriptKeyDown(e) {
+  if (e.ctrlKey || e.metaKey) {
+    if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undoScript(); }
+    else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); redoScript(); }
+    else if (e.key === 's') { e.preventDefault(); syncNow(); }
+  }
+}
+
+function syncText() {
+  const content = document.getElementById('script-textarea').value;
+  sendMsg({ type: 'text', content });
+  document.getElementById('last-sync-time').textContent =
+    'Last sync: ' + new Date().toLocaleTimeString();
+}
+
+function syncNow() { syncText(); }
+
+function updateWordCount() {
+  const text = document.getElementById('script-textarea').value;
+  const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+  document.getElementById('word-count').textContent =
+    `${text.length} chars · ${words} words`;
+}
+
+// ── Undo / Redo ───────────────────────────────────────────
+function saveToUndoStack() {
+  const ta = document.getElementById('script-textarea');
+  if (ta.value !== state.lastScriptValue) {
+    state.undoStack.push(state.lastScriptValue);
+    if (state.undoStack.length > 50) state.undoStack.shift();
+    state.redoStack = [];
+    state.lastScriptValue = ta.value;
+  }
+}
+
+function undoScript() {
+  if (state.undoStack.length === 0) return;
+  const ta = document.getElementById('script-textarea');
+  state.isUndoRedo = true;
+  state.redoStack.push(ta.value);
+  ta.value = state.undoStack.pop();
+  state.lastScriptValue = ta.value;
+  state.isUndoRedo = false;
+  updateWordCount();
+  clearTimeout(state.syncTimeout);
+  state.syncTimeout = setTimeout(syncText, 500);
+}
+
+function redoScript() {
+  if (state.redoStack.length === 0) return;
+  const ta = document.getElementById('script-textarea');
+  state.isUndoRedo = true;
+  state.undoStack.push(ta.value);
+  ta.value = state.redoStack.pop();
+  state.lastScriptValue = ta.value;
+  state.isUndoRedo = false;
+  updateWordCount();
+  clearTimeout(state.syncTimeout);
+  state.syncTimeout = setTimeout(syncText, 500);
+}
+
+// ── UI helpers ────────────────────────────────────────────
+function setConnBadge(connected) {
+  const b = document.getElementById('conn-badge');
+  if (!b) return;
+  if (connected) {
+    b.style.background = 'rgba(0,150,136,.2)';
+    b.style.color = '#4db6ac';
+    b.innerHTML = '<i class="bi bi-wifi me-1"></i>Connected';
+  } else {
+    b.style.background = '#333';
+    b.style.color = '#aaa';
+    b.innerHTML = '<i class="bi bi-wifi-off me-1"></i>Disconnected';
+  }
+}
+
+function showToast(text, type = 'success') {
+  const colors = { success: '#009688', warning: '#ff9800', error: '#f44336', info: '#2196f3' };
+  const id = 'toast-' + Date.now();
+  const html = `
+    <div id="${id}" class="toast align-items-center border-0 show"
+         style="background:${colors[type] || colors.success};color:#fff"
+         role="alert">
+      <div class="d-flex">
+        <div class="toast-body">${text}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                onclick="document.getElementById('${id}').remove()"></button>
+      </div>
+    </div>`;
+  document.getElementById('toast-container').insertAdjacentHTML('beforeend', html);
+  setTimeout(() => { const el = document.getElementById(id); if (el) el.remove(); }, 4000);
+}
+</script>
+{{end}}

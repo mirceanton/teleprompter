@@ -1,0 +1,117 @@
+---
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+project_name: teleprompter
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    binary: "{{.ProjectName}}"
+    goos:
+      - linux
+    ldflags:
+      - -s -w
+
+archives:
+  - formats: tar.gz
+    name_template: "{{.ProjectName}}_{{.Os}}_{{.Arch}}"
+
+checksum:
+  disable: false
+  name_template: "checksums.txt"
+
+release:
+  draft: false
+  prerelease: auto
+  make_latest: true
+  mode: replace
+
+changelog:
+  disable: false
+  use: github
+  sort: asc
+  groups:
+    - title: "💥 Breaking Changes"
+      regexp: '^.*?(feat|fix|patch)(\(.+\))?!:.+$'
+      order: 0
+    - title: "✨ New Features"
+      regexp: '^.*?feat(\(.+\))?:.+$'
+      order: 1
+    - title: "🐛 Bug Fixes"
+      regexp: '^.*?(fix|patch)(\(.+\))?:.+$'
+      order: 2
+    - title: "⚡ Performance Improvements"
+      regexp: '^.*?perf(\(.+\))?:.+$'
+      order: 3
+    - title: "📚 Documentation"
+      regexp: '^.*?docs(\(.+\))?:.+$'
+      order: 4
+    - title: "📦 Build System"
+      regexp: '^.*?build(\(.+\))?:.+$'
+      order: 5
+    - title: "👷 CI/CD"
+      regexp: '^.*?ci(\(.+\))?:.+$'
+      order: 6
+    - title: "🧪 Tests"
+      regexp: '^.*?test(\(.+\))?:.+$'
+      order: 7
+    - title: "♻️ Code Refactoring"
+      regexp: '^.*?refactor(\(.+\))?:.+$'
+      order: 8
+    - title: "💄 Code Style"
+      regexp: '^.*?style(\(.+\))?:.+$'
+      order: 9
+    - title: "🧹 Chores"
+      regexp: '^.*?chore(\(.+\))?:.+$'
+      order: 10
+    - title: "🔧 Other Changes"
+      order: 999
+
+dockers:
+  - image_templates:
+      - "ghcr.io/mirceanton/{{.ProjectName}}:v{{.Version}}-amd64"
+    use: buildx
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.url=https://github.com/mirceanton/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.source=https://github.com/mirceanton/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+      - "--label=org.opencontainers.image.authors=Mircea-Pavel Anton <contact@mirceanton.com>"
+      - "--label=org.opencontainers.image.description=A self-hosted multi-device teleprompter application."
+  - image_templates:
+      - "ghcr.io/mirceanton/{{.ProjectName}}:v{{.Version}}-arm64v8"
+    use: buildx
+    goarch: arm64
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.url=https://github.com/mirceanton/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.source=https://github.com/mirceanton/{{.ProjectName}}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+      - "--label=org.opencontainers.image.authors=Mircea-Pavel Anton <contact@mirceanton.com>"
+      - "--label=org.opencontainers.image.description=A self-hosted multi-device teleprompter application."
+
+docker_manifests:
+  - name_template: "ghcr.io/mirceanton/{{.ProjectName}}:v{{.Version}}"
+    image_templates:
+      - "ghcr.io/mirceanton/{{.ProjectName}}:v{{.Version}}-amd64"
+      - "ghcr.io/mirceanton/{{.ProjectName}}:v{{.Version}}-arm64v8"
+
+  - name_template: "ghcr.io/mirceanton/{{.ProjectName}}:latest"
+    image_templates:
+      - "ghcr.io/mirceanton/{{.ProjectName}}:v{{.Version}}-amd64"
+      - "ghcr.io/mirceanton/{{.ProjectName}}:v{{.Version}}-arm64v8"
