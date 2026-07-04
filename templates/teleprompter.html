@@ -120,10 +120,12 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => { const h = $hint(); if (h) h.style.opacity = '0'; }, 4000);
 });
 
+const BASE_PATH = '{{.BasePath}}';
+
 // ── WebSocket ──────────────────────────────────────────────
 function wsUrl() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${proto}//${location.host}/api/ws`;
+  return `${proto}//${location.host}${BASE_PATH}/api/ws`;
 }
 
 function connect() {
