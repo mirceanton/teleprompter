@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
-	"github.com/mirceanton/teleprompter/internal/hub"
 )
 
 var upgrader = websocket.Upgrader{
@@ -16,8 +15,19 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func WebSocketHandler(h *hub.Hub) http.HandlerFunc {
+// ConnectionCounter reports how many WebSocket connections are live. Both a
+// single hub and the multi-user session manager implement it.
+type ConnectionCounter interface {
+	ConnectionCount() int
+}
+
+func WebSocketHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		h := hubFrom(r)
+		if h == nil {
+			http.NotFound(w, r)
+			return
+		}
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			return
@@ -28,12 +38,12 @@ func WebSocketHandler(h *hub.Hub) http.HandlerFunc {
 	}
 }
 
-func HealthHandler(h *hub.Hub) http.HandlerFunc {
+func HealthHandler(c ConnectionCounter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":           "ok",
-			"connection_count": h.ConnectionCount(),
+			"connection_count": c.ConnectionCount(),
 		})
 	}
 }
@@ -42,15 +52,17 @@ func LiveHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func PlaybackBroadcast(h *hub.Hub, msg string) http.HandlerFunc {
+func PlaybackBroadcast(msg string) http.HandlerFunc {
 	data := []byte(msg)
 	return func(w http.ResponseWriter, r *http.Request) {
-		h.Broadcast(data, "")
+		if h := hubFrom(r); h != nil {
+			h.Broadcast(data, "")
+		}
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
-func ScrollLines(h *hub.Hub, direction string, lines int) http.HandlerFunc {
+func ScrollLines(direction string, lines int) http.HandlerFunc {
 	data, _ := json.Marshal(map[string]interface{}{
 		"type":      "scroll_lines",
 		"direction": direction,
@@ -58,12 +70,14 @@ func ScrollLines(h *hub.Hub, direction string, lines int) http.HandlerFunc {
 		"smooth":    true,
 	})
 	return func(w http.ResponseWriter, r *http.Request) {
-		h.Broadcast(data, "")
+		if h := hubFrom(r); h != nil {
+			h.Broadcast(data, "")
+		}
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
-func ScrollLinesParam(h *hub.Hub, direction string) http.HandlerFunc {
+func ScrollLinesParam(direction string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lines, err := strconv.Atoi(chi.URLParam(r, "lines"))
 		if err != nil || lines < 1 {
@@ -75,7 +89,9 @@ func ScrollLinesParam(h *hub.Hub, direction string) http.HandlerFunc {
 			"lines":     lines,
 			"smooth":    true,
 		})
-		h.Broadcast(data, "")
+		if h := hubFrom(r); h != nil {
+			h.Broadcast(data, "")
+		}
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

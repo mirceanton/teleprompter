@@ -43,9 +43,36 @@ The app will be available at **http://localhost:8080**.
 
 ## ⚙️ Configuration
 
-| Environment Variable | Description       | Default |
-| -------------------- | ----------------- | ------- |
-| `PORT`               | HTTP listen port  | `8080`  |
+| Environment Variable | Description                                                            | Default                |
+| -------------------- | ---------------------------------------------------------------------- | ---------------------- |
+| `PORT`               | HTTP listen port                                                       | `8080`                 |
+| `OIDC_ISSUER_URL`    | OIDC issuer URL (e.g. `https://keycloak.example.com/realms/myrealm`). Setting this enables multi-user mode. | _(unset — single-user mode)_ |
+| `OIDC_CLIENT_ID`     | OIDC client ID (required when `OIDC_ISSUER_URL` is set)                | —                      |
+| `OIDC_CLIENT_SECRET` | OIDC client secret                                                     | —                      |
+| `OIDC_REDIRECT_URL`  | Absolute callback URL, e.g. `https://tp.example.com/auth/callback` (required when `OIDC_ISSUER_URL` is set) | —                      |
+| `OIDC_SCOPES`        | Space-separated scopes to request                                      | `openid profile email` |
+
+## 🔐 Authentication (optional)
+
+By default there is **no authentication and no user separation**: everyone who opens the app shares the same script and playback state (single-user mode), exactly as before.
+
+Setting the `OIDC_*` environment variables switches the app into **multi-user mode**, authenticating against any OIDC provider (e.g. Keycloak) via the authorization code flow with PKCE. There is no local/password auth — OIDC is the only login method.
+
+In multi-user mode:
+
+- Every user gets their **own session** (one per user, created on first visit) at `/session/<id>`, with its own script, teleprompters, and playback state.
+- Other users navigating to your session URL get a **404** — sessions are private by default.
+- The session owner can **invite** other users by email from the controller sidebar ("Session Members"). Once invited, a user can open the session link (which the owner shares with them) and join as a controller or teleprompter. Access can be revoked the same way.
+- All state (sessions, memberships, logins) is in-memory and resets when the container restarts.
+
+Example Keycloak setup: create a confidential OpenID Connect client with `Standard flow` enabled and `https://<your-host>/auth/callback` as a valid redirect URI, then run:
+
+```sh
+OIDC_ISSUER_URL=https://keycloak.example.com/realms/myrealm
+OIDC_CLIENT_ID=teleprompter
+OIDC_CLIENT_SECRET=<client secret>
+OIDC_REDIRECT_URL=https://tp.example.com/auth/callback
+```
 
 ## 📝 License
 

@@ -6,6 +6,11 @@ services:
     restart: unless-stopped
     environment:
       - PORT=8080
+      # Optional OIDC authentication (multi-user mode), see README:
+      # - OIDC_ISSUER_URL=https://keycloak.example.com/realms/myrealm
+      # - OIDC_CLIENT_ID=teleprompter
+      # - OIDC_CLIENT_SECRET=changeme
+      # - OIDC_REDIRECT_URL=https://tp.example.com/auth/callback
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/live || exit 1"]
       interval: 30s
