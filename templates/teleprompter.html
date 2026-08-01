@@ -115,6 +115,10 @@ document.addEventListener('DOMContentLoaded', () => {
   connect();
   document.addEventListener('fullscreenchange', onFullscreenChange);
   document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') requestWakeLock();
+  });
+  requestWakeLock();
   applyStyles();
   // hide hint after 4s
   setTimeout(() => { const h = $hint(); if (h) h.style.opacity = '0'; }, 4000);
@@ -324,7 +328,6 @@ function onFullscreenChange() {
   const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
   const hint = $hint();
   if (hint) hint.style.opacity = isFs ? '0' : '1';
-  if (isFs) requestWakeLock(); else releaseWakeLock();
 }
 
 async function requestWakeLock() {
@@ -334,10 +337,6 @@ async function requestWakeLock() {
       tp.wakeLock.addEventListener('release', () => { tp.wakeLock = null; });
     }
   } catch {}
-}
-
-function releaseWakeLock() {
-  if (tp.wakeLock) { tp.wakeLock.release().catch(() => {}); tp.wakeLock = null; }
 }
 
 // ── UI helpers ────────────────────────────────────────────
