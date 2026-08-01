@@ -27,6 +27,27 @@ func WithHub(h *hub.Hub) func(http.Handler) http.Handler {
 	}
 }
 
+// WithUserHub resolves the authenticated user's own session (creating it on
+// first use, same as HomeHandler) and injects its hub into the request
+// context. Used for the account-wide playback routes, which target whatever
+// session the caller owns without naming it in the URL — so a Stream Deck
+// button keeps working across restarts and re-logins.
+func WithUserHub(m *session.Manager) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, ok := auth.UserFrom(r.Context())
+			if !ok {
+				http.Error(w, "authentication required", http.StatusUnauthorized)
+				return
+			}
+			sess := m.Ensure(user)
+			ctx := context.WithValue(r.Context(), sessionCtxKey, sess)
+			ctx = context.WithValue(ctx, hubCtxKey, sess.Hub)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 // SessionAccess resolves the {sessionID} route parameter and enforces access:
 // anything but an existing session the current user was granted access to is
 // answered with 404, so outsiders cannot distinguish "exists" from "denied".

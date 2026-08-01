@@ -82,11 +82,13 @@ Tools like a Stream Deck can send HTTP requests but can't complete the OIDC brow
 Send it as a bearer token on any API request:
 
 ```sh
-curl -X POST https://tp.example.com/session/<your-session-id>/api/playback/start \
+curl -X POST https://tp.example.com/api/playback/start \
   -H "Authorization: Bearer tp_pat_<token>"
 ```
 
-A token is tied to your account and can do anything your logged-in session can do (start/stop/scroll on any session you own or were invited to) — treat it like a password, and revoke it from the Account page if it leaks. Tokens are in-memory by default (lost on restart, same as everything else); set `TOKENS_FILE` and mount a volume to that path if you want them to persist.
+The `/api/playback/...` routes always target *your own* session (created on first use, same one `/` redirects you into), so the URL never changes across restarts or logins — no session ID to look up or update in your Stream Deck config. If you need to control a session you don't own but were invited to, use the session-scoped form instead: `/session/<session-id>/api/playback/start`.
+
+A token is tied to your account and can do anything your logged-in session can do — treat it like a password, and revoke it from the Account page if it leaks. Tokens are in-memory by default (lost on restart, same as everything else); set `TOKENS_FILE` and mount a volume to that path if you want them to persist.
 
 ## 📝 License
 

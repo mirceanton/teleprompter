@@ -93,6 +93,13 @@ func main() {
 			r.Get("/api/tokens", handlers.TokensListHandler(tokenStore))
 			r.Post("/api/tokens", handlers.TokenCreateHandler(tokenStore))
 			r.Delete("/api/tokens", handlers.TokenRevokeHandler(tokenStore))
+			r.Group(func(r chi.Router) {
+				// Account-wide playback routes: resolve "my session" from the
+				// caller's identity, so the URL never changes (handy for a
+				// Stream Deck button using a PAT).
+				r.Use(handlers.WithUserHub(mgr))
+				hubRoutes(r)
+			})
 			r.Route("/session/{sessionID}", func(r chi.Router) {
 				r.Use(handlers.SessionAccess(mgr))
 				r.Get("/", handlers.LandingHandler)

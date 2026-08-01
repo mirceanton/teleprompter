@@ -34,8 +34,9 @@
       <p class="text-muted small">
         Use a token to call the playback API (start/stop/rewind) from tools that can't sign in interactively,
         such as a Stream Deck. Send it as <code>Authorization: Bearer &lt;token&gt;</code> on requests to
-        <code>/session/&lt;session-id&gt;/api/playback/...</code> — find your session ID in the controller
-        page's URL. A token can do anything your account can do, so treat it like a password.
+        <code>/api/playback/start</code>, <code>/api/playback/stop</code>, etc. — these always target
+        <em>your own</em> session, so the URL never changes. A token can do anything your account can do,
+        so treat it like a password.
       </p>
       <div id="token-list" class="border border-secondary rounded overflow-hidden">
         <div class="prompter-empty" id="token-empty">
