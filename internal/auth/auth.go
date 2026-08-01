@@ -35,6 +35,13 @@ type User struct {
 	Name  string
 }
 
+// TokenVerifier validates a raw Personal Access Token and reports the user
+// it was issued to. Implemented by *tokens.Store; declared here (rather than
+// imported) so this package doesn't need to depend on the tokens package.
+type TokenVerifier interface {
+	Verify(raw string) (User, bool)
+}
+
 type webSession struct {
 	user       User
 	rawIDToken string
@@ -61,6 +68,14 @@ type Service struct {
 	callbackPath  string
 	mu            sync.Mutex
 	sessions      map[string]*webSession
+	tokens        TokenVerifier
+}
+
+// UseTokens enables Bearer-token authentication (e.g. Personal Access
+// Tokens) as an alternative to the cookie session, for clients that can't
+// perform the interactive OIDC flow.
+func (s *Service) UseTokens(v TokenVerifier) {
+	s.tokens = v
 }
 
 // NewFromEnv builds a Service from OIDC_* environment variables. It returns
@@ -291,6 +306,14 @@ func (s *Service) Middleware(next http.Handler) http.Handler {
 }
 
 func (s *Service) userFor(r *http.Request) (User, bool) {
+	if s.tokens != nil {
+		if raw, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok {
+			if u, ok := s.tokens.Verify(raw); ok {
+				return u, true
+			}
+		}
+	}
+
 	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil {
 		return User{}, false

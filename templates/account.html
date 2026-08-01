@@ -1,0 +1,174 @@
+{{template "base" .}}
+
+{{define "content"}}
+<style>
+  .prompter-item { border-bottom: 1px solid #333; }
+  .prompter-item:last-child { border-bottom: none; }
+  .prompter-empty {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: #666;
+  }
+</style>
+
+<div class="container py-5" style="max-width:720px">
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+      <a href="/" class="text-muted text-decoration-none small"><i class="bi bi-arrow-left me-1"></i>Back</a>
+      <h1 class="h3 fw-bold mt-2 mb-0">Account</h1>
+      <p class="text-muted mb-0">{{if .UserName}}{{.UserName}}{{else}}{{.UserEmail}}{{end}}</p>
+    </div>
+    <a href="/auth/logout" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-box-arrow-right me-1"></i>Sign out
+    </a>
+  </div>
+
+  <div class="card bg-dark border-secondary">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0">Personal Access Tokens</h6>
+        <button class="btn btn-outline-secondary btn-sm" onclick="createToken()">
+          <i class="bi bi-plus-lg me-1"></i>Create token
+        </button>
+      </div>
+      <p class="text-muted small">
+        Use a token to call the playback API (start/stop/rewind) from tools that can't sign in interactively,
+        such as a Stream Deck. Send it as <code>Authorization: Bearer &lt;token&gt;</code> on requests to
+        <code>/session/&lt;session-id&gt;/api/playback/...</code> — find your session ID in the controller
+        page's URL. A token can do anything your account can do, so treat it like a password.
+      </p>
+      <div id="token-list" class="border border-secondary rounded overflow-hidden">
+        <div class="prompter-empty" id="token-empty">
+          <i class="bi bi-key d-block mb-2" style="font-size:2rem;opacity:0.3"></i>
+          <div>No tokens yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" style="z-index:9999"></div>
+
+<div class="modal fade" id="new-token-modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title">Token created</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small">Copy this token now — it won't be shown again.</p>
+        <div class="input-group">
+          <input type="text" id="new-token-value" class="form-control font-monospace" readonly>
+          <button class="btn btn-outline-secondary" onclick="copyNewToken()"><i class="bi bi-clipboard"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+async function loadTokens() {
+  try {
+    const res = await fetch('/api/tokens');
+    if (!res.ok) return;
+    renderTokens((await res.json()).tokens || []);
+  } catch {}
+}
+
+function renderTokens(items) {
+  const container = document.getElementById('token-list');
+  container.querySelectorAll('.token-item').forEach(el => el.remove());
+  const empty = document.getElementById('token-empty');
+  empty.style.display = items.length === 0 ? '' : 'none';
+  items.forEach(tok => {
+    const item = document.createElement('div');
+    item.className = 'token-item prompter-item d-flex align-items-center px-3 py-2';
+    const info = document.createElement('div');
+    info.className = 'flex-grow-1 text-truncate small';
+    const created = new Date(tok.created_at).toLocaleString();
+    const usedAt = new Date(tok.last_used_at);
+    const lastUsed = tok.last_used_at && usedAt.getFullYear() > 1 ? usedAt.toLocaleString() : 'never';
+    const name = document.createElement('div');
+    name.className = 'fw-semibold';
+    name.textContent = tok.name;
+    const meta = document.createElement('div');
+    meta.className = 'text-muted';
+    meta.textContent = `Created ${created} · Last used ${lastUsed}`;
+    info.append(name, meta);
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-outline-danger btn-sm ms-2';
+    btn.title = 'Revoke token';
+    btn.innerHTML = '<i class="bi bi-x-lg"></i>';
+    btn.onclick = () => revokeToken(tok.id);
+    item.append(info, btn);
+    container.appendChild(item);
+  });
+}
+
+async function createToken() {
+  const name = prompt('Name for this token (e.g. "Stream Deck"):');
+  if (!name) return;
+  try {
+    const res = await fetch('/api/tokens', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.trim() }),
+    });
+    if (!res.ok) {
+      showToast(await res.text() || 'Failed to create token', 'error');
+      return;
+    }
+    const data = await res.json();
+    document.getElementById('new-token-value').value = data.token;
+    new bootstrap.Modal(document.getElementById('new-token-modal')).show();
+    loadTokens();
+  } catch {
+    showToast('Failed to create token', 'error');
+  }
+}
+
+async function revokeToken(id) {
+  if (!confirm('Revoke this token? Anything using it will stop working immediately.')) return;
+  try {
+    const res = await fetch(`/api/tokens?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!res.ok) {
+      showToast(await res.text() || 'Failed to revoke token', 'error');
+      return;
+    }
+    loadTokens();
+    showToast('Token revoked', 'success');
+  } catch {
+    showToast('Failed to revoke token', 'error');
+  }
+}
+
+function copyNewToken() {
+  const input = document.getElementById('new-token-value');
+  input.select();
+  navigator.clipboard?.writeText(input.value);
+  showToast('Copied to clipboard', 'success');
+}
+
+function showToast(text, type = 'success') {
+  const colors = { success: '#009688', warning: '#ff9800', error: '#f44336', info: '#2196f3' };
+  const id = 'toast-' + Date.now();
+  const html = `
+    <div id="${id}" class="toast align-items-center border-0 show"
+         style="background:${colors[type] || colors.success};color:#fff"
+         role="alert">
+      <div class="d-flex">
+        <div class="toast-body">${text}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                onclick="document.getElementById('${id}').remove()"></button>
+      </div>
+    </div>`;
+  document.getElementById('toast-container').insertAdjacentHTML('beforeend', html);
+  setTimeout(() => { const el = document.getElementById(id); if (el) el.remove(); }, 4000);
+}
+
+loadTokens();
+</script>
+{{end}}

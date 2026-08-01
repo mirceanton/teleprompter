@@ -57,3 +57,9 @@ func ControllerHandler(w http.ResponseWriter, r *http.Request) {
 func TeleprompterHandler(w http.ResponseWriter, r *http.Request) {
 	render(w, "teleprompter.html", pageData(r))
 }
+
+// AccountHandler serves the account page where a user manages their
+// Personal Access Tokens. It is not session-scoped.
+func AccountHandler(w http.ResponseWriter, r *http.Request) {
+	render(w, "account.html", pageData(r))
+}

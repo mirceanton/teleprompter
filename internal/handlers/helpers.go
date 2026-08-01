@@ -11,7 +11,7 @@ var pageTemplates map[string]*template.Template
 
 func InitTemplates(fs embed.FS) error {
 	pageTemplates = make(map[string]*template.Template)
-	pages := []string{"landing.html", "controller.html", "teleprompter.html"}
+	pages := []string{"landing.html", "controller.html", "teleprompter.html", "account.html"}
 	for _, page := range pages {
 		t, err := template.New("").ParseFS(fs, "templates/base.html", "templates/"+page)
 		if err != nil {

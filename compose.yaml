@@ -11,6 +11,10 @@ services:
       # - OIDC_CLIENT_ID=teleprompter
       # - OIDC_CLIENT_SECRET=changeme
       # - OIDC_REDIRECT_URL=https://tp.example.com/auth/callback
+      # Optional: persist Personal Access Tokens across restarts, see README:
+      # - TOKENS_FILE=/data/tokens.json
+    # volumes:
+    #   - ./data:/data
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/live || exit 1"]
       interval: 30s

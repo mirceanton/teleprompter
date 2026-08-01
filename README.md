@@ -51,6 +51,7 @@ The app will be available at **http://localhost:8080**.
 | `OIDC_CLIENT_SECRET` | OIDC client secret                                                     | —                      |
 | `OIDC_REDIRECT_URL`  | Absolute callback URL, e.g. `https://tp.example.com/auth/callback` (required when `OIDC_ISSUER_URL` is set) | —                      |
 | `OIDC_SCOPES`        | Space-separated scopes to request                                      | `openid profile email` |
+| `TOKENS_FILE`        | Path to persist Personal Access Tokens as JSON (multi-user mode only). Setting this makes tokens survive restarts — mount a volume to this path. | _(unset — tokens are in-memory only)_ |
 
 ## 🔐 Authentication (optional)
 
@@ -73,6 +74,19 @@ OIDC_CLIENT_ID=teleprompter
 OIDC_CLIENT_SECRET=<client secret>
 OIDC_REDIRECT_URL=https://tp.example.com/auth/callback
 ```
+
+### 🔑 Personal Access Tokens (for Stream Deck, scripts, etc.)
+
+Tools like a Stream Deck can send HTTP requests but can't complete the OIDC browser login, so in multi-user mode you can generate a **Personal Access Token** from the **Account** page (linked from the landing page once logged in) and use it instead of a cookie session.
+
+Send it as a bearer token on any API request:
+
+```sh
+curl -X POST https://tp.example.com/session/<your-session-id>/api/playback/start \
+  -H "Authorization: Bearer tp_pat_<token>"
+```
+
+A token is tied to your account and can do anything your logged-in session can do (start/stop/scroll on any session you own or were invited to) — treat it like a password, and revoke it from the Account page if it leaks. Tokens are in-memory by default (lost on restart, same as everything else); set `TOKENS_FILE` and mount a volume to that path if you want them to persist.
 
 ## 📝 License
 

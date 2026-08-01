@@ -13,6 +13,7 @@ import (
 	"github.com/mirceanton/teleprompter/internal/handlers"
 	"github.com/mirceanton/teleprompter/internal/hub"
 	"github.com/mirceanton/teleprompter/internal/session"
+	"github.com/mirceanton/teleprompter/internal/tokens"
 )
 
 //go:embed templates
@@ -74,6 +75,12 @@ func main() {
 		log.Println("OIDC configured; running in multi-user mode")
 		mgr := session.NewManager()
 
+		tokenStore, err := tokens.NewStore(os.Getenv("TOKENS_FILE"))
+		if err != nil {
+			log.Fatalf("failed to load Personal Access Tokens: %v", err)
+		}
+		authSvc.UseTokens(tokenStore)
+
 		r.Get("/api/health", handlers.HealthHandler(mgr))
 		r.Get("/auth/login", authSvc.LoginHandler)
 		r.Get(authSvc.CallbackPath(), authSvc.CallbackHandler)
@@ -82,6 +89,10 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(authSvc.Middleware)
 			r.Get("/", handlers.HomeHandler(mgr))
+			r.Get("/account", handlers.AccountHandler)
+			r.Get("/api/tokens", handlers.TokensListHandler(tokenStore))
+			r.Post("/api/tokens", handlers.TokenCreateHandler(tokenStore))
+			r.Delete("/api/tokens", handlers.TokenRevokeHandler(tokenStore))
 			r.Route("/session/{sessionID}", func(r chi.Router) {
 				r.Use(handlers.SessionAccess(mgr))
 				r.Get("/", handlers.LandingHandler)
