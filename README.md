@@ -6,6 +6,9 @@ This project was made to facilitate recording videos for my YouTube channel wher
 
 Multiple teleprompter clients are supported to account for multi-camera setups with multiple teleprompters.
 
+> [!WARNING]
+> **AI Slop / Vibe Coded Project** — This is project is "AI Slop". This is something that was "built" in a weekend with heavy AI assistance to scratch a personal itch. The code works for my use case, but it has not been hardened, audited, or battle-tested. Deploy at your own risk, preferably not exposed to the open internet. No warranties, no support guarantees, no promises.
+
 ## 📸 Screenshots
 
 <table>
