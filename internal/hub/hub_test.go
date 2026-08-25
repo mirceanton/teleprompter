@@ -50,6 +50,9 @@ func TestSendStateRehydratesScript(t *testing.T) {
 	if msg["script"] != "hello world" {
 		t.Fatalf("script = %v, want %q", msg["script"], "hello world")
 	}
+	if msg["has_script"] != true {
+		t.Fatalf("has_script = %v, want true", msg["has_script"])
+	}
 }
 
 func TestSendStateWithNoScriptYet(t *testing.T) {
@@ -63,6 +66,57 @@ func TestSendStateWithNoScriptYet(t *testing.T) {
 	msg := readOne(t, ctrl.Send)
 	if msg["script"] != "" {
 		t.Fatalf("script = %v, want empty string", msg["script"])
+	}
+	if msg["has_script"] != false {
+		t.Fatalf("has_script = %v, want false so the client doesn't mistake a never-set script for a legitimately-cleared one", msg["has_script"])
+	}
+}
+
+func TestSendStateAfterLegitimatelyClearedScript(t *testing.T) {
+	h := New()
+	h.SetScript("hello world")
+	h.SetScript("")
+
+	ctrl := h.Register(nil)
+	drain(ctrl.Send)
+
+	h.SendState(ctrl.ID)
+
+	msg := readOne(t, ctrl.Send)
+	if msg["script"] != "" {
+		t.Fatalf("script = %v, want empty string", msg["script"])
+	}
+	if msg["has_script"] != true {
+		t.Fatalf("has_script = %v, want true — an intentionally-cleared script should still converge on the client", msg["has_script"])
+	}
+}
+
+func TestSetScriptFromControllerRequiresControllerRole(t *testing.T) {
+	h := New()
+	prompter := h.Register(nil)
+	ctrl := h.Register(nil)
+	drain(prompter.Send)
+	drain(ctrl.Send)
+
+	// prompter has no role set (never sent `mode: teleprompter` through
+	// UpdateRole in this test), so this must not persist.
+	h.SetScriptFromController(prompter.ID, "sneaky overwrite")
+
+	h.SendState(ctrl.ID)
+	msg := readOne(t, ctrl.Send)
+	if msg["has_script"] != false {
+		t.Fatalf("has_script = %v, want false: a non-controller's text message must not persist", msg["has_script"])
+	}
+
+	h.UpdateRole(ctrl.ID, "controller")
+	drain(ctrl.Send) // discard the participants_update broadcast from UpdateRole
+
+	h.SetScriptFromController(ctrl.ID, "legitimate update")
+
+	h.SendState(ctrl.ID)
+	msg = readOne(t, ctrl.Send)
+	if msg["script"] != "legitimate update" {
+		t.Fatalf("script = %v, want %q", msg["script"], "legitimate update")
 	}
 }
 

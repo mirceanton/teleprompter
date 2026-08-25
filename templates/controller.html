@@ -380,7 +380,7 @@ function handleMessage(msg) {
 // DEFAULT_SCRIPT. This is the primary recovery path; the localStorage
 // mirror above only covers the brief window before this arrives.
 function applyStateSync(msg) {
-  if (typeof msg.script === 'string' && msg.script.length > 0) {
+  if (msg.has_script && typeof msg.script === 'string') {
     const ta = document.getElementById('script-textarea');
     if (ta.value !== msg.script) {
       ta.value = msg.script;
@@ -390,7 +390,13 @@ function applyStateSync(msg) {
     }
   }
   if (msg.settings && typeof msg.settings === 'object') {
-    Object.assign(state.prompterSettings, msg.settings);
+    // Merge each id's persisted fields into its existing (defaults-filled)
+    // settings object — the hub only ever records the specific keys it has
+    // seen, so replacing wholesale would wipe out any field it never saw
+    // (e.g. fontSize left at its default while only speed was adjusted).
+    for (const [id, snap] of Object.entries(msg.settings)) {
+      Object.assign(getSettings(id), snap);
+    }
     renderPrompterList();
   }
 }
@@ -679,12 +685,19 @@ function toggleMarkdown() {
 }
 
 // ── Script / Sync ─────────────────────────────────────────
-function onScriptInput(e) {
-  if (!state.isUndoRedo) saveToUndoStack();
+// Shared tail of every script mutation: refresh the word count, mirror to
+// localStorage, and (re)schedule the debounced server sync.
+function afterScriptChange() {
+  const ta = document.getElementById('script-textarea');
   updateWordCount();
-  saveScriptLocally(document.getElementById('script-textarea').value);
+  saveScriptLocally(ta.value);
   clearTimeout(state.syncTimeout);
   state.syncTimeout = setTimeout(syncText, 500);
+}
+
+function onScriptInput(e) {
+  if (!state.isUndoRedo) saveToUndoStack();
+  afterScriptChange();
 }
 
 function onScriptKeyDown(e) {
@@ -730,10 +743,7 @@ function undoScript() {
   ta.value = state.undoStack.pop();
   state.lastScriptValue = ta.value;
   state.isUndoRedo = false;
-  updateWordCount();
-  saveScriptLocally(ta.value);
-  clearTimeout(state.syncTimeout);
-  state.syncTimeout = setTimeout(syncText, 500);
+  afterScriptChange();
 }
 
 function redoScript() {
@@ -744,10 +754,7 @@ function redoScript() {
   ta.value = state.redoStack.pop();
   state.lastScriptValue = ta.value;
   state.isUndoRedo = false;
-  updateWordCount();
-  saveScriptLocally(ta.value);
-  clearTimeout(state.syncTimeout);
-  state.syncTimeout = setTimeout(syncText, 500);
+  afterScriptChange();
 }
 
 // ── Session members (multi-user mode, owner only) ─────────

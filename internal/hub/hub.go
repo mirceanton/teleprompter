@@ -30,6 +30,7 @@ type Hub struct {
 	mu           sync.Mutex
 	participants map[string]*Participant
 	script       string
+	hasScript    bool                              // whether SetScript has ever been called, vs. script being legitimately ""
 	settings     map[string]map[string]interface{} // participant ID -> last known settings
 }
 
@@ -160,7 +161,22 @@ func (h *Hub) ConnectionCount() int {
 func (h *Hub) SetScript(text string) {
 	h.mu.Lock()
 	h.script = text
+	h.hasScript = true
 	h.mu.Unlock()
+}
+
+// SetScriptFromController stores text as the hub's persisted script only if
+// participantID currently holds the controller role. "text" messages are
+// only ever sent by the controller today, but this guards the durable
+// server-side state explicitly rather than trusting the sender.
+func (h *Hub) SetScriptFromController(participantID, text string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if p, ok := h.participants[participantID]; !ok || p.Role != "controller" {
+		return
+	}
+	h.script = text
+	h.hasScript = true
 }
 
 // settingsFields maps a per-prompter settings message type to the field it
@@ -209,11 +225,10 @@ func (h *Hub) RecordSetting(targetID, msgType string, msg map[string]interface{}
 // state instead of starting from its hardcoded default script.
 func (h *Hub) SendState(participantID string) {
 	h.mu.Lock()
+	// Every entry in h.settings belongs to a currently-connected participant:
+	// Unregister deletes it under this same lock when a participant leaves.
 	settings := make(map[string]interface{}, len(h.settings))
 	for id, snap := range h.settings {
-		if _, ok := h.participants[id]; !ok {
-			continue // stale entry for a participant that has since left
-		}
 		cp := make(map[string]interface{}, len(snap))
 		for k, v := range snap {
 			cp[k] = v
@@ -221,9 +236,10 @@ func (h *Hub) SendState(participantID string) {
 		settings[id] = cp
 	}
 	data, _ := json.Marshal(map[string]interface{}{
-		"type":     "state_sync",
-		"script":   h.script,
-		"settings": settings,
+		"type":       "state_sync",
+		"script":     h.script,
+		"has_script": h.hasScript,
+		"settings":   settings,
 	})
 	h.mu.Unlock()
 
@@ -280,7 +296,7 @@ func (p *Participant) ReadPump(h *Hub) {
 
 		if msgType == "text" {
 			if content, ok := msg["content"].(string); ok {
-				h.SetScript(content)
+				h.SetScriptFromController(p.ID, content)
 			}
 		}
 
