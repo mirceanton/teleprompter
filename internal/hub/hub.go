@@ -27,11 +27,14 @@ type Participant struct {
 }
 
 type Hub struct {
-	mu           sync.Mutex
-	participants map[string]*Participant
-	script       string
-	hasScript    bool                              // whether SetScript has ever been called, vs. script being legitimately ""
-	settings     map[string]map[string]interface{} // participant ID -> last known settings
+	mu              sync.Mutex
+	participants    map[string]*Participant
+	script          string
+	hasScript       bool                              // whether SetScript has ever been called, vs. script being legitimately ""
+	settings        map[string]map[string]interface{} // participant ID -> last known settings
+	markdownEnabled bool                              // last known state of the controller's markdown toggle
+	isPlaying       bool                              // last known play/pause state
+	atEnd           bool                              // whether the last known position command was go_to_end rather than go_to_beginning
 }
 
 func New() *Hub {
@@ -165,18 +168,74 @@ func (h *Hub) SetScript(text string) {
 	h.mu.Unlock()
 }
 
+// isControllerLocked reports whether participantID currently holds the
+// controller role. h.mu must already be held by the caller.
+func (h *Hub) isControllerLocked(participantID string) bool {
+	p, ok := h.participants[participantID]
+	return ok && p.Role == "controller"
+}
+
 // SetScriptFromController stores text as the hub's persisted script only if
 // participantID currently holds the controller role. "text" messages are
 // only ever sent by the controller today, but this guards the durable
 // server-side state explicitly rather than trusting the sender.
+//
+// A new script also resets playback on every teleprompter client-side (see
+// the "text" case in teleprompter.html's handleMessage, which always calls
+// resetScrolling()), so the hub's retained playback/position state is reset
+// to match.
 func (h *Hub) SetScriptFromController(participantID, text string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if p, ok := h.participants[participantID]; !ok || p.Role != "controller" {
+	if !h.isControllerLocked(participantID) {
 		return
 	}
 	h.script = text
 	h.hasScript = true
+	h.isPlaying = false
+	h.atEnd = false
+}
+
+// SetMarkdownFromController records the last-known state of the controller's
+// markdown-rendering toggle, gated to the controller role like
+// SetScriptFromController.
+func (h *Hub) SetMarkdownFromController(participantID string, enabled bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if !h.isControllerLocked(participantID) {
+		return
+	}
+	h.markdownEnabled = enabled
+}
+
+// SetPlaybackFromController records the hub's last-known play/pause and
+// beginning/end position state in response to a controller-originated
+// playback message (msgType is one of "start", "pause", "go_to_beginning",
+// or "go_to_end"), gated to the controller role like SetScriptFromController.
+//
+// Note this only tracks the coarse beginning/end position, not fine-grained
+// "scroll_lines" nudges: those are relative moves interpreted client-side
+// using each teleprompter's own font size, so there is no single absolute
+// position the hub could faithfully replay to a newly-connecting device.
+func (h *Hub) SetPlaybackFromController(participantID, msgType string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if !h.isControllerLocked(participantID) {
+		return
+	}
+	switch msgType {
+	case "start":
+		h.isPlaying = true
+		h.atEnd = false
+	case "pause":
+		h.isPlaying = false
+	case "go_to_beginning":
+		h.isPlaying = false
+		h.atEnd = false
+	case "go_to_end":
+		h.isPlaying = false
+		h.atEnd = true
+	}
 }
 
 // settingsFields maps a per-prompter settings message type to the field it
@@ -246,6 +305,48 @@ func (h *Hub) SendState(participantID string) {
 	h.Unicast(participantID, data)
 }
 
+// SendTeleprompterState unicasts the hub's persisted script, markdown
+// toggle, and playback/position state to participantID, along with
+// participantID's own settings snapshot (if any was previously recorded for
+// its ID). Called when a teleprompter identifies itself, so a reconnecting
+// or brand-new teleprompter tab can rehydrate the last known state instead
+// of sitting on a blank screen until a controller notices the new
+// connection and pushes a manual resync.
+//
+// Unlike SendState, which gives a controller every participant's settings
+// keyed by ID, a teleprompter only needs its own settings.
+//
+// In practice the own-settings snapshot is always empty today: h.settings[ID]
+// is only populated once a controller addresses this participant's ID in a
+// target_id'd message, which requires the controller to already know that
+// ID — but IDs are freshly assigned on every connect (see newID/Register) and
+// aren't stable across reconnects (Unregister deletes the entry), so no
+// controller can have addressed this ID before this very "mode: teleprompter"
+// identification fires. This field is kept for architectural symmetry with
+// SendState's controller path and will become useful once/if the app gains
+// stable per-device identity across reconnects; it is inert until then.
+func (h *Hub) SendTeleprompterState(participantID string) {
+	h.mu.Lock()
+	settings := make(map[string]interface{})
+	if snap, ok := h.settings[participantID]; ok {
+		for k, v := range snap {
+			settings[k] = v
+		}
+	}
+	data, _ := json.Marshal(map[string]interface{}{
+		"type":             "state_sync",
+		"script":           h.script,
+		"has_script":       h.hasScript,
+		"markdown_enabled": h.markdownEnabled,
+		"is_playing":       h.isPlaying,
+		"at_end":           h.atEnd,
+		"settings":         settings,
+	})
+	h.mu.Unlock()
+
+	h.Unicast(participantID, data)
+}
+
 func (h *Hub) participantListLocked() []map[string]interface{} {
 	result := make([]map[string]interface{}, 0, len(h.participants))
 	for _, p := range h.participants {
@@ -288,16 +389,33 @@ func (p *Participant) ReadPump(h *Hub) {
 		if msgType == "mode" {
 			role, _ := msg["mode"].(string)
 			h.UpdateRole(p.ID, role)
-			if role == "controller" {
+			switch role {
+			case "controller":
 				h.SendState(p.ID)
+			case "teleprompter":
+				h.SendTeleprompterState(p.ID)
 			}
 			continue
 		}
 
-		if msgType == "text" {
+		// Note: the SetXFromController calls below only gate the hub's
+		// *persisted* replay state to the controller role; the raw message is
+		// still broadcast to all clients below regardless of sender role, so
+		// a non-controller sender can make live clients diverge from what
+		// the hub reports on the next state_sync. This mirrors an
+		// already-accepted tradeoff for "text" from the prior PR; closing it
+		// for all of these is out of scope here.
+		switch msgType {
+		case "text":
 			if content, ok := msg["content"].(string); ok {
 				h.SetScriptFromController(p.ID, content)
 			}
+		case "markdown":
+			if enabled, ok := msg["enabled"].(bool); ok {
+				h.SetMarkdownFromController(p.ID, enabled)
+			}
+		case "start", "pause", "go_to_beginning", "go_to_end":
+			h.SetPlaybackFromController(p.ID, msgType)
 		}
 
 		if targetID, ok := msg["target_id"].(string); ok && targetID != "" {
