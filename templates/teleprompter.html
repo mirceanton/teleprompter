@@ -165,6 +165,9 @@ function handleMessage(msg) {
       tp.participantId = msg.participant_id;
       sendMsg({ type: 'mode', mode: 'teleprompter' });
       break;
+    case 'state_sync':
+      applyStateSync(msg);
+      break;
     case 'text':
       tp.content = msg.content || '';
       renderContent();
@@ -212,6 +215,38 @@ function handleMessage(msg) {
     case 'scroll_lines':
       scrollByLines(msg.direction, msg.lines, msg.smooth);
       break;
+  }
+}
+
+// ── Server-side state rehydration ─────────────────────────
+// The server retains the last-synced script, markdown toggle, playback
+// position, and this teleprompter's own settings on its hub, so a
+// reconnecting (or brand-new) teleprompter tab can rehydrate them instead of
+// sitting on a blank "Waiting for text…" screen until a controller notices
+// the new connection and pushes a manual resync.
+function applyStateSync(msg) {
+  if (msg.has_script && typeof msg.script === 'string') {
+    tp.content = msg.script;
+  }
+  if (typeof msg.markdown_enabled === 'boolean') {
+    tp.markdownEnabled = msg.markdown_enabled;
+  }
+  renderContent();
+
+  if (msg.settings && typeof msg.settings === 'object') {
+    Object.assign(tp, msg.settings);
+  }
+  applyStyles();
+
+  pauseScrolling();
+  if (msg.at_end) {
+    goToEnd();
+  } else {
+    tp.scrollPos = 0;
+    updateTranslate();
+  }
+  if (msg.is_playing) {
+    startScrolling();
   }
 }
 
