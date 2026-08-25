@@ -29,11 +29,15 @@ type Participant struct {
 type Hub struct {
 	mu           sync.Mutex
 	participants map[string]*Participant
+	script       string
+	hasScript    bool                              // whether SetScript has ever been called, vs. script being legitimately ""
+	settings     map[string]map[string]interface{} // participant ID -> last known settings
 }
 
 func New() *Hub {
 	return &Hub{
 		participants: make(map[string]*Participant),
+		settings:     make(map[string]map[string]interface{}),
 	}
 }
 
@@ -85,6 +89,7 @@ func (h *Hub) Unregister(p *Participant) {
 		return
 	}
 	delete(h.participants, p.ID)
+	delete(h.settings, p.ID)
 	close(p.Send)
 	leftMsg, _ := json.Marshal(map[string]interface{}{
 		"type":             "participant_left",
@@ -151,6 +156,96 @@ func (h *Hub) ConnectionCount() int {
 	return len(h.participants)
 }
 
+// SetScript stores the latest script text so a controller that (re)connects
+// can rehydrate it instead of falling back to its hardcoded default.
+func (h *Hub) SetScript(text string) {
+	h.mu.Lock()
+	h.script = text
+	h.hasScript = true
+	h.mu.Unlock()
+}
+
+// SetScriptFromController stores text as the hub's persisted script only if
+// participantID currently holds the controller role. "text" messages are
+// only ever sent by the controller today, but this guards the durable
+// server-side state explicitly rather than trusting the sender.
+func (h *Hub) SetScriptFromController(participantID, text string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if p, ok := h.participants[participantID]; !ok || p.Role != "controller" {
+		return
+	}
+	h.script = text
+	h.hasScript = true
+}
+
+// settingsFields maps a per-prompter settings message type to the field it
+// carries and the key that field is recorded under, matching the shape the
+// controller already keeps client-side in state.prompterSettings.
+var settingsFields = map[string]struct {
+	msgKey  string
+	snapKey string
+}{
+	"speed":          {"value", "scrollSpeed"},
+	"width":          {"value", "textWidth"},
+	"font_size":      {"value", "fontSize"},
+	"lines_per_step": {"value", "linesPerStep"},
+	"mirror":         {"horizontal", "horizontalMirror"},
+}
+
+// RecordSetting remembers the latest value of a per-prompter setting for
+// targetID, if msgType is a known settings message. It is a no-op for any
+// other message type, and for a target that isn't currently connected.
+func (h *Hub) RecordSetting(targetID, msgType string, msg map[string]interface{}) {
+	field, ok := settingsFields[msgType]
+	if !ok {
+		return
+	}
+	value, ok := msg[field.msgKey]
+	if !ok {
+		return
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if _, ok := h.participants[targetID]; !ok {
+		return
+	}
+	snap, ok := h.settings[targetID]
+	if !ok {
+		snap = make(map[string]interface{})
+		h.settings[targetID] = snap
+	}
+	snap[field.snapKey] = value
+}
+
+// SendState unicasts the hub's persisted script and per-prompter settings to
+// participantID. Called when a controller identifies itself, so a
+// reconnecting or brand-new controller tab can rehydrate the last known
+// state instead of starting from its hardcoded default script.
+func (h *Hub) SendState(participantID string) {
+	h.mu.Lock()
+	// Every entry in h.settings belongs to a currently-connected participant:
+	// Unregister deletes it under this same lock when a participant leaves.
+	settings := make(map[string]interface{}, len(h.settings))
+	for id, snap := range h.settings {
+		cp := make(map[string]interface{}, len(snap))
+		for k, v := range snap {
+			cp[k] = v
+		}
+		settings[id] = cp
+	}
+	data, _ := json.Marshal(map[string]interface{}{
+		"type":       "state_sync",
+		"script":     h.script,
+		"has_script": h.hasScript,
+		"settings":   settings,
+	})
+	h.mu.Unlock()
+
+	h.Unicast(participantID, data)
+}
+
 func (h *Hub) participantListLocked() []map[string]interface{} {
 	result := make([]map[string]interface{}, 0, len(h.participants))
 	for _, p := range h.participants {
@@ -193,10 +288,20 @@ func (p *Participant) ReadPump(h *Hub) {
 		if msgType == "mode" {
 			role, _ := msg["mode"].(string)
 			h.UpdateRole(p.ID, role)
+			if role == "controller" {
+				h.SendState(p.ID)
+			}
 			continue
 		}
 
+		if msgType == "text" {
+			if content, ok := msg["content"].(string); ok {
+				h.SetScriptFromController(p.ID, content)
+			}
+		}
+
 		if targetID, ok := msg["target_id"].(string); ok && targetID != "" {
+			h.RecordSetting(targetID, msgType, msg)
 			delete(msg, "target_id")
 			fwd, _ := json.Marshal(msg)
 			h.Unicast(targetID, fwd)
