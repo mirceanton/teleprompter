@@ -168,6 +168,13 @@ func (h *Hub) SetScript(text string) {
 	h.mu.Unlock()
 }
 
+// isControllerLocked reports whether participantID currently holds the
+// controller role. h.mu must already be held by the caller.
+func (h *Hub) isControllerLocked(participantID string) bool {
+	p, ok := h.participants[participantID]
+	return ok && p.Role == "controller"
+}
+
 // SetScriptFromController stores text as the hub's persisted script only if
 // participantID currently holds the controller role. "text" messages are
 // only ever sent by the controller today, but this guards the durable
@@ -180,7 +187,7 @@ func (h *Hub) SetScript(text string) {
 func (h *Hub) SetScriptFromController(participantID, text string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if p, ok := h.participants[participantID]; !ok || p.Role != "controller" {
+	if !h.isControllerLocked(participantID) {
 		return
 	}
 	h.script = text
@@ -195,7 +202,7 @@ func (h *Hub) SetScriptFromController(participantID, text string) {
 func (h *Hub) SetMarkdownFromController(participantID string, enabled bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if p, ok := h.participants[participantID]; !ok || p.Role != "controller" {
+	if !h.isControllerLocked(participantID) {
 		return
 	}
 	h.markdownEnabled = enabled
@@ -213,12 +220,13 @@ func (h *Hub) SetMarkdownFromController(participantID string, enabled bool) {
 func (h *Hub) SetPlaybackFromController(participantID, msgType string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if p, ok := h.participants[participantID]; !ok || p.Role != "controller" {
+	if !h.isControllerLocked(participantID) {
 		return
 	}
 	switch msgType {
 	case "start":
 		h.isPlaying = true
+		h.atEnd = false
 	case "pause":
 		h.isPlaying = false
 	case "go_to_beginning":
@@ -307,6 +315,16 @@ func (h *Hub) SendState(participantID string) {
 //
 // Unlike SendState, which gives a controller every participant's settings
 // keyed by ID, a teleprompter only needs its own settings.
+//
+// In practice the own-settings snapshot is always empty today: h.settings[ID]
+// is only populated once a controller addresses this participant's ID in a
+// target_id'd message, which requires the controller to already know that
+// ID — but IDs are freshly assigned on every connect (see newID/Register) and
+// aren't stable across reconnects (Unregister deletes the entry), so no
+// controller can have addressed this ID before this very "mode: teleprompter"
+// identification fires. This field is kept for architectural symmetry with
+// SendState's controller path and will become useful once/if the app gains
+// stable per-device identity across reconnects; it is inert until then.
 func (h *Hub) SendTeleprompterState(participantID string) {
 	h.mu.Lock()
 	settings := make(map[string]interface{})
@@ -380,6 +398,13 @@ func (p *Participant) ReadPump(h *Hub) {
 			continue
 		}
 
+		// Note: the SetXFromController calls below only gate the hub's
+		// *persisted* replay state to the controller role; the raw message is
+		// still broadcast to all clients below regardless of sender role, so
+		// a non-controller sender can make live clients diverge from what
+		// the hub reports on the next state_sync. This mirrors an
+		// already-accepted tradeoff for "text" from the prior PR; closing it
+		// for all of these is out of scope here.
 		switch msgType {
 		case "text":
 			if content, ok := msg["content"].(string); ok {

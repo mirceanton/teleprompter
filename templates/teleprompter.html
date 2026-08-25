@@ -239,14 +239,16 @@ function applyStateSync(msg) {
   applyStyles();
 
   pauseScrolling();
-  if (msg.at_end) {
+  if (msg.is_playing) {
+    // Playback will move scrollPos on its own via scrollFrame()'s rAF loop;
+    // running the at_end/reset positioning below at the same time would race
+    // it with animateTo()'s own rAF loop, fighting over scrollPos.
+    startScrolling();
+  } else if (msg.at_end) {
     goToEnd();
   } else {
     tp.scrollPos = 0;
     updateTranslate();
-  }
-  if (msg.is_playing) {
-    startScrolling();
   }
 }
 

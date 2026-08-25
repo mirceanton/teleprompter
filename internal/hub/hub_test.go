@@ -379,6 +379,36 @@ func TestSetPlaybackFromControllerTracksPositionAndPlayState(t *testing.T) {
 	}
 }
 
+func TestSetPlaybackFromControllerStartClearsAtEnd(t *testing.T) {
+	h := New()
+	ctrl := h.Register(nil)
+	prompter := h.Register(nil)
+	drain(ctrl.Send)
+	drain(prompter.Send)
+
+	h.UpdateRole(ctrl.ID, "controller")
+	drain(ctrl.Send)
+	drain(prompter.Send)
+
+	// go_to_end followed by start (e.g. a controller parking the prompter at
+	// the end, then resuming playback) must not leave atEnd and isPlaying
+	// both true: a newly-connecting teleprompter's applyStateSync() treats
+	// "at rest at the end" and "actively scrolling" as mutually exclusive,
+	// and running both goToEnd() and startScrolling() at once fights over
+	// scrollPos.
+	h.SetPlaybackFromController(ctrl.ID, "go_to_end")
+	h.SetPlaybackFromController(ctrl.ID, "start")
+
+	h.SendTeleprompterState(prompter.ID)
+	msg := readOne(t, prompter.Send)
+	if msg["is_playing"] != true {
+		t.Fatalf("is_playing = %v, want true after start", msg["is_playing"])
+	}
+	if msg["at_end"] != false {
+		t.Fatalf("at_end = %v, want false after start clears the parked-at-end position", msg["at_end"])
+	}
+}
+
 func TestSetScriptFromControllerResetsPlaybackState(t *testing.T) {
 	h := New()
 	ctrl := h.Register(nil)
